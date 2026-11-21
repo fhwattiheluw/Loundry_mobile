@@ -23,7 +23,7 @@ class MessageTemplate {
       NotificationTrigger.pengingatAmbil =>
         _settings.get(SettingsKeys.templateReminder),
       NotificationTrigger.pembayaranDiterima =>
-        _settings.get(SettingsKeys.templateOrderDone),
+        _settings.get(SettingsKeys.templatePayment),
     };
 
     return render(template, order);
@@ -59,6 +59,7 @@ class MessageTemplate {
           _settings.getBool(SettingsKeys.notifyOrderDone, fallback: true),
         NotificationTrigger.pengingatAmbil =>
           _settings.getBool(SettingsKeys.notifyReminder, fallback: true),
-        NotificationTrigger.pembayaranDiterima => false,
+        NotificationTrigger.pembayaranDiterima =>
+          _settings.getBool(SettingsKeys.notifyPaymentReceived),
       };
 }

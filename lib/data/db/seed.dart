@@ -94,6 +94,15 @@ Future<void> seedInitialData(Database db) async {
     SettingsKeys.notifyOrderCreated: '1',
     SettingsKeys.notifyOrderDone: '1',
     SettingsKeys.notifyReminder: '1',
+    SettingsKeys.notifyPaymentReceived: '0',
+    SettingsKeys.whatsappMode: 'manual',
+    SettingsKeys.whatsappPhoneNumberId: '',
+    SettingsKeys.whatsappToken: '',
+    SettingsKeys.whatsappTemplateName: '',
+    SettingsKeys.whatsappApiVersion: 'v21.0',
+    SettingsKeys.quietHoursEnabled: '0',
+    SettingsKeys.quietHoursStart: '21:00',
+    SettingsKeys.quietHoursEnd: '08:00',
     SettingsKeys.templateOrderCreated:
         'Halo {nama}, pesanan laundry Anda sudah kami terima.\n\n'
         'No. Nota: {no_order}\n'
@@ -113,6 +122,12 @@ Future<void> seedInitialData(Database db) async {
         'sejak {estimasi} dan belum diambil.\n\n'
         'Sisa tagihan: {sisa}\n'
         'Mohon diambil ya. Terima kasih. {nama_usaha}',
+    SettingsKeys.templatePayment:
+        'Halo {nama}, pembayaran Anda sudah kami terima.\n\n'
+        'No. Nota: {no_order}\n'
+        'Dibayar: {dibayar}\n'
+        'Sisa tagihan: {sisa}\n\n'
+        'Terima kasih. {nama_usaha}',
     SettingsKeys.seededAt: now,
   };
 

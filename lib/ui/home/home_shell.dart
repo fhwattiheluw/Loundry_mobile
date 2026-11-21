@@ -31,6 +31,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       // Backup otomatis maksimal sekali sehari. Data aplikasi ini hanya ada
       // di satu perangkat, jadi salinan harian adalah pengaman paling murah.
       ref.read(backupServiceProvider).autoBackupIfDue();
+
+      // Pesan yang gagal kirim dan sudah waktunya dicoba lagi (FR-69).
+      // Hanya berjalan di mode API; mode manual butuh kasir menekan kirim.
+      ref.read(notificationServiceProvider).processQueue().then((sent) {
+        if (sent > 0) ref.invalidate(pendingNotificationsProvider);
+      });
     });
   }
 

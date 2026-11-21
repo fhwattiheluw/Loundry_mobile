@@ -14,6 +14,7 @@ import '../services/backup/backup_service.dart';
 import '../services/export/export_service.dart';
 import '../services/notification/message_template.dart';
 import '../services/notification/notification_service.dart';
+import '../services/notification/whatsapp_api_sender.dart';
 import '../services/printer/receipt_builder.dart';
 import '../services/printer/receipt_printer.dart';
 
@@ -91,12 +92,23 @@ final messageTemplateProvider = Provider<MessageTemplate>(
   (ref) => MessageTemplate(ref.watch(settingsRepoProvider)),
 );
 
+final whatsAppApiSenderProvider = Provider<WhatsAppApiSender>(
+  (ref) => WhatsAppApiSender(ref.watch(settingsRepoProvider)),
+);
+
 final notificationServiceProvider = Provider<NotificationService>(
   (ref) => NotificationService(
-    ref.watch(databaseProvider),
-    ref.watch(messageTemplateProvider),
-    const WhatsAppManualSender(),
+    db: ref.watch(databaseProvider),
+    template: ref.watch(messageTemplateProvider),
+    settings: ref.watch(settingsRepoProvider),
+    manualSender: const WhatsAppManualSender(),
+    apiSender: ref.watch(whatsAppApiSenderProvider),
   ),
+);
+
+/// Jumlah pesan yang masih menunggu giliran kirim.
+final pendingNotificationsProvider = FutureProvider<int>(
+  (ref) => ref.watch(notificationServiceProvider).pendingCount(),
 );
 
 final consentManagerProvider = Provider<ConsentManager>(

@@ -21,12 +21,14 @@ class _TemplateSettingsScreenState
     SettingsKeys.templateOrderCreated: 'Saat order diterima',
     SettingsKeys.templateOrderDone: 'Saat cucian selesai',
     SettingsKeys.templateReminder: 'Pengingat belum diambil',
+    SettingsKeys.templatePayment: 'Saat pembayaran diterima',
   };
 
   static const _toggles = <String, String>{
     SettingsKeys.notifyOrderCreated: 'Kirim saat order diterima',
     SettingsKeys.notifyOrderDone: 'Kirim saat cucian selesai',
     SettingsKeys.notifyReminder: 'Kirim pengingat pengambilan',
+    SettingsKeys.notifyPaymentReceived: 'Kirim saat pembayaran diterima',
   };
 
   static const _variables = [
@@ -109,7 +111,10 @@ class _TemplateSettingsScreenState
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(entry.value),
-              value: settings.getBool(entry.key, fallback: true),
+              value: settings.getBool(
+                entry.key,
+                fallback: entry.key != SettingsKeys.notifyPaymentReceived,
+              ),
               onChanged: (value) async {
                 await settings.set(entry.key, value ? '1' : '0');
                 ref.invalidate(settingsLoadedProvider);

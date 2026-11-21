@@ -7,10 +7,12 @@ import '../../data/db/settings_keys.dart';
 import '../shift/shift_screen.dart';
 import 'backup_settings_screen.dart';
 import 'business_settings_screen.dart';
+import 'notification_log_screen.dart';
 import 'printer_settings_screen.dart';
 import 'service_settings_screen.dart';
 import 'template_settings_screen.dart';
 import 'user_settings_screen.dart';
+import 'whatsapp_settings_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -128,6 +130,47 @@ class SettingsScreen extends ConsumerWidget {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () =>
                         _open(context, const TemplateSettingsScreen()),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.send_outlined),
+                    title: const Text('Mode pengiriman dan jam tenang'),
+                    subtitle: Text(
+                      settings.get(SettingsKeys.whatsappMode,
+                                  fallback: 'manual') ==
+                              'api'
+                          ? 'Otomatis lewat Cloud API'
+                          : 'Manual lewat wa.me',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () =>
+                        _open(context, const WhatsAppSettingsScreen()),
+                  ),
+                  const Divider(height: 1),
+                  Consumer(
+                    builder: (context, ref, _) {
+                      final pending = ref.watch(pendingNotificationsProvider);
+                      final count = pending.maybeWhen(
+                        data: (c) => c,
+                        orElse: () => 0,
+                      );
+
+                      return ListTile(
+                        leading: const Icon(Icons.mark_chat_unread_outlined),
+                        title: const Text('Pesan belum terkirim'),
+                        subtitle: Text(count == 0
+                            ? 'Semua pesan sudah terkirim'
+                            : '$count pesan menunggu'),
+                        trailing: count == 0
+                            ? const Icon(Icons.chevron_right)
+                            : Chip(
+                                label: Text('$count'),
+                                visualDensity: VisualDensity.compact,
+                              ),
+                        onTap: () =>
+                            _open(context, const NotificationLogScreen()),
+                      );
+                    },
                   ),
                   const Divider(height: 1),
                   ListTile(

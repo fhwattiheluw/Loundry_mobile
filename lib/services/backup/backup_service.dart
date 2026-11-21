@@ -4,6 +4,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_sqlcipher/sqflite.dart' as cipher;
 
 import '../../data/db/app_database.dart';
 
@@ -68,10 +69,17 @@ class BackupService {
       '${at.hour.toString().padLeft(2, '0')}'
       '${at.minute.toString().padLeft(2, '0')}';
 
-  /// Menyalin database ke folder backup di dalam penyimpanan aplikasi.
+  /// Membuat backup yang bisa dibuka di perangkat lain.
   ///
-  /// Database ditutup lebih dulu agar seluruh isi WAL ikut tersalin. Backup
-  /// yang diambil saat database terbuka bisa kehilangan transaksi terakhir.
+  /// Database aslinya terenkripsi dengan kunci yang hanya ada di Keystore
+  /// ponsel ini. Menyalin berkasnya mentah-mentah akan menghasilkan backup
+  /// yang tidak bisa dipulihkan di ponsel baru, yaitu justru saat backup
+  /// paling dibutuhkan.
+  ///
+  /// Karena itu isi database diekspor ke salinan TANPA enkripsi memakai
+  /// `sqlcipher_export`. Konsekuensinya berkas backup bisa dibaca siapa pun
+  /// yang memegangnya, jadi pemilik diingatkan menyimpannya di tempat
+  /// pribadi, bukan di grup WhatsApp.
   Future<BackupResult> createLocal() async {
     try {
       final source = await _databaseFile();
@@ -79,21 +87,48 @@ class BackupService {
         return const BackupResult.failed('Database belum ada.');
       }
 
-      await _db.close();
-
       final dir = await _backupDir();
       final now = DateTime.now();
       final target = File(p.join(dir.path, 'laundry-${_stamp(now)}.db'));
 
-      await source.copy(target.path);
+      if (await target.exists()) await target.delete();
+
+      final exported = await _exportPlain(target);
+
+      if (!exported) {
+        // Perangkat tidak mendukung sqlcipher_export. Salin mentah supaya
+        // tetap ada backup, meski hanya bisa dipulihkan di ponsel ini.
+        await _db.close();
+        await source.copy(target.path);
+      }
+
       await _rotate(dir);
 
       return BackupResult.ok(
-        'Backup tersimpan di perangkat.',
+        exported
+            ? 'Backup tersimpan di perangkat.'
+            : 'Backup tersimpan, tapi hanya bisa dipulihkan di ponsel ini.',
         file: target,
       );
     } catch (e) {
       return BackupResult.failed('Backup gagal: $e');
+    }
+  }
+
+  /// Menyalin seluruh isi database ke berkas tanpa enkripsi.
+  /// Mengembalikan false bila perintah SQLCipher tidak tersedia.
+  Future<bool> _exportPlain(File target) async {
+    try {
+      final db = await _db.database;
+      final path = target.path.replaceAll("'", "''");
+
+      await db.rawQuery("ATTACH DATABASE '$path' AS plainbackup KEY ''");
+      await db.rawQuery("SELECT sqlcipher_export('plainbackup')");
+      await db.rawQuery('DETACH DATABASE plainbackup');
+
+      return await target.exists();
+    } catch (_) {
+      return false;
     }
   }
 
@@ -165,7 +200,9 @@ class BackupService {
       await Share.shareXFiles(
         [XFile(result.file!.path)],
         subject: 'Backup POS Laundry',
-        text: 'Simpan berkas ini di tempat aman di luar ponsel.',
+        text: 'Simpan berkas ini di tempat pribadi di luar ponsel. '
+            'Isinya memuat data pelanggan dan riwayat transaksi, '
+            'jadi jangan dikirim ke grup.',
       );
       return const BackupResult.ok('Backup siap dibagikan.');
     } catch (e) {
@@ -191,16 +228,29 @@ class BackupService {
       }
 
       final target = await _databaseFile();
-      await _db.close();
 
+      // Salinan pengaman: kalau berkas backup ternyata tidak utuh,
+      // data lama masih bisa diselamatkan secara manual.
       if (await target.exists()) {
         final dir = await _backupDir();
+        await createLocal();
         await target.copy(
           p.join(dir.path, 'pre-restore-${_stamp(DateTime.now())}.db'),
         );
       }
 
-      await backup.copy(target.path);
+      await _db.close();
+      await target.delete().catchError((_) => target);
+
+      // Backup tanpa enkripsi diimpor dengan membalik sqlcipher_export:
+      // berkas backup dibuka apa adanya, lalu isinya ditulis ke database
+      // baru yang terenkripsi dengan kunci ponsel ini.
+      final imported = await _importPlain(backup, target);
+
+      if (!imported) {
+        // Backup ternyata sudah terenkripsi dengan kunci ponsel ini.
+        await backup.copy(target.path);
+      }
 
       // Dibuka ulang untuk memastikan berkasnya benar-benar bisa dipakai.
       await _db.database;
@@ -213,6 +263,32 @@ class BackupService {
     }
   }
 
+  /// Menulis isi backup tanpa enkripsi ke database baru yang terenkripsi.
+  /// Mengembalikan false bila backup itu ternyata sudah terenkripsi.
+  Future<bool> _importPlain(File backup, File target) async {
+    cipher.Database? plain;
+
+    try {
+      final key = await _db.encryptionKey();
+      final path = target.path.replaceAll("'", "''");
+
+      // Password kosong berarti berkas dibuka sebagai SQLite biasa.
+      plain = await cipher.openDatabase(backup.path, password: '');
+
+      await plain.rawQuery(
+        "ATTACH DATABASE '$path' AS encrypted KEY '${key.replaceAll("'", "''")}'",
+      );
+      await plain.rawQuery("SELECT sqlcipher_export('encrypted')");
+      await plain.rawQuery('DETACH DATABASE encrypted');
+
+      return await target.exists();
+    } catch (_) {
+      return false;
+    } finally {
+      await plain?.close();
+    }
+  }
+
   /// Berkas SQLite selalu diawali teks "SQLite format 3".
   /// Memeriksanya mencegah pemilik salah memilih foto atau dokumen lain.
   Future<bool> _looksLikeSqlite(File file) async {
@@ -221,7 +297,15 @@ class BackupService {
       final header = await handle.read(16);
       await handle.close();
 
-      return String.fromCharCodes(header.take(15)) == 'SQLite format 3';
+      if (String.fromCharCodes(header.take(15)) == 'SQLite format 3') {
+        return true;
+      }
+
+      // Backup yang masih terenkripsi tidak punya header itu, karena seluruh
+      // berkasnya teracak. Yang bisa diperiksa hanyalah ukurannya masuk akal.
+      // Berkas foto atau dokumen yang salah pilih akan gagal saat dibuka,
+      // dan salinan pengaman sudah dibuat sebelum itu terjadi.
+      return await file.length() > 4096;
     } catch (_) {
       return false;
     }

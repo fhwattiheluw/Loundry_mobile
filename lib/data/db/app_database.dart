@@ -1,6 +1,8 @@
 import 'package:path/path.dart' as p;
-import 'package:sqflite/sqflite.dart';
+import 'package:sqflite/sqflite.dart' as sql;
+import 'package:sqflite_sqlcipher/sqflite.dart' as cipher;
 
+import 'database_key.dart';
 import 'seed.dart';
 
 /// Database lokal. Tidak ada server: seluruh data hidup di file ini.
@@ -14,24 +16,34 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const _fileName = 'laundry_pos.db';
-  static const _schemaVersion = 1;
+  static const _schemaVersion = 2;
 
-  Database? _db;
+  final _key = const DatabaseKey();
 
-  Future<Database> get database async => _db ??= await _open();
+  sql.Database? _db;
 
-  Future<Database> _open() async {
-    final dir = await getDatabasesPath();
+  Future<sql.Database> get database async => _db ??= await _open();
+
+  /// Membuka database terenkripsi di perangkat.
+  ///
+  /// Kuncinya diambil dari Android Keystore, bukan ditulis di kode. Berkas
+  /// database di luar aplikasi tidak bisa dibaca tanpa kunci itu, bahkan
+  /// pada perangkat yang sudah di-root.
+  Future<sql.Database> _open() async {
+    final dir = await sql.getDatabasesPath();
     final path = p.join(dir, _fileName);
+    final password = await _key.obtain();
 
-    return openDatabase(
+    return cipher.openDatabase(
       path,
+      password: password,
       version: _schemaVersion,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
       onCreate: (db, version) async {
         await _v1(db);
+        await _v2(db);
         await seedInitialData(db);
       },
       onUpgrade: _migrate,
@@ -43,14 +55,22 @@ class AppDatabase {
     _db = null;
   }
 
-  /// Hanya dipakai oleh pengujian.
-  Future<Database> openInMemory() async {
-    final db = await openDatabase(
-      inMemoryDatabasePath,
+  /// Kunci enkripsi database, dipakai saat mengekspor dan memulihkan backup.
+  Future<String> encryptionKey() => _key.obtain();
+
+  /// Hanya dipakai oleh pengujian, dan sengaja TIDAK terenkripsi.
+  ///
+  /// Pengujian berjalan di desktop lewat sqflite_common_ffi, yang tidak
+  /// memuat pustaka SQLCipher. Yang diuji di sini adalah skema dan kueri,
+  /// bukan enkripsinya.
+  Future<sql.Database> openInMemory() async {
+    final db = await sql.openDatabase(
+      sql.inMemoryDatabasePath,
       version: _schemaVersion,
       onConfigure: (db) async => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: (db, _) async {
         await _v1(db);
+        await _v2(db);
         await seedInitialData(db);
       },
     );
@@ -58,14 +78,30 @@ class AppDatabase {
     return db;
   }
 
-  Future<void> _migrate(Database db, int from, int to) async {
-    // Contoh untuk versi berikutnya:
-    // if (from < 2) {
-    //   await db.execute('ALTER TABLE orders ADD COLUMN item_count INTEGER');
-    // }
+  /// Migrasi dijalankan bertahap dan tidak pernah melompat, supaya pemasangan
+  /// lama dari versi mana pun sampai ke bentuk skema yang sama.
+  Future<void> _migrate(sql.Database db, int from, int to) async {
+    if (from < 2) await _v2(db);
   }
 
-  Future<void> _v1(Database db) async {
+  /// Versi 2: antrean kirim ulang notifikasi (FR-69).
+  ///
+  /// Pesan yang gagal kirim disimpan beserta isinya, jumlah percobaan, dan
+  /// kapan boleh dicoba lagi. Tanpa menyimpan isi pesannya, kirim ulang akan
+  /// memakai template yang mungkin sudah diubah pemilik sejak itu.
+  Future<void> _v2(sql.Database db) async {
+    await db.execute(
+        'ALTER TABLE notification_logs ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0');
+    await db.execute(
+        'ALTER TABLE notification_logs ADD COLUMN next_attempt_at TEXT');
+    await db.execute('ALTER TABLE notification_logs ADD COLUMN message TEXT');
+
+    await db.execute(
+      'CREATE INDEX idx_notif_queue ON notification_logs(status, next_attempt_at)',
+    );
+  }
+
+  Future<void> _v1(sql.Database db) async {
     await db.execute('''
       CREATE TABLE settings (
         key   TEXT PRIMARY KEY,

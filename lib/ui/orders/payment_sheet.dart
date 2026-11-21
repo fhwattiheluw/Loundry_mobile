@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
+import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
 
 /// Layar pembayaran. Mengembalikan true bila ada pembayaran yang tersimpan.
@@ -99,6 +100,13 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
             );
           }
         }
+
+        // Pemberitahuan pembayaran diterima (FR-63). Mati secara bawaan,
+        // karena pelanggan yang membayar di konter sudah memegang kwitansi.
+        await ref.read(notificationServiceProvider).notify(
+              fresh,
+              NotificationTrigger.pembayaranDiterima,
+            );
       }
 
       if (mounted) Navigator.pop(context, true);

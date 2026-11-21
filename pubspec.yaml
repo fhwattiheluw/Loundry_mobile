@@ -15,8 +15,14 @@ dependencies:
 
   # Database lokal
   sqflite: ^2.3.3
+  # SQLite terenkripsi (NFR-05). Dipakai hanya di perangkat, bukan di pengujian.
+  sqflite_sqlcipher: ^3.1.0+1
+  flutter_secure_storage: ^9.2.2
   path: ^1.9.0
   path_provider: ^2.1.3
+
+  # Pengiriman WhatsApp lewat Cloud API (FR-67)
+  http: ^1.2.2
 
   # Format angka dan tanggal Indonesia
   intl: ^0.19.0
