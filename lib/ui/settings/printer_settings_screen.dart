@@ -151,6 +151,23 @@ class _PrinterSettingsScreenState
             style: TextStyle(fontSize: 12.5, color: Colors.black54),
           ),
 
+          const SizedBox(height: 20),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Cetak QR nomor nota'),
+            subtitle: const Text(
+              'Dipindai saat pengambilan supaya tidak perlu mengetik nomor. '
+              'Matikan bila printer Anda tidak mendukung QR.',
+            ),
+            value: settings.getBool(SettingsKeys.receiptQrEnabled),
+            onChanged: (value) async {
+              await settings.set(
+                  SettingsKeys.receiptQrEnabled, value ? '1' : '0');
+              ref.invalidate(settingsLoadedProvider);
+              setState(() {});
+            },
+          ),
+
           const SizedBox(height: 24),
           const Text('Pilih printer',
               style: TextStyle(fontWeight: FontWeight.w700)),

@@ -82,9 +82,38 @@ class PriceCalculator {
     return total.clamp(0, subtotal);
   }
 
-  int totalOf(List<OrderItem> items, {int discount = 0}) {
+  /// Total yang ditagih.
+  ///
+  /// Diskon hanya memotong nilai layanan, tidak memotong biaya tambahan.
+  /// Biaya antar-jemput adalah ongkos yang sudah terlanjur dikeluarkan,
+  /// jadi tidak ikut didiskon.
+  int totalOf(List<OrderItem> items, {int discount = 0, int extraFee = 0}) {
     final subtotal = subtotalOf(items);
-    return math.max(0, subtotal - discount.clamp(0, subtotal));
+    final afterDiscount = math.max(0, subtotal - discount.clamp(0, subtotal));
+    return afterDiscount + math.max(0, extraFee);
+  }
+
+  /// Membuat baris nota dengan rincian isi cucian (FR-32).
+  OrderItem buildItemWithDetails(
+    LaundryService service,
+    double rawQty, {
+    bool express = false,
+    String? note,
+    String? itemDetails,
+  }) {
+    final item = buildItem(service, rawQty, express: express, note: note);
+
+    return OrderItem(
+      serviceId: item.serviceId,
+      serviceName: item.serviceName,
+      unit: item.unit,
+      qty: item.qty,
+      unitPrice: item.unitPrice,
+      subtotal: item.subtotal,
+      express: item.express,
+      note: item.note,
+      itemDetails: itemDetails,
+    );
   }
 
   /// Estimasi selesai diambil dari layanan dengan durasi terpanjang.

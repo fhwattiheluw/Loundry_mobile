@@ -157,6 +157,9 @@ class OrderRepository {
     required List<LaundryService> services,
     required AppUser user,
     int discount = 0,
+    int extraFee = 0,
+    String? extraFeeNote,
+    String? perfume,
     String? note,
     DateTime? estimatedAt,
     int initialPayment = 0,
@@ -175,7 +178,8 @@ class OrderRepository {
 
     final subtotal = _calc.subtotalOf(items);
     final safeDiscount = discount.clamp(0, subtotal);
-    final total = subtotal - safeDiscount;
+    final safeExtra = extraFee < 0 ? 0 : extraFee;
+    final total = _calc.totalOf(items, discount: safeDiscount, extraFee: safeExtra);
     final paid = initialPayment.clamp(0, total);
 
     final estimate =
@@ -197,6 +201,9 @@ class OrderRepository {
             _calc.paymentStatusFor(total: total, paid: paid).name,
         'subtotal': subtotal,
         'discount': safeDiscount,
+        'extra_fee': safeExtra,
+        'extra_fee_note': extraFeeNote,
+        'perfume': perfume,
         'total': total,
         'note': note,
       });

@@ -160,6 +160,7 @@ class OrderItem {
     required this.subtotal,
     this.express = false,
     this.note,
+    this.itemDetails,
   });
 
   final int? id;
@@ -173,6 +174,10 @@ class OrderItem {
   final bool express;
   final String? note;
 
+  /// Rincian isi cucian, misalnya "3 kemeja, 2 celana" (FR-32).
+  /// Inilah yang menyelamatkan pemilik saat pelanggan mengaku ada yang hilang.
+  final String? itemDetails;
+
   OrderItem copyWith({int? orderId}) => OrderItem(
         id: id,
         orderId: orderId ?? this.orderId,
@@ -184,6 +189,7 @@ class OrderItem {
         subtotal: subtotal,
         express: express,
         note: note,
+        itemDetails: itemDetails,
       );
 
   factory OrderItem.fromMap(Map<String, Object?> m) => OrderItem(
@@ -197,6 +203,7 @@ class OrderItem {
         subtotal: m['subtotal'] as int,
         express: (m['express'] as int? ?? 0) == 1,
         note: m['note'] as String?,
+        itemDetails: m['item_details'] as String?,
       );
 
   Map<String, Object?> toMap() => {
@@ -210,6 +217,7 @@ class OrderItem {
         'subtotal': subtotal,
         'express': express ? 1 : 0,
         'note': note,
+        'item_details': itemDetails,
       };
 }
 
@@ -226,6 +234,9 @@ class LaundryOrder {
     required this.subtotal,
     required this.discount,
     required this.total,
+    this.extraFee = 0,
+    this.extraFeeNote,
+    this.perfume,
     this.paid = 0,
     this.note,
     this.pickedUpAt,
@@ -247,6 +258,14 @@ class LaundryOrder {
   final PaymentStatus paymentStatus;
   final int subtotal;
   final int discount;
+
+  /// Biaya tambahan seperti antar-jemput atau kantong khusus (FR-51).
+  final int extraFee;
+  final String? extraFeeNote;
+
+  /// Pewangi yang dipilih pelanggan (FR-12).
+  final String? perfume;
+
   final int total;
 
   /// Dihitung dari tabel payments, bukan disimpan sebagai kolom.
@@ -281,6 +300,9 @@ class LaundryOrder {
         paymentStatus: paymentStatus ?? this.paymentStatus,
         subtotal: subtotal,
         discount: discount,
+        extraFee: extraFee,
+        extraFeeNote: extraFeeNote,
+        perfume: perfume,
         total: total,
         paid: paid ?? this.paid,
         note: note,
@@ -304,6 +326,9 @@ class LaundryOrder {
         paymentStatus: PaymentStatus.fromDb(m['payment_status'] as String),
         subtotal: m['subtotal'] as int,
         discount: m['discount'] as int,
+        extraFee: (m['extra_fee'] as num?)?.toInt() ?? 0,
+        extraFeeNote: m['extra_fee_note'] as String?,
+        perfume: m['perfume'] as String?,
         total: m['total'] as int,
         paid: (m['paid'] as num?)?.toInt() ?? 0,
         note: m['note'] as String?,
@@ -326,6 +351,9 @@ class LaundryOrder {
         'payment_status': paymentStatus.name,
         'subtotal': subtotal,
         'discount': discount,
+        'extra_fee': extraFee,
+        'extra_fee_note': extraFeeNote,
+        'perfume': perfume,
         'total': total,
         'note': note,
         'picked_up_at': pickedUpAt?.toIso8601String(),

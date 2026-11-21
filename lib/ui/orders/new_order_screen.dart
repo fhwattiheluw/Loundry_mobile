@@ -24,11 +24,13 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
   final _phoneController = TextEditingController();
   final _noteController = TextEditingController();
   final _discountController = TextEditingController();
+  final _extraFeeController = TextEditingController();
   final _payController = TextEditingController();
 
   final _items = <OrderItem>[];
   Customer? _customer;
   DateTime? _estimate;
+  String? _perfume;
   String _payMethod = 'Tunai';
   bool _saving = false;
 
@@ -38,6 +40,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
     _phoneController.dispose();
     _noteController.dispose();
     _discountController.dispose();
+    _extraFeeController.dispose();
     _payController.dispose();
     super.dispose();
   }
@@ -49,7 +52,11 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
     return raw.clamp(0, _subtotal);
   }
 
-  int get _total => _subtotal - _discount;
+  int get _extraFee => parseRupiah(_extraFeeController.text);
+
+  // Diskon hanya memotong nilai layanan. Biaya tambahan seperti antar-jemput
+  // adalah ongkos yang sudah terlanjur keluar, jadi tidak ikut didiskon.
+  int get _total => _subtotal - _discount + _extraFee;
 
   int get _payNow => parseRupiah(_payController.text).clamp(0, _total);
 
@@ -155,6 +162,13 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
             user: user,
             shiftId: shift?.id,
             discount: _discount,
+            extraFee: _extraFee,
+            extraFeeNote: _extraFee > 0
+                ? ref
+                    .read(settingsRepoProvider)
+                    .get(SettingsKeys.extraFeeLabel, fallback: 'Biaya lain')
+                : null,
+            perfume: _perfume,
             note: _noteController.text.trim().isEmpty
                 ? null
                 : _noteController.text.trim(),
@@ -404,6 +418,24 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                       prefixIcon: Icon(Icons.discount_outlined),
                     ),
                   ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _extraFeeController,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    onChanged: (_) => setState(() {}),
+                    decoration: InputDecoration(
+                      labelText:
+                          '${ref.watch(settingsRepoProvider).get(SettingsKeys.extraFeeLabel, fallback: 'Biaya lain')} (Rp)',
+                      helperText: 'Tidak ikut didiskon',
+                      prefixIcon: const Icon(Icons.local_shipping_outlined),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _PerfumePicker(
+                    value: _perfume,
+                    onChanged: (v) => setState(() => _perfume = v),
+                  ),
                 ],
               ),
             ),
@@ -447,6 +479,13 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                   _summaryRow('Subtotal', formatRupiah(_subtotal)),
                   if (_discount > 0)
                     _summaryRow('Diskon', '- ${formatRupiah(_discount)}'),
+                  if (_extraFee > 0)
+                    _summaryRow(
+                      ref.watch(settingsRepoProvider).get(
+                          SettingsKeys.extraFeeLabel,
+                          fallback: 'Biaya lain'),
+                      formatRupiah(_extraFee),
+                    ),
                   const Divider(),
                   _summaryRow('Total', formatRupiah(_total), big: true),
                   if (_payNow > 0) ...[
@@ -508,6 +547,44 @@ class _Label extends StatelessWidget {
         child: Text(text,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
       );
+}
+
+/// Pilihan pewangi (FR-12). Daftarnya diatur pemilik di Pengaturan,
+/// karena tiap laundry memakai merek yang berbeda.
+class _PerfumePicker extends ConsumerWidget {
+  const _PerfumePicker({required this.value, required this.onChanged});
+
+  final String? value;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final perfumes =
+        ref.watch(settingsRepoProvider).getList(SettingsKeys.perfumes);
+
+    if (perfumes.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Parfum', style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final perfume in perfumes)
+              ChoiceChip(
+                label: Text(perfume),
+                selected: value == perfume,
+                onSelected: (selected) =>
+                    onChanged(selected ? perfume : null),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
 }
 
 class _MethodSelector extends ConsumerWidget {
@@ -623,6 +700,7 @@ class _ServicePicker extends ConsumerStatefulWidget {
 class _ServicePickerState extends ConsumerState<_ServicePicker> {
   final _qtyController = TextEditingController();
   final _noteController = TextEditingController();
+  final _detailsController = TextEditingController();
 
   LaundryService? _service;
   bool _express = false;
@@ -631,6 +709,7 @@ class _ServicePickerState extends ConsumerState<_ServicePicker> {
   void dispose() {
     _qtyController.dispose();
     _noteController.dispose();
+    _detailsController.dispose();
     super.dispose();
   }
 
@@ -640,13 +719,16 @@ class _ServicePickerState extends ConsumerState<_ServicePicker> {
 
     if (service == null || qty <= 0) return;
 
-    final item = ref.read(calculatorProvider).buildItem(
+    final item = ref.read(calculatorProvider).buildItemWithDetails(
           service,
           qty,
           express: _express,
           note: _noteController.text.trim().isEmpty
               ? null
               : _noteController.text.trim(),
+          itemDetails: _detailsController.text.trim().isEmpty
+              ? null
+              : _detailsController.text.trim(),
         );
 
     Navigator.pop(context, item);
@@ -720,6 +802,17 @@ class _ServicePickerState extends ConsumerState<_ServicePicker> {
                     'harga ×${_service!.expressMultiplier}',
                   ),
                 ),
+                TextField(
+                  controller: _detailsController,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(
+                    labelText: 'Rincian isi (opsional)',
+                    hintText: '3 kemeja, 2 celana, 1 jaket',
+                    helperText: 'Tercetak di nota, berguna saat ada klaim',
+                    helperMaxLines: 2,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: _noteController,
                   decoration: const InputDecoration(

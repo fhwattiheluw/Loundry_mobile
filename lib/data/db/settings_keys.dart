@@ -15,6 +15,10 @@ abstract final class SettingsKeys {
   static const reminderDays = 'reminder_days';
   static const maxCashierDiscount = 'max_cashier_discount';
   static const paymentMethods = 'payment_methods';
+  static const perfumes = 'perfumes';
+  static const extraFeeLabel = 'extra_fee_label';
+  static const receiptQrEnabled = 'receipt_qr_enabled';
+  static const receiptLogoPath = 'receipt_logo_path';
 
   static const adsEnabled = 'ads_enabled';
 

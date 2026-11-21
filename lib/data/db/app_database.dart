@@ -16,7 +16,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const _fileName = 'laundry_pos.db';
-  static const _schemaVersion = 2;
+  static const _schemaVersion = 3;
 
   final _key = const DatabaseKey();
 
@@ -44,6 +44,7 @@ class AppDatabase {
       onCreate: (db, version) async {
         await _v1(db);
         await _v2(db);
+        await _v3(db);
         await seedInitialData(db);
       },
       onUpgrade: _migrate,
@@ -71,6 +72,7 @@ class AppDatabase {
       onCreate: (db, _) async {
         await _v1(db);
         await _v2(db);
+        await _v3(db);
         await seedInitialData(db);
       },
     );
@@ -82,6 +84,23 @@ class AppDatabase {
   /// lama dari versi mana pun sampai ke bentuk skema yang sama.
   Future<void> _migrate(sql.Database db, int from, int to) async {
     if (from < 2) await _v2(db);
+    if (from < 3) await _v3(db);
+  }
+
+  /// Versi 3: tambahan per order yang diminta di lapangan.
+  ///
+  /// - `perfume`: pilihan pewangi (FR-12)
+  /// - `extra_fee` dan `extra_fee_note`: biaya antar-jemput atau kantong
+  ///   khusus (FR-51)
+  /// - `order_items.item_details`: rincian isi cucian, misalnya
+  ///   "3 kemeja, 2 celana", yang menyelamatkan pemilik saat ada klaim
+  ///   cucian hilang (FR-32)
+  Future<void> _v3(sql.Database db) async {
+    await db.execute('ALTER TABLE orders ADD COLUMN perfume TEXT');
+    await db.execute(
+        'ALTER TABLE orders ADD COLUMN extra_fee INTEGER NOT NULL DEFAULT 0');
+    await db.execute('ALTER TABLE orders ADD COLUMN extra_fee_note TEXT');
+    await db.execute('ALTER TABLE order_items ADD COLUMN item_details TEXT');
   }
 
   /// Versi 2: antrean kirim ulang notifikasi (FR-69).

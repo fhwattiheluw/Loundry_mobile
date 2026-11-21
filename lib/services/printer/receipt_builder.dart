@@ -59,6 +59,13 @@ class ReceiptBuilder {
           '${formatQty(item.qty)} ${item.unit.label} x ${formatPlain(item.unitPrice)}';
       bytes.addAll(_row(g, qtyLabel, formatPlain(item.subtotal)));
 
+      // Rincian isi cucian dicetak di nota, bukan hanya disimpan, karena
+      // inilah bukti yang dipegang kedua pihak saat ada klaim (FR-32).
+      if (item.itemDetails != null && item.itemDetails!.trim().isNotEmpty) {
+        bytes.addAll(g.text('  Isi: ${_ascii(item.itemDetails!)}',
+            styles: const PosStyles(fontType: PosFontType.fontB)));
+      }
+
       if (item.note != null && item.note!.trim().isNotEmpty) {
         bytes.addAll(g.text('  ${_ascii(item.note!)}',
             styles: const PosStyles(fontType: PosFontType.fontB)));
@@ -72,6 +79,13 @@ class ReceiptBuilder {
       bytes.addAll(_row(g, 'Diskon', '-${formatPlain(order.discount)}'));
     }
 
+    if (order.extraFee > 0) {
+      final label = order.extraFeeNote?.trim().isNotEmpty == true
+          ? _ascii(order.extraFeeNote!)
+          : _settings.get(SettingsKeys.extraFeeLabel, fallback: 'Biaya lain');
+      bytes.addAll(_row(g, label, formatPlain(order.extraFee)));
+    }
+
     bytes.addAll(_row(g, 'TOTAL', formatPlain(order.total), bold: true));
     bytes.addAll(_row(g, 'Dibayar', formatPlain(order.paid)));
 
@@ -83,6 +97,11 @@ class ReceiptBuilder {
           styles: const PosStyles(align: PosAlign.center, bold: true)));
     }
 
+    if (order.perfume != null && order.perfume!.trim().isNotEmpty) {
+      bytes.addAll(g.text(_line()));
+      bytes.addAll(_kv(g, 'Parfum', _ascii(order.perfume!)));
+    }
+
     if (order.note != null && order.note!.trim().isNotEmpty) {
       bytes.addAll(g.text(_line()));
       bytes.addAll(g.text('Catatan: ${_ascii(order.note!)}'));
@@ -91,6 +110,22 @@ class ReceiptBuilder {
     bytes.addAll(g.text(_line()));
     bytes.addAll(g.text('Kasir: ${_ascii(cashierName)}',
         styles: const PosStyles(fontType: PosFontType.fontB)));
+
+    // QR berisi nomor nota, untuk dipindai saat pengambilan (FR-89).
+    // Tidak semua printer murah mendukung perintah QR, jadi kegagalannya
+    // tidak boleh membatalkan sisa nota yang sudah tersusun.
+    if (_settings.getBool(SettingsKeys.receiptQrEnabled)) {
+      try {
+        bytes.addAll(g.feed(1));
+        bytes.addAll(g.qrcode(order.orderNo, size: QRSize.size4));
+        bytes.addAll(g.text(order.orderNo,
+            styles: const PosStyles(
+                align: PosAlign.center, fontType: PosFontType.fontB)));
+      } catch (_) {
+        bytes.addAll(g.text(order.orderNo,
+            styles: const PosStyles(align: PosAlign.center)));
+      }
+    }
 
     bytes.addAll(_footer(g));
     return bytes;

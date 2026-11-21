@@ -127,6 +127,14 @@ class _Body extends ConsumerWidget {
                 title: const Text('Estimasi selesai'),
                 subtitle: Text(formatDateTime(order.estimatedAt)),
               ),
+              if (order.perfume != null && order.perfume!.isNotEmpty) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.local_florist_outlined),
+                  title: const Text('Parfum'),
+                  subtitle: Text(order.perfume!),
+                ),
+              ],
               if (order.note != null && order.note!.isNotEmpty) ...[
                 const Divider(height: 1),
                 ListTile(
@@ -173,6 +181,14 @@ class _Body extends ConsumerWidget {
                                   fontSize: 12.5,
                                   color: scheme.onSurfaceVariant),
                             ),
+                            if (item.itemDetails != null &&
+                                item.itemDetails!.isNotEmpty)
+                              Text(
+                                'Isi: ${item.itemDetails}',
+                                style: TextStyle(
+                                    fontSize: 12.5,
+                                    color: scheme.onSurfaceVariant),
+                              ),
                             if (item.note != null && item.note!.isNotEmpty)
                               Text(item.note!,
                                   style: TextStyle(
@@ -193,6 +209,14 @@ class _Body extends ConsumerWidget {
                 _row(context, 'Subtotal', formatRupiah(order.subtotal)),
                 if (order.discount > 0)
                   _row(context, 'Diskon', '- ${formatRupiah(order.discount)}'),
+                if (order.extraFee > 0)
+                  _row(
+                    context,
+                    order.extraFeeNote?.isNotEmpty == true
+                        ? order.extraFeeNote!
+                        : 'Biaya tambahan',
+                    formatRupiah(order.extraFee),
+                  ),
                 _row(context, 'Total', formatRupiah(order.total), big: true),
                 _row(context, 'Sudah dibayar', formatRupiah(order.paid)),
                 if (order.remaining > 0)

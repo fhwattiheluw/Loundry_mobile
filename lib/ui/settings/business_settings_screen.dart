@@ -42,6 +42,14 @@ class _BusinessSettingsScreenState
       'Batas diskon kasir (Rp)',
       'Diskon di atas ini butuh PIN Owner',
     ),
+    SettingsKeys.perfumes: (
+      'Pilihan parfum',
+      'Pisahkan dengan koma. Kosongkan bila tidak memakai parfum',
+    ),
+    SettingsKeys.extraFeeLabel: (
+      'Nama biaya tambahan',
+      'Contoh: Antar-jemput, Kantong khusus',
+    ),
   };
 
   @override
