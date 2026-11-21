@@ -5,9 +5,12 @@ import '../data/repositories/master_repository.dart';
 import '../data/repositories/order_repository.dart';
 import '../data/repositories/report_repository.dart';
 import '../data/repositories/settings_repository.dart';
+import '../data/repositories/shift_repository.dart';
 import '../domain/models/models.dart';
 import '../domain/price_calculator.dart';
 import '../services/ads/ad_service.dart';
+import '../services/backup/backup_service.dart';
+import '../services/export/export_service.dart';
 import '../services/notification/message_template.dart';
 import '../services/notification/notification_service.dart';
 import '../services/printer/receipt_builder.dart';
@@ -55,6 +58,24 @@ final reportRepoProvider = Provider<ReportRepository>(
   (ref) => ReportRepository(ref.watch(databaseProvider)),
 );
 
+final shiftRepoProvider = Provider<ShiftRepository>(
+  (ref) => ShiftRepository(ref.watch(databaseProvider)),
+);
+
+/// Shift yang sedang terbuka untuk pengguna yang login.
+/// Null berarti kasir belum membuka shift.
+final currentShiftProvider = FutureProvider<Shift?>((ref) async {
+  final user = ref.watch(sessionProvider);
+  if (user == null) return null;
+  return ref.watch(shiftRepoProvider).openShiftOf(user.id!);
+});
+
+final shiftTotalsProvider = FutureProvider<ShiftTotals>((ref) async {
+  final shift = await ref.watch(currentShiftProvider.future);
+  if (shift == null) return ShiftTotals.empty;
+  return ref.watch(shiftRepoProvider).totalsOf(shift);
+});
+
 // --------------------------------------------------------------- layanan
 
 final printerProvider = Provider<ReceiptPrinter>(
@@ -79,6 +100,14 @@ final notificationServiceProvider = Provider<NotificationService>(
 
 final adServiceProvider = Provider<AdService>(
   (ref) => AdService(ref.watch(settingsRepoProvider)),
+);
+
+final backupServiceProvider = Provider<BackupService>(
+  (ref) => BackupService(ref.watch(databaseProvider)),
+);
+
+final exportServiceProvider = Provider<ExportService>(
+  (ref) => const ExportService(),
 );
 
 // --------------------------------------------------------------- sesi
@@ -208,5 +237,6 @@ extension RefreshData on WidgetRef {
     invalidate(revenueByMethodProvider);
     invalidate(revenueByCashierProvider);
     invalidate(receivablesProvider);
+    invalidate(shiftTotalsProvider);
   }
 }

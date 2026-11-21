@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
+import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
+import '../shift/shift_screen.dart';
+import 'backup_settings_screen.dart';
 import 'business_settings_screen.dart';
 import 'printer_settings_screen.dart';
 import 'service_settings_screen.dart';
@@ -34,6 +37,43 @@ class SettingsScreen extends ConsumerWidget {
                 icon: const Icon(Icons.logout, size: 18),
                 label: const Text('Keluar'),
               ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+          const _Heading('Kas'),
+          Card(
+            child: Column(
+              children: [
+                Consumer(
+                  builder: (context, ref, _) {
+                    final shift = ref.watch(currentShiftProvider);
+                    return ListTile(
+                      leading: const Icon(Icons.point_of_sale_outlined),
+                      title: const Text('Shift kasir'),
+                      subtitle: Text(
+                        shift.maybeWhen(
+                          data: (s) => s == null
+                              ? 'Belum dibuka'
+                              : 'Berjalan sejak ${formatDateTime(s.openedAt)}',
+                          orElse: () => 'Memuat...',
+                        ),
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _open(context, const ShiftScreen()),
+                    );
+                  },
+                ),
+                if (isOwner) ...[
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.history),
+                    title: const Text('Riwayat shift dan selisih kas'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _open(context, const ShiftHistoryScreen()),
+                  ),
+                ],
+              ],
             ),
           ),
 
@@ -95,6 +135,15 @@ class SettingsScreen extends ConsumerWidget {
                     title: const Text('Pengguna dan PIN'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _open(context, const UserSettingsScreen()),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.backup_outlined),
+                    title: const Text('Backup dan restore'),
+                    subtitle: const Text(
+                        'Data hanya ada di ponsel ini. Bagikan backup rutin.'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _open(context, const BackupSettingsScreen()),
                   ),
                 ],
               ),

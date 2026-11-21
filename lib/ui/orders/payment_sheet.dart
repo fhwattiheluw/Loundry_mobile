@@ -66,11 +66,14 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
     final user = ref.read(currentUserProvider);
 
     try {
+      final shift = await ref.read(currentShiftProvider.future);
+
       await ref.read(orderRepoProvider).addPayment(
             orderId: widget.order.id!,
             amount: _amount,
             method: _method,
             user: user,
+            shiftId: shift?.id,
           );
 
       final fresh = await ref.read(orderRepoProvider).byId(widget.order.id!);

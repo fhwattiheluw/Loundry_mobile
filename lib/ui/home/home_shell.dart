@@ -27,6 +27,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     // melarang interstitial yang terpicu setelah setiap aksi pengguna.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(adServiceProvider).maybeShowSessionInterstitial();
+
+      // Backup otomatis maksimal sekali sehari. Data aplikasi ini hanya ada
+      // di satu perangkat, jadi salinan harian adalah pengaman paling murah.
+      ref.read(backupServiceProvider).autoBackupIfDue();
     });
   }
 

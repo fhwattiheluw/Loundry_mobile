@@ -2,8 +2,8 @@ import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 
 import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
-import '../../data/repositories/report_repository.dart';
 import '../../data/repositories/settings_repository.dart';
+import '../../data/repositories/shift_repository.dart';
 import '../../domain/models/models.dart';
 
 /// Menyusun perintah ESC/POS untuk nota.
@@ -131,8 +131,7 @@ class ReceiptBuilder {
   Future<List<int>> buildShiftReport(
     Shift shift, {
     required String cashierName,
-    required RevenueSummary summary,
-    required List<NamedAmount> byMethod,
+    required ShiftTotals totals,
   }) async {
     final profile = await CapabilityProfile.load();
     final g = Generator(_paperSize, profile);
@@ -149,16 +148,18 @@ class ReceiptBuilder {
         shift.closedAt == null ? '-' : formatDateTime(shift.closedAt!)));
     bytes.addAll(g.text(_line()));
 
-    bytes.addAll(_row(g, 'Jumlah order', summary.orderCount.toString()));
-    bytes.addAll(_row(g, 'Uang masuk', formatPlain(summary.cashIn)));
+    bytes.addAll(_row(g, 'Jumlah order', totals.orderCount.toString()));
+    bytes.addAll(
+        _row(g, 'Jumlah pembayaran', totals.paymentCount.toString()));
+    bytes.addAll(_row(g, 'Uang masuk', formatPlain(totals.cashIn)));
 
-    if (summary.refundTotal > 0) {
-      bytes.addAll(_row(g, 'Refund', '-${formatPlain(summary.refundTotal)}'));
+    if (totals.refundTotal > 0) {
+      bytes.addAll(_row(g, 'Refund', '-${formatPlain(totals.refundTotal)}'));
     }
 
     bytes.addAll(g.text(_line()));
-    for (final method in byMethod) {
-      bytes.addAll(_row(g, _ascii(method.name), formatPlain(method.amount)));
+    for (final entry in totals.byMethod.entries) {
+      bytes.addAll(_row(g, _ascii(entry.key), formatPlain(entry.value)));
     }
 
     bytes.addAll(g.text(_line()));

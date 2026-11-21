@@ -48,10 +48,22 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 - Template bisa diedit dengan variabel seperti `{nama}` dan `{no_order}`
 - Log kirim lengkap, dan satu pemicu tidak terkirim dua kali
 
+**Shift kasir**
+- Buka shift dengan kas awal, tutup dengan kas fisik hitungan tangan
+- Kas seharusnya dihitung otomatis: kas awal ditambah pembayaran tunai
+- Selisih kas langsung terlihat, dan laporan tutup shift bisa dicetak
+- Riwayat shift beserta selisihnya untuk Owner
+
 **Laporan**
 - Pendapatan harian, periode bebas, per layanan, per metode bayar, per kasir
 - Grafik tren harian
 - Daftar piutang dengan umur tagihan
+- Ekspor CSV untuk Excel, dan PDF siap cetak
+
+**Backup**
+- Backup otomatis harian ke penyimpanan aplikasi, tujuh salinan terakhir
+- Bagikan backup ke WhatsApp, email, atau Google Drive
+- Restore dari berkas, dengan salinan pengaman sebelum menimpa
 
 **Pengguna**
 - Login PIN, dua peran: Owner dan Kasir
@@ -130,6 +142,7 @@ Yang diuji:
 | --- | --- |
 | `test/price_calculator_test.dart` | Pembulatan berat, minimum, express, diskon, status bayar, estimasi selesai, kembalian |
 | `test/report_repository_test.dart` | Nomor order urut, pendapatan dari pembayaran, refund, pembatalan, piutang, grafik harian |
+| `test/shift_repository_test.dart` | Buka dan tutup shift, kas seharusnya, selisih kas, pemisahan tunai dan non-tunai |
 | `test/security_test.dart` | Normalisasi dan validasi nomor HP, hash PIN, format rupiah |
 
 Uji laporan memakai SQLite sungguhan lewat `sqflite_common_ffi`, bukan tiruan,
@@ -166,6 +179,7 @@ flutter build appbundle --release \
 | --- | --- |
 | Beranda, daftar order, laporan | Banner, berjarak 24 dp dari tombol mana pun |
 | Setelah login | Interstitial, maksimal sekali per sesi |
+| Ekspor laporan PDF | Rewarded ad opsional, bisa ditolak; ekspor CSV selalu gratis |
 | Input order, pembayaran, proses cetak | **Tidak ada iklan** |
 
 Penempatan ini mengikuti kebijakan AdMob, yang melarang interstitial terpicu

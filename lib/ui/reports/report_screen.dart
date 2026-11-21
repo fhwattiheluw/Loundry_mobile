@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
+import '../../data/db/settings_keys.dart';
 import '../../data/repositories/report_repository.dart';
 import '../../services/ads/ad_service.dart';
 import '../widgets/stat_tile.dart';
@@ -34,6 +35,29 @@ class ReportScreen extends ConsumerWidget {
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const ReceivablesScreen()),
             ),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'Ekspor',
+            icon: const Icon(Icons.ios_share),
+            onSelected: (value) => _export(context, ref, asPdf: value == 'pdf'),
+            itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'csv',
+                child: ListTile(
+                  leading: Icon(Icons.table_chart_outlined),
+                  title: Text('Ekspor CSV'),
+                  subtitle: Text('Buka di Excel'),
+                ),
+              ),
+              PopupMenuItem(
+                value: 'pdf',
+                child: ListTile(
+                  leading: Icon(Icons.picture_as_pdf_outlined),
+                  title: Text('Ekspor PDF'),
+                  subtitle: Text('Siap dicetak atau dikirim'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -184,6 +208,86 @@ class ReportScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Ekspor laporan.
+  ///
+  /// CSV selalu gratis supaya pemilik tidak pernah terhalang mengambil
+  /// datanya sendiri. PDF ditawarkan lewat rewarded ad yang benar-benar
+  /// bisa ditolak, sesuai format iklan yang memang diizinkan AdMob.
+  Future<void> _export(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool asPdf,
+  }) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final range = ref.read(reportRangeProvider);
+    final settings = ref.read(settingsRepoProvider);
+    final ads = ref.read(adServiceProvider);
+
+    if (asPdf && ads.enabled && ads.rewardedReady) {
+      final accepted = await offerRewardedAd(
+        context,
+        title: 'Ekspor PDF',
+        description:
+            'Tonton satu iklan singkat untuk membuat laporan PDF. '
+            'Ekspor CSV dengan data yang sama selalu tersedia tanpa iklan.',
+        rewardLabel: 'Hadiah: laporan PDF siap cetak',
+      );
+
+      if (!accepted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Dibatalkan. Ekspor CSV tersedia tanpa iklan.'),
+          ),
+        );
+        return;
+      }
+
+      final watched = await ads.showRewarded();
+      if (!watched) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Iklan tidak selesai ditonton. Coba lagi, '
+                'atau pakai ekspor CSV.'),
+          ),
+        );
+        return;
+      }
+    }
+
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Menyiapkan laporan...')),
+    );
+
+    final summary = await ref.read(revenueSummaryProvider.future);
+    final byService = await ref.read(revenueByServiceProvider.future);
+    final byMethod = await ref.read(revenueByMethodProvider.future);
+    final exporter = ref.read(exportServiceProvider);
+
+    final result = asPdf
+        ? await exporter.exportPdf(
+            from: range.from,
+            to: range.to,
+            businessName: settings.get(SettingsKeys.businessName),
+            businessAddress: settings.get(SettingsKeys.businessAddress),
+            summary: summary,
+            byService: byService,
+            byMethod: byMethod,
+          )
+        : await exporter.exportCsv(
+            from: range.from,
+            to: range.to,
+            businessName: settings.get(SettingsKeys.businessName),
+            summary: summary,
+            daily: await ref.read(dailyRevenueProvider.future),
+            byService: byService,
+            byMethod: byMethod,
+          );
+
+    if (!result.success) {
+      messenger.showSnackBar(SnackBar(content: Text(result.message)));
+    }
   }
 
   Future<void> _pickRange(BuildContext context, WidgetRef ref) async {

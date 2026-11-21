@@ -144,11 +144,16 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
 
       final services = await ref.read(servicesProvider.future);
 
+      // Pembayaran dikaitkan ke shift yang sedang terbuka, supaya kas laci
+      // bisa dicocokkan saat tutup shift. Null bila kasir belum buka shift.
+      final shift = await ref.read(currentShiftProvider.future);
+
       final order = await ref.read(orderRepoProvider).create(
             customer: customer,
             items: _items,
             services: services,
             user: user,
+            shiftId: shift?.id,
             discount: _discount,
             note: _noteController.text.trim().isEmpty
                 ? null
