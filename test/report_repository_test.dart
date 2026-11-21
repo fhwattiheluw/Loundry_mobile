@@ -147,6 +147,43 @@ void main() {
       expect(payments.last.amount, -8000);
     });
 
+    test('refund memunculkan sisa tagihan yang sama di ringkasan dan daftar',
+        () async {
+      final order = await buatOrder(bayar: 28000);
+
+      await orders.refund(
+        orderId: order.id!,
+        amount: 8000,
+        user: owner,
+        reason: 'Salah hitung',
+      );
+
+      final summary = await reports.summary(DateTime.now(), DateTime.now());
+      final rows = await reports.receivables();
+      final totalDaftar = rows.fold(0, (sum, r) => sum + r.remaining);
+
+      expect(summary.newReceivable, 8000);
+      expect(totalDaftar, summary.newReceivable,
+          reason: 'ringkasan dan daftar piutang harus sepakat');
+    });
+
+    test('kelebihan bayar satu order tidak mengurangi piutang order lain',
+        () async {
+      await buatOrder(bayar: 0);
+
+      final lebih = await buatOrder(bayar: 28000);
+      await orders.addPayment(
+        orderId: lebih.id!,
+        amount: 5000,
+        method: 'Tunai',
+        user: owner,
+      );
+
+      final summary = await reports.summary(DateTime.now(), DateTime.now());
+
+      expect(summary.newReceivable, 28000);
+    });
+
     test('order dibatalkan keluar dari hitungan order', () async {
       final order = await buatOrder();
       await orders.cancel(order.id!, user: owner, reason: 'Pelanggan batal');

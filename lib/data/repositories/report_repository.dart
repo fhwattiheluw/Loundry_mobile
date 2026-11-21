@@ -114,9 +114,12 @@ class ReportRepository {
       [a, b],
     );
 
+    // MAX(0, ...) per order, bukan pada hasil penjumlahan. Tanpa itu, order
+    // yang kelebihan bayar akan mengurangi piutang order lain, dan angkanya
+    // tidak akan cocok dengan daftar piutang di layar tersendiri.
     final receivableRows = await db.rawQuery(
-      'SELECT COALESCE(SUM(o.total - COALESCE('
-      '(SELECT SUM(p.amount) FROM payments p WHERE p.order_id = o.id), 0)), 0) AS sisa '
+      'SELECT COALESCE(SUM(MAX(0, o.total - COALESCE('
+      '(SELECT SUM(p.amount) FROM payments p WHERE p.order_id = o.id), 0))), 0) AS sisa '
       "FROM orders o WHERE o.laundry_status != 'dibatalkan' "
       'AND o.created_at BETWEEN ? AND ?',
       [a, b],
@@ -233,6 +236,10 @@ class ReportRepository {
   }
 
   /// Seluruh piutang yang masih terbuka, bukan hanya periode tertentu.
+  ///
+  /// Sisa dihitung langsung dari tabel payments, bukan dari kolom
+  /// payment_status. Kolom turunan bisa tertinggal dari sumbernya; hasil
+  /// hitungan ini selalu cocok dengan angka piutang di ringkasan laporan.
   Future<List<ReceivableRow>> receivables() async {
     final db = await _db.database;
 
@@ -243,7 +250,6 @@ class ReportRepository {
       FROM orders o
       JOIN customers c ON c.id = o.customer_id
       WHERE o.laundry_status != 'dibatalkan'
-        AND o.payment_status != 'lunas'
       ORDER BY o.created_at ASC
     ''');
 
