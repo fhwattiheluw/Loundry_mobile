@@ -1,0 +1,162 @@
+import 'package:sqflite/sqflite.dart';
+
+import '../../core/security.dart';
+import '../../domain/models/models.dart';
+import '../db/app_database.dart';
+
+class CustomerRepository {
+  CustomerRepository(this._db);
+
+  final AppDatabase _db;
+
+  Future<List<Customer>> search(String query, {int limit = 30}) async {
+    final db = await _db.database;
+    final term = query.trim();
+
+    final rows = term.isEmpty
+        ? await db.query('customers', orderBy: 'name COLLATE NOCASE', limit: limit)
+        : await db.query(
+            'customers',
+            where: 'name LIKE ? OR phone LIKE ?',
+            whereArgs: ['%$term%', '%${normalizePhone(term)}%'],
+            orderBy: 'name COLLATE NOCASE',
+            limit: limit,
+          );
+
+    return rows.map(Customer.fromMap).toList();
+  }
+
+  Future<Customer?> findByPhone(String rawPhone) async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'customers',
+      where: 'phone = ?',
+      whereArgs: [normalizePhone(rawPhone)],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : Customer.fromMap(rows.first);
+  }
+
+  Future<Customer?> findById(int id) async {
+    final db = await _db.database;
+    final rows =
+        await db.query('customers', where: 'id = ?', whereArgs: [id], limit: 1);
+    return rows.isEmpty ? null : Customer.fromMap(rows.first);
+  }
+
+  /// Menyimpan pelanggan baru, atau mengembalikan yang sudah ada bila
+  /// nomornya sama. Duplikat pelanggan adalah sumber kekacauan paling umum
+  /// di data laundry.
+  Future<Customer> saveOrGet(Customer customer) async {
+    final existing = await findByPhone(customer.phone);
+    if (existing != null) return existing;
+
+    final db = await _db.database;
+    final id = await db.insert('customers', {
+      ...customer.toMap(),
+      'phone': normalizePhone(customer.phone),
+      'created_at': DateTime.now().toIso8601String(),
+    });
+
+    return customer.copyWith(id: id, phone: normalizePhone(customer.phone));
+  }
+
+  Future<void> update(Customer customer) async {
+    final db = await _db.database;
+    await db.update(
+      'customers',
+      {...customer.toMap(), 'phone': normalizePhone(customer.phone)},
+      where: 'id = ?',
+      whereArgs: [customer.id],
+    );
+  }
+}
+
+class ServiceRepository {
+  ServiceRepository(this._db);
+
+  final AppDatabase _db;
+
+  Future<List<LaundryService>> all({bool activeOnly = true}) async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'services',
+      where: activeOnly ? 'active = 1' : null,
+      orderBy: 'active DESC, name COLLATE NOCASE',
+    );
+    return rows.map(LaundryService.fromMap).toList();
+  }
+
+  Future<int> insert(LaundryService service) async {
+    final db = await _db.database;
+    return db.insert('services', service.toMap());
+  }
+
+  Future<void> update(LaundryService service) async {
+    final db = await _db.database;
+    await db.update('services', service.toMap(),
+        where: 'id = ?', whereArgs: [service.id]);
+  }
+
+  /// Layanan tidak pernah dihapus, hanya dinonaktifkan, supaya nota lama
+  /// yang memakainya tetap bisa dibaca.
+  Future<void> deactivate(int id) async {
+    final db = await _db.database;
+    await db.update('services', {'active': 0},
+        where: 'id = ?', whereArgs: [id]);
+  }
+}
+
+class UserRepository {
+  UserRepository(this._db);
+
+  final AppDatabase _db;
+
+  Future<List<AppUser>> all({bool activeOnly = true}) async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'users',
+      where: activeOnly ? 'active = 1' : null,
+      orderBy: 'role, name',
+    );
+    return rows.map(AppUser.fromMap).toList();
+  }
+
+  Future<AppUser?> authenticate(String pin) async {
+    final db = await _db.database;
+    final rows = await db.query('users', where: 'active = 1');
+
+    for (final row in rows) {
+      final user = AppUser.fromMap(row);
+      if (verifyPin(pin, user.pinHash)) return user;
+    }
+    return null;
+  }
+
+  Future<int> insert(AppUser user) async {
+    final db = await _db.database;
+    return db.insert('users', user.toMap());
+  }
+
+  Future<void> setPin(int userId, String newPin) async {
+    final db = await _db.database;
+    await db.update('users', {'pin_hash': hashPin(newPin)},
+        where: 'id = ?', whereArgs: [userId]);
+  }
+
+  Future<void> deactivate(int userId) async {
+    final db = await _db.database;
+    await db.update('users', {'active': 0},
+        where: 'id = ?', whereArgs: [userId]);
+  }
+
+  /// Mencegah pemilik mengunci dirinya sendiri keluar dari aplikasi.
+  Future<bool> isLastOwner(int userId) async {
+    final db = await _db.database;
+    final result = await db.rawQuery(
+      "SELECT COUNT(*) AS c FROM users WHERE role = 'owner' AND active = 1 AND id != ?",
+      [userId],
+    );
+    return (Sqflite.firstIntValue(result) ?? 0) == 0;
+  }
+}

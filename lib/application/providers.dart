@@ -1,0 +1,213 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../data/db/app_database.dart';
+import '../data/repositories/master_repository.dart';
+import '../data/repositories/order_repository.dart';
+import '../data/repositories/report_repository.dart';
+import '../data/repositories/settings_repository.dart';
+import '../domain/models/enums.dart';
+import '../domain/models/models.dart';
+import '../domain/price_calculator.dart';
+import '../services/ads/ad_service.dart';
+import '../services/notification/message_template.dart';
+import '../services/notification/notification_service.dart';
+import '../services/printer/receipt_builder.dart';
+import '../services/printer/receipt_printer.dart';
+
+// ------------------------------------------------------------------- dasar
+
+final databaseProvider = Provider<AppDatabase>((ref) => AppDatabase.instance);
+
+final calculatorProvider = Provider<PriceCalculator>(
+  (ref) => const PriceCalculator(),
+);
+
+final settingsRepoProvider = Provider<SettingsRepository>(
+  (ref) => SettingsRepository(ref.watch(databaseProvider)),
+);
+
+/// Pengaturan dimuat sekali di awal, lalu dipakai banyak layar.
+final settingsLoadedProvider = FutureProvider<Map<String, String>>(
+  (ref) => ref.watch(settingsRepoProvider).loadAll(),
+);
+
+// ------------------------------------------------------------------- data
+
+final customerRepoProvider = Provider<CustomerRepository>(
+  (ref) => CustomerRepository(ref.watch(databaseProvider)),
+);
+
+final serviceRepoProvider = Provider<ServiceRepository>(
+  (ref) => ServiceRepository(ref.watch(databaseProvider)),
+);
+
+final userRepoProvider = Provider<UserRepository>(
+  (ref) => UserRepository(ref.watch(databaseProvider)),
+);
+
+final orderRepoProvider = Provider<OrderRepository>(
+  (ref) => OrderRepository(
+    ref.watch(databaseProvider),
+    calculator: ref.watch(calculatorProvider),
+  ),
+);
+
+final reportRepoProvider = Provider<ReportRepository>(
+  (ref) => ReportRepository(ref.watch(databaseProvider)),
+);
+
+// --------------------------------------------------------------- layanan
+
+final printerProvider = Provider<ReceiptPrinter>(
+  (ref) => ReceiptPrinter(ref.watch(settingsRepoProvider)),
+);
+
+final receiptBuilderProvider = Provider<ReceiptBuilder>(
+  (ref) => ReceiptBuilder(ref.watch(settingsRepoProvider)),
+);
+
+final messageTemplateProvider = Provider<MessageTemplate>(
+  (ref) => MessageTemplate(ref.watch(settingsRepoProvider)),
+);
+
+final notificationServiceProvider = Provider<NotificationService>(
+  (ref) => NotificationService(
+    ref.watch(databaseProvider),
+    ref.watch(messageTemplateProvider),
+    const WhatsAppManualSender(),
+  ),
+);
+
+final adServiceProvider = Provider<AdService>(
+  (ref) => AdService(ref.watch(settingsRepoProvider)),
+);
+
+// --------------------------------------------------------------- sesi
+
+/// Pengguna yang sedang login. Null berarti layar PIN.
+class SessionController extends StateNotifier<AppUser?> {
+  SessionController() : super(null);
+
+  void signIn(AppUser user) => state = user;
+  void signOut() => state = null;
+}
+
+final sessionProvider =
+    StateNotifierProvider<SessionController, AppUser?>((ref) => SessionController());
+
+final currentUserProvider = Provider<AppUser>((ref) {
+  final user = ref.watch(sessionProvider);
+  if (user == null) {
+    throw StateError('Layar ini hanya boleh dibuka setelah login.');
+  }
+  return user;
+});
+
+// --------------------------------------------------------------- daftar
+
+final servicesProvider = FutureProvider<List<LaundryService>>(
+  (ref) => ref.watch(serviceRepoProvider).all(),
+);
+
+final orderFilterProvider = StateProvider<OrderFilter>(
+  (ref) => const OrderFilter(),
+);
+
+final orderListProvider = FutureProvider<List<LaundryOrder>>((ref) {
+  final filter = ref.watch(orderFilterProvider);
+  return ref.watch(orderRepoProvider).find(filter);
+});
+
+final orderDetailProvider =
+    FutureProvider.family<LaundryOrder?, int>((ref, id) {
+  return ref.watch(orderRepoProvider).byId(id);
+});
+
+/// Order selesai yang sudah lewat batas hari dan belum diambil.
+final staleOrdersProvider = FutureProvider<List<LaundryOrder>>((ref) async {
+  await ref.watch(settingsLoadedProvider.future);
+  final days = ref.watch(settingsRepoProvider).getInt('reminder_days', fallback: 3);
+  return ref.watch(orderRepoProvider).staleOrders(days);
+});
+
+// --------------------------------------------------------------- laporan
+
+class ReportRange {
+  const ReportRange(this.from, this.to, this.label);
+
+  final DateTime from;
+  final DateTime to;
+  final String label;
+
+  static ReportRange today() {
+    final now = DateTime.now();
+    return ReportRange(now, now, 'Hari ini');
+  }
+
+  static ReportRange thisWeek() {
+    final now = DateTime.now();
+    final start = now.subtract(Duration(days: now.weekday - 1));
+    return ReportRange(start, now, 'Minggu ini');
+  }
+
+  static ReportRange thisMonth() {
+    final now = DateTime.now();
+    return ReportRange(DateTime(now.year, now.month, 1), now, 'Bulan ini');
+  }
+
+  static ReportRange lastMonth() {
+    final now = DateTime.now();
+    final start = DateTime(now.year, now.month - 1, 1);
+    final end = DateTime(now.year, now.month, 0);
+    return ReportRange(start, end, 'Bulan lalu');
+  }
+}
+
+final reportRangeProvider =
+    StateProvider<ReportRange>((ref) => ReportRange.today());
+
+final revenueSummaryProvider = FutureProvider<RevenueSummary>((ref) {
+  final range = ref.watch(reportRangeProvider);
+  return ref.watch(reportRepoProvider).summary(range.from, range.to);
+});
+
+final dailyRevenueProvider = FutureProvider<List<DailyRevenue>>((ref) {
+  final range = ref.watch(reportRangeProvider);
+  return ref.watch(reportRepoProvider).dailyRevenue(range.from, range.to);
+});
+
+final revenueByServiceProvider = FutureProvider<List<NamedAmount>>((ref) {
+  final range = ref.watch(reportRangeProvider);
+  return ref.watch(reportRepoProvider).byService(range.from, range.to);
+});
+
+final revenueByMethodProvider = FutureProvider<List<NamedAmount>>((ref) {
+  final range = ref.watch(reportRangeProvider);
+  return ref.watch(reportRepoProvider).byMethod(range.from, range.to);
+});
+
+final revenueByCashierProvider = FutureProvider<List<NamedAmount>>((ref) {
+  final range = ref.watch(reportRangeProvider);
+  return ref.watch(reportRepoProvider).byCashier(range.from, range.to);
+});
+
+final receivablesProvider = FutureProvider<List<ReceivableRow>>(
+  (ref) => ref.watch(reportRepoProvider).receivables(),
+);
+
+/// Dipanggil setiap kali ada perubahan data supaya layar lain ikut segar.
+///
+/// Satu tempat saja, supaya tidak ada layar yang lupa menyegarkan laporan
+/// setelah pembayaran masuk.
+extension RefreshData on WidgetRef {
+  void refreshOrderData() {
+    invalidate(orderListProvider);
+    invalidate(staleOrdersProvider);
+    invalidate(revenueSummaryProvider);
+    invalidate(dailyRevenueProvider);
+    invalidate(revenueByServiceProvider);
+    invalidate(revenueByMethodProvider);
+    invalidate(revenueByCashierProvider);
+    invalidate(receivablesProvider);
+  }
+}
