@@ -111,7 +111,7 @@ class NotificationService {
     final db = await _db.database;
     final rows = await db.query(
       'notification_logs',
-      where: "order_id = ? AND trigger = ? AND status = 'terkirim'",
+      where: "order_id = ? AND trigger_name = ? AND status = 'terkirim'",
       whereArgs: [orderId, trigger.name],
       limit: 1,
     );
@@ -131,7 +131,7 @@ class NotificationService {
       'notification_logs',
       {
         'order_id': orderId,
-        'trigger': trigger.name,
+        'trigger_name': trigger.name,
         'target': target,
         'sent_at': DateTime.now().toIso8601String(),
         'status': state.name,

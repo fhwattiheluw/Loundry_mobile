@@ -5,7 +5,6 @@ import '../data/repositories/master_repository.dart';
 import '../data/repositories/order_repository.dart';
 import '../data/repositories/report_repository.dart';
 import '../data/repositories/settings_repository.dart';
-import '../domain/models/enums.dart';
 import '../domain/models/models.dart';
 import '../domain/price_calculator.dart';
 import '../services/ads/ad_service.dart';

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'application/providers.dart';
 import 'core/theme.dart';
+import 'services/connectivity/connection_guard.dart';
 import 'ui/auth/pin_login_screen.dart';
 import 'ui/home/home_shell.dart';
 
@@ -15,7 +16,9 @@ class LaundryPosApp extends ConsumerWidget {
       title: 'POS Laundry',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      home: const _Root(),
+      // Gerbang internet membungkus seluruh aplikasi. Layar apa pun hanya
+      // tergambar setelah koneksi terbukti ada.
+      home: const ConnectionGate(child: _Root()),
     );
   }
 }

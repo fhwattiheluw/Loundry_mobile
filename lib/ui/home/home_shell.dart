@@ -19,6 +19,18 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   int _index = 0;
 
   @override
+  void initState() {
+    super.initState();
+
+    // Interstitial ditayangkan SEKALI per sesi, di titik transisi setelah
+    // kasir masuk, dan tidak pernah di tengah transaksi. Kebijakan AdMob
+    // melarang interstitial yang terpicu setelah setiap aksi pengguna.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(adServiceProvider).maybeShowSessionInterstitial();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final user = ref.watch(sessionProvider);
     if (user == null) return const SizedBox.shrink();

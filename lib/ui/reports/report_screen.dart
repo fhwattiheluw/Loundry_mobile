@@ -1,0 +1,426 @@
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../application/providers.dart';
+import '../../core/formatters.dart';
+import '../../data/repositories/report_repository.dart';
+import '../../services/ads/ad_service.dart';
+import '../widgets/stat_tile.dart';
+import 'receivables_screen.dart';
+
+class ReportScreen extends ConsumerWidget {
+  const ReportScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(sessionProvider);
+    final range = ref.watch(reportRangeProvider);
+    final summary = ref.watch(revenueSummaryProvider);
+    final ads = ref.watch(adServiceProvider);
+
+    // Kasir hanya melihat shift sendiri. Laporan keseluruhan milik Owner.
+    if (user != null && !user.isOwner) {
+      return const _CashierNotice();
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Laporan Pendapatan'),
+        actions: [
+          IconButton(
+            tooltip: 'Piutang',
+            icon: const Icon(Icons.account_balance_wallet_outlined),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ReceivablesScreen()),
+            ),
+          ),
+        ],
+      ),
+      body: RefreshIndicator(
+        onRefresh: () async => ref.refreshOrderData(),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+          children: [
+            SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  for (final preset in [
+                    ReportRange.today(),
+                    ReportRange.thisWeek(),
+                    ReportRange.thisMonth(),
+                    ReportRange.lastMonth(),
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(preset.label),
+                        selected: range.label == preset.label,
+                        onSelected: (_) => ref
+                            .read(reportRangeProvider.notifier)
+                            .state = preset,
+                      ),
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ActionChip(
+                      avatar: const Icon(Icons.date_range, size: 18),
+                      label: const Text('Pilih tanggal'),
+                      onPressed: () => _pickRange(context, ref),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+            summary.when(
+              loading: () => const SizedBox(
+                height: 120,
+                child: Center(child: CircularProgressIndicator()),
+              ),
+              error: (e, _) => Text('Gagal memuat: $e'),
+              data: (data) => Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: StatTile(
+                          label: 'Pendapatan (uang diterima)',
+                          value: formatRupiah(data.cashIn),
+                          icon: Icons.trending_up,
+                          highlight: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: StatTile(
+                          label: 'Jumlah order',
+                          value: '${data.orderCount}',
+                          icon: Icons.receipt_long_outlined,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: StatTile(
+                          label: 'Rata-rata nota',
+                          value: formatRupiah(data.averageOrderValue),
+                          icon: Icons.calculate_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: StatTile(
+                          label: 'Diskon diberikan',
+                          value: formatRupiah(data.discountTotal),
+                          icon: Icons.discount_outlined,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: StatTile(
+                          label: 'Refund',
+                          value: formatRupiah(data.refundTotal),
+                          icon: Icons.undo,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline, size: 18),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Nilai order periode ini ${formatRupiah(data.grossOrderValue)}. '
+                              'Selisihnya dengan pendapatan adalah piutang yang belum masuk.',
+                              style: const TextStyle(fontSize: 12.5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            const _Heading('Tren harian'),
+            const SizedBox(height: 8),
+            const _RevenueChart(),
+
+            const SizedBox(height: 20),
+            const _Heading('Per layanan'),
+            const SizedBox(height: 8),
+            _AmountList(provider: revenueByServiceProvider, showQty: true),
+
+            const SizedBox(height: 20),
+            const _Heading('Per metode bayar'),
+            const SizedBox(height: 8),
+            _AmountList(provider: revenueByMethodProvider),
+
+            const SizedBox(height: 20),
+            const _Heading('Per kasir'),
+            const SizedBox(height: 8),
+            _AmountList(provider: revenueByCashierProvider),
+
+            SafeBannerAd(enabled: ads.enabled),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickRange(BuildContext context, WidgetRef ref) async {
+    final now = DateTime.now();
+
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 3),
+      lastDate: now,
+      initialEntryMode: DatePickerEntryMode.calendarOnly,
+    );
+
+    if (picked == null) return;
+
+    ref.read(reportRangeProvider.notifier).state = ReportRange(
+      picked.start,
+      picked.end,
+      '${formatDate(picked.start)} - ${formatDate(picked.end)}',
+    );
+  }
+}
+
+class _Heading extends StatelessWidget {
+  const _Heading(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+      );
+}
+
+class _RevenueChart extends ConsumerWidget {
+  const _RevenueChart();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(dailyRevenueProvider);
+    final scheme = Theme.of(context).colorScheme;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 20, 20, 8),
+        child: SizedBox(
+          height: 200,
+          child: data.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('$e')),
+            data: (days) {
+              if (days.isEmpty) {
+                return const Center(child: Text('Belum ada data'));
+              }
+
+              if (days.every((d) => d.amount == 0)) {
+                return const Center(
+                  child: Text('Belum ada pemasukan di periode ini',
+                      style: TextStyle(color: Colors.black54)),
+                );
+              }
+
+              final maxY = days
+                  .map((d) => d.amount)
+                  .reduce((a, b) => a > b ? a : b)
+                  .toDouble();
+
+              return LineChart(
+                LineChartData(
+                  minY: 0,
+                  maxY: maxY * 1.2,
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: maxY <= 0 ? 1 : maxY / 2,
+                  ),
+                  borderData: FlBorderData(show: false),
+                  titlesData: FlTitlesData(
+                    topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false)),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 52,
+                        interval: maxY <= 0 ? 1 : maxY / 2,
+                        getTitlesWidget: (value, meta) => Text(
+                          _short(value.toInt()),
+                          style: const TextStyle(fontSize: 10),
+                        ),
+                      ),
+                    ),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 28,
+                        interval: (days.length / 5).ceilToDouble(),
+                        getTitlesWidget: (value, meta) {
+                          final i = value.toInt();
+                          if (i < 0 || i >= days.length) {
+                            return const SizedBox.shrink();
+                          }
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Text(
+                              formatDayMonth(days[i].date),
+                              style: const TextStyle(fontSize: 10),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: [
+                        for (var i = 0; i < days.length; i++)
+                          FlSpot(i.toDouble(), days[i].amount.toDouble()),
+                      ],
+                      isCurved: false,
+                      barWidth: 2.5,
+                      color: scheme.primary,
+                      dotData: FlDotData(show: days.length <= 14),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        color: scheme.primary.withOpacity(0.12),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 1.250.000 menjadi "1,2jt" supaya sumbu tidak penuh angka.
+  static String _short(int value) {
+    if (value >= 1000000) {
+      return '${(value / 1000000).toStringAsFixed(1).replaceAll('.', ',')}jt';
+    }
+    if (value >= 1000) return '${value ~/ 1000}rb';
+    return '$value';
+  }
+}
+
+class _AmountList extends ConsumerWidget {
+  const _AmountList({required this.provider, this.showQty = false});
+
+  final ProviderListenable<AsyncValue<List<NamedAmount>>> provider;
+  final bool showQty;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final data = ref.watch(provider);
+
+    return Card(
+      child: data.when(
+        loading: () => const SizedBox(
+          height: 80,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+        error: (e, _) => ListTile(title: Text('Gagal memuat: $e')),
+        data: (rows) {
+          if (rows.isEmpty) {
+            return const ListTile(title: Text('Belum ada data'));
+          }
+
+          final total = rows.fold(0, (sum, r) => sum + r.amount);
+
+          return Column(
+            children: [
+              for (var i = 0; i < rows.length; i++) ...[
+                if (i > 0) const Divider(height: 1),
+                ListTile(
+                  title: Text(rows[i].name),
+                  subtitle: Text(
+                    showQty
+                        ? '${rows[i].count} order · ${formatQty(rows[i].qty)} satuan'
+                        : '${rows[i].count} transaksi',
+                  ),
+                  trailing: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(formatRupiah(rows[i].amount),
+                          style:
+                              const TextStyle(fontWeight: FontWeight.w700)),
+                      if (total > 0)
+                        Text(
+                          '${(rows[i].amount / total * 100).round()}%',
+                          style: const TextStyle(
+                              fontSize: 11.5, color: Colors.black54),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _CashierNotice extends StatelessWidget {
+  const _CashierNotice();
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Laporan')),
+        body: const Padding(
+          padding: EdgeInsets.all(32),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.lock_outline, size: 48, color: Colors.black26),
+                SizedBox(height: 16),
+                Text(
+                  'Laporan pendapatan hanya bisa dibuka Owner.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 15),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Rekap shift Anda sendiri ada di menu Pengaturan.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.black54),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+}

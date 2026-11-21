@@ -1,0 +1,233 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../application/providers.dart';
+import '../../core/security.dart';
+import '../../domain/models/enums.dart';
+import '../../domain/models/models.dart';
+
+class UserSettingsScreen extends ConsumerStatefulWidget {
+  const UserSettingsScreen({super.key});
+
+  @override
+  ConsumerState<UserSettingsScreen> createState() =>
+      _UserSettingsScreenState();
+}
+
+class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
+  List<AppUser> _users = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final users = await ref.read(userRepoProvider).all();
+    if (mounted) setState(() => _users = users);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Pengguna dan PIN')),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _addUser,
+        icon: const Icon(Icons.person_add_outlined),
+        label: const Text('Tambah kasir'),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 96),
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
+            child: Text(
+              'Setiap transaksi menyimpan siapa yang membuatnya. Beri PIN '
+              'berbeda untuk tiap kasir supaya selisih kas bisa dilacak.',
+              style: TextStyle(fontSize: 13, color: Colors.black54),
+            ),
+          ),
+          for (final user in _users) ...[
+            ListTile(
+              leading: CircleAvatar(
+                child: Icon(
+                  user.isOwner ? Icons.admin_panel_settings : Icons.person,
+                ),
+              ),
+              title: Text(user.name,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text(user.role.label),
+              trailing: PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'pin') {
+                    await _resetPin(user);
+                  } else {
+                    await _deactivate(user);
+                  }
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'pin', child: Text('Ganti PIN')),
+                  PopupMenuItem(
+                      value: 'off', child: Text('Nonaktifkan akun')),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Future<void> _addUser() async {
+    final nameController = TextEditingController();
+    final pinController = TextEditingController();
+    var role = UserRole.kasir;
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Tambah pengguna'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(labelText: 'Nama'),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: pinController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  labelText: 'PIN (4-6 digit)',
+                  counterText: '',
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                children: [
+                  for (final value in UserRole.values)
+                    ChoiceChip(
+                      label: Text(value.label),
+                      selected: role == value,
+                      onSelected: (_) => setDialogState(() => role = value),
+                    ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Simpan'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (ok != true) return;
+
+    final name = nameController.text.trim();
+    final pin = pinController.text.trim();
+
+    if (name.isEmpty || pin.length < 4) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Nama dan PIN minimal 4 digit wajib diisi.')),
+        );
+      }
+      return;
+    }
+
+    // PIN harus unik, karena login hanya memakai PIN tanpa nama pengguna.
+    final existing = await ref.read(userRepoProvider).authenticate(pin);
+    if (existing != null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PIN itu sudah dipakai pengguna lain.')),
+        );
+      }
+      return;
+    }
+
+    await ref.read(userRepoProvider).insert(
+          AppUser(name: name, pinHash: hashPin(pin), role: role),
+        );
+
+    await _load();
+  }
+
+  Future<void> _resetPin(AppUser user) async {
+    final controller = TextEditingController();
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Ganti PIN ${user.name}'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          decoration: const InputDecoration(
+            labelText: 'PIN baru',
+            counterText: '',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Simpan'),
+          ),
+        ],
+      ),
+    );
+
+    if (ok != true || controller.text.length < 4) return;
+
+    await ref.read(userRepoProvider).setPin(user.id!, controller.text);
+    await _load();
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PIN diganti.')),
+      );
+    }
+  }
+
+  Future<void> _deactivate(AppUser user) async {
+    final repo = ref.read(userRepoProvider);
+
+    if (user.isOwner && await repo.isLastOwner(user.id!)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Ini satu-satunya Owner. Buat Owner lain dulu sebelum menonaktifkan.'),
+          ),
+        );
+      }
+      return;
+    }
+
+    await repo.deactivate(user.id!);
+    await _load();
+  }
+}

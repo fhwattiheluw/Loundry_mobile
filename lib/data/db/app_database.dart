@@ -185,7 +185,7 @@ class AppDatabase {
       CREATE TABLE notification_logs (
         id         INTEGER PRIMARY KEY AUTOINCREMENT,
         order_id   INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
-        trigger    TEXT    NOT NULL,
+        trigger_name TEXT  NOT NULL,
         target     TEXT    NOT NULL,
         sent_at    TEXT    NOT NULL,
         status     TEXT    NOT NULL,
@@ -195,7 +195,7 @@ class AppDatabase {
     // Satu pemicu hanya boleh berhasil sekali per order (FR-71).
     await db.execute('''
       CREATE UNIQUE INDEX idx_notif_once
-      ON notification_logs(order_id, trigger)
+      ON notification_logs(order_id, trigger_name)
       WHERE status = 'terkirim'
     ''');
 

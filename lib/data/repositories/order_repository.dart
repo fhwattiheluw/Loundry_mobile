@@ -182,10 +182,9 @@ class OrderRepository {
         estimatedAt ?? _calc.estimatedFinish(services, items, from: now);
 
     late int orderId;
-    late String orderNo;
 
     await db.transaction((txn) async {
-      orderNo = await _nextOrderNo(txn, now);
+      final orderNo = await _nextOrderNo(txn, now);
 
       orderId = await txn.insert('orders', {
         'order_no': orderNo,
