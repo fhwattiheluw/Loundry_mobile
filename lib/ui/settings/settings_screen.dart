@@ -152,18 +152,49 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             const _Heading('Iklan'),
             Card(
-              child: SwitchListTile(
-                secondary: const Icon(Icons.ads_click),
-                title: const Text('Tampilkan iklan'),
-                subtitle: const Text(
-                  'Banner di daftar order dan laporan. Tidak pernah muncul '
-                  'di layar input order maupun pembayaran.',
-                ),
-                value: settings.getBool(SettingsKeys.adsEnabled, fallback: true),
-                onChanged: (value) async {
-                  await settings.set(SettingsKeys.adsEnabled, value ? '1' : '0');
-                  ref.invalidate(settingsLoadedProvider);
-                },
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    secondary: const Icon(Icons.ads_click),
+                    title: const Text('Tampilkan iklan'),
+                    subtitle: const Text(
+                      'Banner di daftar order dan laporan. Tidak pernah '
+                      'muncul di layar input order maupun pembayaran.',
+                    ),
+                    value: settings.getBool(SettingsKeys.adsEnabled,
+                        fallback: true),
+                    onChanged: (value) async {
+                      await settings.set(
+                          SettingsKeys.adsEnabled, value ? '1' : '0');
+                      ref.invalidate(settingsLoadedProvider);
+                    },
+                  ),
+                  // Hanya muncul di wilayah yang mewajibkannya, misalnya
+                  // Uni Eropa. Menyediakannya adalah syarat kepatuhan UMP.
+                  FutureBuilder<bool>(
+                    future: ref
+                        .read(consentManagerProvider)
+                        .isPrivacyOptionsRequired(),
+                    builder: (context, snapshot) {
+                      if (snapshot.data != true) {
+                        return const SizedBox.shrink();
+                      }
+                      return Column(
+                        children: [
+                          const Divider(height: 1),
+                          ListTile(
+                            leading: const Icon(Icons.privacy_tip_outlined),
+                            title: const Text('Opsi privasi iklan'),
+                            trailing: const Icon(Icons.chevron_right),
+                            onTap: () => ref
+                                .read(consentManagerProvider)
+                                .showPrivacyOptions(),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           ],

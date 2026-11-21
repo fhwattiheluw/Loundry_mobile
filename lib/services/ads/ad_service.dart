@@ -6,6 +6,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../../data/db/settings_keys.dart';
 import '../../data/repositories/settings_repository.dart';
+import 'consent_manager.dart';
 
 /// ID unit iklan.
 ///
@@ -50,9 +51,10 @@ abstract final class AdIds {
 ///   titik transisi, tidak pernah per transaksi.
 /// - Rewarded ad yang benar-benar opsional, ditukar fitur tambahan.
 class AdService {
-  AdService(this._settings);
+  AdService(this._settings, this.consent);
 
   final SettingsRepository _settings;
+  final ConsentManager consent;
 
   bool _initialized = false;
   bool _interstitialShownThisSession = false;
@@ -68,6 +70,14 @@ class AdService {
     if (_initialized || !enabled) return;
 
     try {
+      // Persetujuan privasi diminta SEBELUM iklan pertama. Meminta iklan
+      // lebih dulu adalah pelanggaran kebijakan UMP.
+      final allowed = await consent.gatherConsent();
+      if (!allowed) {
+        debugPrint('Pengguna tidak mengizinkan iklan. AdMob dilewati.');
+        return;
+      }
+
       await MobileAds.instance.initialize();
       _initialized = true;
       _preloadInterstitial();

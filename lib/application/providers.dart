@@ -9,6 +9,7 @@ import '../data/repositories/shift_repository.dart';
 import '../domain/models/models.dart';
 import '../domain/price_calculator.dart';
 import '../services/ads/ad_service.dart';
+import '../services/ads/consent_manager.dart';
 import '../services/backup/backup_service.dart';
 import '../services/export/export_service.dart';
 import '../services/notification/message_template.dart';
@@ -98,8 +99,15 @@ final notificationServiceProvider = Provider<NotificationService>(
   ),
 );
 
+final consentManagerProvider = Provider<ConsentManager>(
+  (ref) => ConsentManager(),
+);
+
 final adServiceProvider = Provider<AdService>(
-  (ref) => AdService(ref.watch(settingsRepoProvider)),
+  (ref) => AdService(
+    ref.watch(settingsRepoProvider),
+    ref.watch(consentManagerProvider),
+  ),
 );
 
 final backupServiceProvider = Provider<BackupService>(
