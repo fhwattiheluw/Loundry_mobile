@@ -5,6 +5,7 @@ import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../domain/models/enums.dart';
+import '../../domain/models/models.dart';
 import '../../services/ads/ad_service.dart';
 import '../orders/order_detail_screen.dart';
 import '../widgets/stat_tile.dart';
@@ -136,7 +137,21 @@ class DashboardScreen extends ConsumerWidget {
                                 'Selesai ${relativeDays(order.estimatedAt, DateTime.now())}'
                                 '${order.remaining > 0 ? '  ·  sisa ${formatRupiah(order.remaining)}' : ''}',
                               ),
-                              trailing: const Icon(Icons.chevron_right),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (order.customerPhone.isNotEmpty)
+                                    IconButton(
+                                      tooltip: 'Kirim pengingat WhatsApp',
+                                      icon: const Icon(
+                                          Icons.chat_outlined,
+                                          size: 20),
+                                      onPressed: () =>
+                                          _sendReminder(context, ref, order),
+                                    ),
+                                  const Icon(Icons.chevron_right),
+                                ],
+                              ),
                               onTap: () => Navigator.of(context).push(
                                 MaterialPageRoute(
                                   builder: (_) =>
@@ -191,6 +206,29 @@ class DashboardScreen extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Pengingat pengambilan (FR-62).
+  ///
+  /// Dikirim dengan force, karena pengingat memang boleh dikirim berkali-kali
+  /// untuk cucian yang sama selama belum diambil. Aturan anti-kirim-ganda
+  /// hanya berlaku untuk pemberitahuan sekali pakai seperti "order diterima".
+  Future<void> _sendReminder(
+    BuildContext context,
+    WidgetRef ref,
+    LaundryOrder order,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    final result = await ref.read(notificationServiceProvider).notify(
+          order,
+          NotificationTrigger.pengingatAmbil,
+          force: true,
+        );
+
+    if (!result.sent) {
+      messenger.showSnackBar(SnackBar(content: Text(result.message)));
+    }
   }
 
   Widget _shortcut(
