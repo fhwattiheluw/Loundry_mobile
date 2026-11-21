@@ -292,6 +292,20 @@ class ReportRepository {
         .toList();
   }
 
+  /// Ringkasan periode sebelumnya yang panjangnya sama, untuk perbandingan
+  /// bulan ini dengan bulan lalu (FR-108).
+  ///
+  /// Panjang periode disamakan, bukan selalu satu bulan kalender. Tanggal
+  /// 1 sampai 10 November dibandingkan dengan 22 sampai 31 Oktober, bukan
+  /// dengan seluruh Oktober, supaya angkanya setara.
+  Future<RevenueSummary> previousPeriod(DateTime from, DateTime to) {
+    final days = _endOfDay(to).difference(_startOfDay(from)).inDays + 1;
+    final previousTo = _startOfDay(from).subtract(const Duration(days: 1));
+    final previousFrom = previousTo.subtract(Duration(days: days - 1));
+
+    return summary(previousFrom, previousTo);
+  }
+
   /// Uang tunai yang seharusnya ada di laci untuk satu shift.
   Future<int> expectedCashFor(int shiftId) async {
     final db = await _db.database;

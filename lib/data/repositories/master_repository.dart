@@ -70,6 +70,87 @@ class CustomerRepository {
       whereArgs: [customer.id],
     );
   }
+
+  Future<int> count() async {
+    final db = await _db.database;
+    final result = await db.rawQuery('SELECT COUNT(*) AS c FROM customers');
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  /// Menambahkan banyak pelanggan sekaligus dari impor CSV (FR-13).
+  ///
+  /// Nomor yang sudah ada dilewati, bukan ditimpa: data pelanggan lama
+  /// biasanya lebih akurat daripada berkas impor yang entah dari mana.
+  Future<ImportReport> importMany(List<Customer> rows) async {
+    final db = await _db.database;
+    final now = DateTime.now().toIso8601String();
+
+    var added = 0;
+    var skipped = 0;
+    final invalid = <String>[];
+
+    await db.transaction((txn) async {
+      for (final row in rows) {
+        final name = row.name.trim();
+        final phone = normalizePhone(row.phone);
+
+        if (name.isEmpty || !isValidPhone(phone)) {
+          invalid.add(name.isEmpty ? '(tanpa nama)' : name);
+          continue;
+        }
+
+        final existing = await txn.query('customers',
+            where: 'phone = ?', whereArgs: [phone], limit: 1);
+
+        if (existing.isNotEmpty) {
+          skipped++;
+          continue;
+        }
+
+        await txn.insert('customers', {
+          'name': name,
+          'phone': phone,
+          'address': row.address,
+          'note': row.note,
+          'notify_enabled': 1,
+          'created_at': now,
+        });
+        added++;
+      }
+    });
+
+    return ImportReport(added: added, skipped: skipped, invalid: invalid);
+  }
+
+  /// Pelanggan yang boleh dikirimi pesan promo (FR-64).
+  Future<List<Customer>> broadcastTargets() async {
+    final db = await _db.database;
+    final rows = await db.query(
+      'customers',
+      where: "notify_enabled = 1 AND phone != ''",
+      orderBy: 'name COLLATE NOCASE',
+    );
+    return rows.map(Customer.fromMap).toList();
+  }
+}
+
+class ImportReport {
+  const ImportReport({
+    required this.added,
+    required this.skipped,
+    required this.invalid,
+  });
+
+  final int added;
+  final int skipped;
+  final List<String> invalid;
+
+  String get summary {
+    final parts = ['$added pelanggan ditambahkan'];
+    if (skipped > 0) parts.add('$skipped sudah ada');
+    if (invalid.isNotEmpty) parts.add('${invalid.length} baris tidak valid');
+    return parts.join(', ');
+  }
 }
 
 class ServiceRepository {

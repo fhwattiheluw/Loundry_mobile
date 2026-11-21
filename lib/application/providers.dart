@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/db/app_database.dart';
+import '../data/db/settings_keys.dart';
 import '../data/repositories/master_repository.dart';
 import '../data/repositories/order_repository.dart';
 import '../data/repositories/report_repository.dart';
@@ -105,6 +106,19 @@ final notificationServiceProvider = Provider<NotificationService>(
     apiSender: ref.watch(whatsAppApiSenderProvider),
   ),
 );
+
+/// Pengirim untuk promo broadcast, mengikuti mode yang dipilih pemilik.
+/// Promo tidak lewat NotificationService karena tidak terikat ke satu order
+/// dan tidak perlu masuk log per-order.
+final broadcastSenderProvider = Provider<NotificationSender>((ref) {
+  final settings = ref.watch(settingsRepoProvider);
+  final isApi =
+      settings.get(SettingsKeys.whatsappMode, fallback: 'manual') == 'api';
+
+  return isApi
+      ? ref.watch(whatsAppApiSenderProvider)
+      : const WhatsAppManualSender();
+});
 
 /// Jumlah pesan yang masih menunggu giliran kirim.
 final pendingNotificationsProvider = FutureProvider<int>(
@@ -243,6 +257,16 @@ final receivablesProvider = FutureProvider<List<ReceivableRow>>(
   (ref) => ref.watch(reportRepoProvider).receivables(),
 );
 
+final topCustomersProvider = FutureProvider<List<NamedAmount>>((ref) {
+  final range = ref.watch(reportRangeProvider);
+  return ref.watch(reportRepoProvider).topCustomers(range.from, range.to);
+});
+
+final previousPeriodProvider = FutureProvider<RevenueSummary>((ref) {
+  final range = ref.watch(reportRangeProvider);
+  return ref.watch(reportRepoProvider).previousPeriod(range.from, range.to);
+});
+
 /// Dipanggil setiap kali ada perubahan data supaya layar lain ikut segar.
 ///
 /// Satu tempat saja, supaya tidak ada layar yang lupa menyegarkan laporan
@@ -257,6 +281,8 @@ extension RefreshData on WidgetRef {
     invalidate(revenueByMethodProvider);
     invalidate(revenueByCashierProvider);
     invalidate(receivablesProvider);
+    invalidate(topCustomersProvider);
+    invalidate(previousPeriodProvider);
     invalidate(shiftTotalsProvider);
   }
 }

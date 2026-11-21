@@ -184,6 +184,11 @@ class ReportScreen extends ConsumerWidget {
             ),
 
             const SizedBox(height: 20),
+            const _Heading('Dibanding periode sebelumnya'),
+            const SizedBox(height: 8),
+            const _ComparisonCard(),
+
+            const SizedBox(height: 20),
             const _Heading('Tren harian'),
             const SizedBox(height: 8),
             const _RevenueChart(),
@@ -202,6 +207,11 @@ class ReportScreen extends ConsumerWidget {
             const _Heading('Per kasir'),
             const SizedBox(height: 8),
             _AmountList(provider: revenueByCashierProvider),
+
+            const SizedBox(height: 20),
+            const _Heading('Pelanggan teratas'),
+            const SizedBox(height: 8),
+            _AmountList(provider: topCustomersProvider),
 
             SafeBannerAd(enabled: ads.enabled),
           ],
@@ -320,6 +330,128 @@ class _Heading extends StatelessWidget {
         text,
         style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
       );
+}
+
+/// Perbandingan dengan periode sebelumnya yang panjangnya sama (FR-108).
+class _ComparisonCard extends ConsumerWidget {
+  const _ComparisonCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(revenueSummaryProvider);
+    final before = ref.watch(previousPeriodProvider);
+
+    if (now.isLoading || before.isLoading) {
+      return const Card(
+        child: SizedBox(
+          height: 90,
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    final current = now.valueOrNull;
+    final previous = before.valueOrNull;
+
+    if (current == null || previous == null) {
+      return const Card(
+        child: ListTile(title: Text('Data pembanding belum tersedia')),
+      );
+    }
+
+    return Card(
+      child: Column(
+        children: [
+          _CompareRow(
+            label: 'Pendapatan',
+            current: current.cashIn,
+            previous: previous.cashIn,
+          ),
+          const Divider(height: 1),
+          _CompareRow(
+            label: 'Jumlah order',
+            current: current.orderCount,
+            previous: previous.orderCount,
+            isMoney: false,
+          ),
+          const Divider(height: 1),
+          _CompareRow(
+            label: 'Rata-rata nota',
+            current: current.averageOrderValue,
+            previous: previous.averageOrderValue,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CompareRow extends StatelessWidget {
+  const _CompareRow({
+    required this.label,
+    required this.current,
+    required this.previous,
+    this.isMoney = true,
+  });
+
+  final String label;
+  final int current;
+  final int previous;
+  final bool isMoney;
+
+  @override
+  Widget build(BuildContext context) {
+    final diff = current - previous;
+
+    // Persentase tidak bisa dihitung dari nol, dan menampilkan "naik 100%"
+    // dari nol hanya menyesatkan.
+    final percent = previous == 0 ? null : (diff / previous * 100).round();
+
+    final naik = diff > 0;
+    final color = diff == 0
+        ? Theme.of(context).colorScheme.onSurfaceVariant
+        : naik
+            ? const Color(0xFF2E7D32)
+            : const Color(0xFFC62828);
+
+    String show(int value) =>
+        isMoney ? formatRupiah(value) : value.toString();
+
+    return ListTile(
+      dense: true,
+      title: Text(label),
+      subtitle: Text('Sebelumnya ${show(previous)}'),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(show(current),
+              style: const TextStyle(fontWeight: FontWeight.w700)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                diff == 0
+                    ? Icons.remove
+                    : naik
+                        ? Icons.arrow_upward
+                        : Icons.arrow_downward,
+                size: 13,
+                color: color,
+              ),
+              Text(
+                percent == null
+                    ? show(diff.abs())
+                    : '${percent.abs()}%',
+                style: TextStyle(
+                    fontSize: 11.5, color: color, fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _RevenueChart extends ConsumerWidget {

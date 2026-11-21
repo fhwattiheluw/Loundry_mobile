@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
+import '../customers/customer_screen.dart';
 import '../shift/shift_screen.dart';
 import 'backup_settings_screen.dart';
 import 'business_settings_screen.dart';
@@ -122,6 +123,14 @@ class SettingsScreen extends ConsumerWidget {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () =>
                         _open(context, const ServiceSettingsScreen()),
+                  ),
+                  const Divider(height: 1),
+                  ListTile(
+                    leading: const Icon(Icons.people_outline),
+                    title: const Text('Pelanggan'),
+                    subtitle: const Text('Ubah data, impor CSV, kirim promo'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _open(context, const CustomerScreen()),
                   ),
                   const Divider(height: 1),
                   ListTile(
