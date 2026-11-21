@@ -63,6 +63,9 @@ class AdService {
   RewardedAd? _rewarded;
 
   bool get enabled =>
+      // Pembelian bebas iklan mengalahkan sakelar apa pun. Pemilik yang
+      // sudah membayar tidak boleh melihat iklan lagi karena salah setel.
+      !_settings.getBool(SettingsKeys.adsRemoved) &&
       _settings.getBool(SettingsKeys.adsEnabled, fallback: true) &&
       (Platform.isAndroid || Platform.isIOS);
 

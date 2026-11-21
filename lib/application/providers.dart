@@ -11,6 +11,7 @@ import '../domain/models/models.dart';
 import '../domain/price_calculator.dart';
 import '../services/ads/ad_service.dart';
 import '../services/ads/consent_manager.dart';
+import '../services/ads/purchase_service.dart';
 import '../services/backup/backup_service.dart';
 import '../services/export/export_service.dart';
 import '../services/notification/message_template.dart';
@@ -124,6 +125,12 @@ final broadcastSenderProvider = Provider<NotificationSender>((ref) {
 final pendingNotificationsProvider = FutureProvider<int>(
   (ref) => ref.watch(notificationServiceProvider).pendingCount(),
 );
+
+final purchaseServiceProvider = Provider<PurchaseService>((ref) {
+  final service = PurchaseService(ref.watch(settingsRepoProvider));
+  ref.onDispose(service.dispose);
+  return service;
+});
 
 final consentManagerProvider = Provider<ConsentManager>(
   (ref) => ConsentManager(),

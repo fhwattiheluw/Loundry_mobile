@@ -50,6 +50,13 @@ dependencies:
   file_picker: ^8.1.2
   # Ekspor laporan sebagai PDF
   pdf: ^3.11.1
+  # Pindai QR nomor nota saat pengambilan
+  mobile_scanner: ^5.2.3
+  # Logo usaha pada nota
+  image_picker: ^1.1.2
+  image: ^4.2.0
+  # Pembelian versi bebas iklan
+  in_app_purchase: ^3.2.0
 
 dev_dependencies:
   flutter_test:

@@ -7,6 +7,12 @@
     <!-- AdMob: Advertising ID harus dideklarasikan juga di Play Console -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 
+    <!-- Memindai QR nomor nota saat pengambilan -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+
     <!--
       Bluetooth printer thermal.
       Android 12 (API 31) ke atas memakai BLUETOOTH_CONNECT dan BLUETOOTH_SCAN

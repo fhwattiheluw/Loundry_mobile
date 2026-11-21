@@ -8,6 +8,7 @@ import '../customers/customer_screen.dart';
 import '../shift/shift_screen.dart';
 import 'backup_settings_screen.dart';
 import 'business_settings_screen.dart';
+import 'logo_settings_screen.dart';
 import 'notification_log_screen.dart';
 import 'printer_settings_screen.dart';
 import 'service_settings_screen.dart';
@@ -202,6 +203,22 @@ class SettingsScreen extends ConsumerWidget {
             ),
 
             const SizedBox(height: 16),
+            const _Heading('Nota'),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.image_outlined),
+                title: const Text('Logo di nota'),
+                subtitle: Text(
+                  settings.get(SettingsKeys.receiptLogoPath).isEmpty
+                      ? 'Belum ada logo'
+                      : 'Logo terpasang',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _open(context, const LogoSettingsScreen()),
+              ),
+            ),
+
+            const SizedBox(height: 16),
             const _Heading('Iklan'),
             Card(
               child: Column(
@@ -221,6 +238,8 @@ class SettingsScreen extends ConsumerWidget {
                       ref.invalidate(settingsLoadedProvider);
                     },
                   ),
+                  const Divider(height: 1),
+                  const _RemoveAdsTile(),
                   // Hanya muncul di wilayah yang mewajibkannya, misalnya
                   // Uni Eropa. Menyediakannya adalah syarat kepatuhan UMP.
                   FutureBuilder<bool>(
@@ -267,6 +286,74 @@ class SettingsScreen extends ConsumerWidget {
 
   void _open(BuildContext context, Widget screen) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
+  }
+}
+
+/// Pembelian sekali bayar untuk menghilangkan iklan (FR-118).
+///
+/// Harga selalu diambil dari Play Store, tidak pernah ditulis di kode,
+/// karena mata uang dan pajaknya berbeda per negara.
+class _RemoveAdsTile extends ConsumerStatefulWidget {
+  const _RemoveAdsTile();
+
+  @override
+  ConsumerState<_RemoveAdsTile> createState() => _RemoveAdsTileState();
+}
+
+class _RemoveAdsTileState extends ConsumerState<_RemoveAdsTile> {
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _prepare();
+  }
+
+  Future<void> _prepare() async {
+    await ref.read(purchaseServiceProvider).init();
+    if (mounted) setState(() => _ready = true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final purchases = ref.watch(purchaseServiceProvider);
+    final settings = ref.watch(settingsRepoProvider);
+
+    if (settings.getBool(SettingsKeys.adsRemoved)) {
+      return const ListTile(
+        leading: Icon(Icons.verified_outlined, color: Color(0xFF2E7D32)),
+        title: Text('Versi bebas iklan aktif'),
+        subtitle: Text('Terima kasih sudah mendukung aplikasi ini.'),
+      );
+    }
+
+    if (!_ready || !purchases.isAvailable || purchases.product == null) {
+      return const SizedBox.shrink();
+    }
+
+    return ListTile(
+      leading: const Icon(Icons.block_outlined),
+      title: const Text('Hilangkan iklan selamanya'),
+      subtitle: Text(
+        'Sekali bayar ${purchases.priceLabel}. '
+        'Tekan lama untuk memulihkan pembelian lama.',
+      ),
+      trailing: FilledButton(
+        onPressed: () async {
+          await purchases.buy();
+          if (mounted) ref.invalidate(settingsLoadedProvider);
+        },
+        child: Text(purchases.priceLabel),
+      ),
+      onLongPress: () async {
+        await purchases.restore();
+        if (!context.mounted) return;
+        ref.invalidate(settingsLoadedProvider);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Memulihkan pembelian...')),
+        );
+      },
+    );
   }
 }
 

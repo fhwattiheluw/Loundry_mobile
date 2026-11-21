@@ -21,6 +21,7 @@ abstract final class SettingsKeys {
   static const receiptLogoPath = 'receipt_logo_path';
 
   static const adsEnabled = 'ads_enabled';
+  static const adsRemoved = 'ads_removed';
 
   static const notifyOrderCreated = 'notify_order_created';
   static const notifyOrderDone = 'notify_order_done';

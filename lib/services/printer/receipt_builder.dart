@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
+import 'package:image/image.dart' as img;
 
 import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
@@ -34,6 +37,7 @@ class ReceiptBuilder {
     final g = Generator(_paperSize, profile);
     final bytes = <int>[];
 
+    bytes.addAll(await _logo(g));
     bytes.addAll(_header(g));
 
     if (isReprint) {
@@ -140,6 +144,7 @@ class ReceiptBuilder {
     final g = Generator(_paperSize, profile);
     final bytes = <int>[];
 
+    bytes.addAll(await _logo(g));
     bytes.addAll(_header(g));
     bytes.addAll(g.text('KWITANSI PEMBAYARAN',
         styles: const PosStyles(align: PosAlign.center, bold: true)));
@@ -240,6 +245,35 @@ class ReceiptBuilder {
   }
 
   // --------------------------------------------------------------- bantuan
+
+  /// Logo usaha di kepala nota (FR-88).
+  ///
+  /// Printer thermal hanya bisa mencetak hitam putih, jadi logo diubah ke
+  /// hitam putih dan dikecilkan agar muat selebar kertas. Logo yang terlalu
+  /// besar membuat sebagian printer menggantung, dan kegagalannya tidak
+  /// boleh membatalkan nota, jadi seluruhnya dibungkus try.
+  Future<List<int>> _logo(Generator g) async {
+    final path = _settings.get(SettingsKeys.receiptLogoPath);
+    if (path.isEmpty) return const [];
+
+    try {
+      final file = File(path);
+      if (!await file.exists()) return const [];
+
+      final decoded = img.decodeImage(await file.readAsBytes());
+      if (decoded == null) return const [];
+
+      final maxWidth = _paperWidth == 80 ? 400 : 300;
+      final resized = img.copyResize(
+        decoded,
+        width: decoded.width > maxWidth ? maxWidth : decoded.width,
+      );
+
+      return g.image(img.grayscale(resized));
+    } catch (_) {
+      return const [];
+    }
+  }
 
   List<int> _header(Generator g) {
     final bytes = <int>[];

@@ -24,6 +24,9 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 
 **Transaksi**
 - Order dengan beberapa baris layanan dalam satu nota
+- Rincian isi cucian per baris, tercetak di nota sebagai bukti saat ada klaim
+- Pilihan parfum dan biaya tambahan seperti antar-jemput
+- Pindai QR nota untuk mencari order saat pengambilan
 - Layanan kiloan, satuan, meter, dan paket, masing-masing dengan harga sendiri
 - Minimum berat dan pembulatan yang bisa diatur per layanan
 - Express dengan pengali harga dan durasi tersendiri
@@ -39,14 +42,19 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 
 **Nota**
 - Printer thermal Bluetooth ESC/POS 58 mm dan 80 mm
+- Logo usaha dan QR nomor nota, keduanya bisa dimatikan
 - Cetak otomatis setelah simpan, cetak ulang bertanda "CETAK ULANG"
 - Kwitansi pelunasan dan laporan tutup shift
 - Uji cetak untuk memastikan lebar kertas benar
 
 **WhatsApp**
-- Pemicu: order diterima, cucian selesai, pengingat belum diambil
+- Dua mode: manual lewat `wa.me` (gratis) atau otomatis lewat Cloud API resmi
+- Pemicu: order diterima, cucian selesai, pengingat belum diambil, pembayaran
 - Template bisa diedit dengan variabel seperti `{nama}` dan `{no_order}`
 - Log kirim lengkap, dan satu pemicu tidak terkirim dua kali
+- Kirim ulang otomatis tiga kali dengan jeda membesar bila gagal
+- Jam tenang: pesan di luar jam operasional ditunda, bukan dibuang
+- Kirim promo ke pelanggan terpilih
 
 **Shift kasir**
 - Buka shift dengan kas awal, tutup dengan kas fisik hitungan tangan
@@ -58,12 +66,17 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 - Pendapatan harian, periode bebas, per layanan, per metode bayar, per kasir
 - Grafik tren harian
 - Daftar piutang dengan umur tagihan
+- Pelanggan teratas dan perbandingan dengan periode sebelumnya
 - Ekspor CSV untuk Excel, dan PDF siap cetak
 
 **Backup**
 - Backup otomatis harian ke penyimpanan aplikasi, tujuh salinan terakhir
 - Bagikan backup ke WhatsApp, email, atau Google Drive
 - Restore dari berkas, dengan salinan pengaman sebelum menimpa
+
+**Pelanggan**
+- Cari, ubah, dan atur izin notifikasi per pelanggan
+- Impor dari CSV, nomor yang sudah ada dilewati bukan ditimpa
 
 **Pengguna**
 - Login PIN, dua peran: Owner dan Kasir
@@ -182,6 +195,10 @@ flutter build appbundle --release \
 | Ekspor laporan PDF | Rewarded ad opsional, bisa ditolak; ekspor CSV selalu gratis |
 | Input order, pembayaran, proses cetak | **Tidak ada iklan** |
 
+Tersedia juga pembelian sekali bayar untuk menghilangkan iklan selamanya.
+Harganya diambil dari Play Store, tidak ditulis di kode. Buat produk
+non-consumable dengan ID `remove_ads` di Play Console sebelum rilis.
+
 Penempatan ini mengikuti kebijakan AdMob, yang melarang interstitial terpicu
 setelah setiap aksi pengguna maupun iklan yang menyela alur kerja inti.
 Melanggarnya berakibat penutupan akun yang tidak bisa dibuka lagi dengan
@@ -272,6 +289,19 @@ dan nota bisa dicetak ulang kapan saja.
 **Nota memakai huruf ASCII saja.**
 Printer thermal murah menampilkan karakter non-ASCII sebagai sampah, dan tiap
 merek berbeda. Karena itu nominal dicetak tanpa simbol "Rp".
+
+**Database dienkripsi, dan itu mengubah cara backup bekerja.**
+Kunci SQLCipher dibuat acak saat pemasangan dan disimpan di Android
+Keystore, tidak pernah di kode. Konsekuensinya salinan mentah berkas
+database tidak bisa dibuka di ponsel lain. Karena itu backup diekspor
+tanpa enkripsi lewat `sqlcipher_export`, supaya tetap berguna justru saat
+paling dibutuhkan: ketika ponselnya hilang. Berkas backup itu bisa dibaca
+siapa pun yang memegangnya, jadi simpan di tempat pribadi.
+
+**Kirim ulang otomatis hanya berlaku di mode API.**
+Mode manual membuka layar WhatsApp setiap mengirim. Mencobanya sendiri di
+latar belakang akan merebut layar kasir di tengah melayani pelanggan, jadi
+kegagalan di mode manual menunggu pemilik menekan kirim ulang.
 
 **Aplikasi mewajibkan koneksi internet.**
 Ini keputusan bisnis, bukan keterbatasan teknis: seluruh lapisan data sanggup

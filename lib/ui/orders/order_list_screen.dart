@@ -9,6 +9,7 @@ import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
 import '../widgets/stat_tile.dart';
 import 'order_detail_screen.dart';
+import 'scan_order_screen.dart';
 
 class OrderListScreen extends ConsumerStatefulWidget {
   const OrderListScreen({super.key});
@@ -58,7 +59,16 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
             ? const Text('Daftar Order')
             : Text('${_selected.length} dipilih'),
         actions: _selected.isEmpty
-            ? null
+            ? [
+                IconButton(
+                  tooltip: 'Pindai QR nota',
+                  icon: const Icon(Icons.qr_code_scanner),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                        builder: (_) => const ScanOrderScreen()),
+                  ),
+                ),
+              ]
             : [
                 IconButton(
                   tooltip: 'Tandai diproses',

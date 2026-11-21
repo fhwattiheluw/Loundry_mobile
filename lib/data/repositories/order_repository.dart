@@ -111,6 +111,23 @@ class OrderRepository {
     return order.copyWith(items: items);
   }
 
+  /// Mencari order dari nomor nota, dipakai hasil pindai QR (FR-33).
+  /// Nomor dibandingkan tanpa peduli spasi di ujung, karena hasil pindai
+  /// kadang membawa karakter tambahan.
+  Future<LaundryOrder?> byOrderNo(String orderNo) async {
+    final db = await _db.database;
+    final rows = await db.rawQuery(
+      '$_orderSelect WHERE o.order_no = ?',
+      [orderNo.trim()],
+    );
+
+    if (rows.isEmpty) return null;
+
+    final order = LaundryOrder.fromMap(rows.first);
+    final items = await _itemsOf(db, order.id!);
+    return order.copyWith(items: items);
+  }
+
   Future<List<OrderItem>> _itemsOf(Database db, int orderId) async {
     final rows = await db.query('order_items',
         where: 'order_id = ?', whereArgs: [orderId], orderBy: 'id');
