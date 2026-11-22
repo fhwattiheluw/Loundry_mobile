@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../core/design_system.dart';
 
@@ -194,22 +194,22 @@ class OrderCardSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return const Card(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.all(AppSpacing.lg),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Expanded(child: Skeleton(height: 18, width: 140)),
+                Expanded(child: Skeleton(height: 18, width: 140)),
                 Skeleton(height: 22, width: 72, radius: AppRadius.pill),
               ],
             ),
-            const SizedBox(height: AppSpacing.sm),
-            const Skeleton(height: 12, width: 180),
-            const SizedBox(height: AppSpacing.lg),
-            const Row(
+            SizedBox(height: AppSpacing.sm),
+            Skeleton(height: 12, width: 180),
+            SizedBox(height: AppSpacing.lg),
+            Row(
               children: [
                 Expanded(child: Skeleton(height: 14, width: 120)),
                 Skeleton(height: 20, width: 90),

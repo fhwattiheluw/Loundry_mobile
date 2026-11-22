@@ -189,14 +189,14 @@ class ExportService {
       children: [
         pw.Text(
           name.isEmpty ? 'Laporan Pendapatan' : name,
-          style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
+          style: const pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold),
         ),
         if (address.isNotEmpty)
           pw.Text(address, style: const pw.TextStyle(fontSize: 9)),
         pw.SizedBox(height: 10),
         pw.Text(
           'Laporan Pendapatan',
-          style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
+          style: const pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
         ),
         pw.Text(
           'Periode ${formatDate(from)} sampai ${formatDate(to)}',
@@ -258,7 +258,7 @@ class ExportService {
         padding: const pw.EdgeInsets.only(bottom: 8),
         child: pw.Text(
           text,
-          style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+          style: const pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
         ),
       );
 
@@ -267,7 +267,7 @@ class ExportService {
       headers: headers,
       data: rows,
       cellStyle: const pw.TextStyle(fontSize: 9),
-      headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+      headerStyle: const pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
       headerDecoration: const pw.BoxDecoration(color: PdfColors.grey200),
       cellAlignments: {
         0: pw.Alignment.centerLeft,

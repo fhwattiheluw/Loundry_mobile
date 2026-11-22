@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -124,7 +124,7 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 96),
         children: [
           Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: Text(
               'Setiap transaksi menyimpan siapa yang membuatnya. Beri PIN '
               'berbeda untuk tiap kasir supaya selisih kas bisa dilacak.',
@@ -136,7 +136,7 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
           Card(
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: ListTile(
-              leading: IconBadge(Icons.key_outlined, tone: 11),
+              leading: const IconBadge(Icons.key_outlined, tone: 11),
               title: const Text('Kode pemulihan PIN'),
               subtitle: Text(
                 ref.read(pinRecoveryProvider).hasRecoveryCode

@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -160,7 +160,7 @@ class _BackupSettingsScreenState
 
               return Card(
                 child: ListTile(
-                  leading: IconBadge(Icons.folder_outlined, tone: 4),
+                  leading: const IconBadge(Icons.folder_outlined, tone: 4),
                   title: const Text('Folder backup otomatis'),
                   subtitle: Text(
                     path,
@@ -215,7 +215,7 @@ class _BackupSettingsScreenState
                   for (var i = 0; i < _backups.length; i++) ...[
                     if (i > 0) const Divider(height: 1),
                     ListTile(
-                      leading: IconBadge(Icons.description_outlined, tone: 5),
+                      leading: const IconBadge(Icons.description_outlined, tone: 5),
                       title: Text(_backups[i].name),
                       subtitle: Text(
                         '${formatDateTime(_backups[i].createdAt)} · '

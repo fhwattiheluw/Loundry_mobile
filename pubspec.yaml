@@ -60,6 +60,7 @@ dependencies:
   image: '>=3.3.0 <5.0.0'
   # Pembelian versi bebas iklan
 
+  material_ui: ^0.0.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

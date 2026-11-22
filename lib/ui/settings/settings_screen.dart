@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
@@ -159,7 +159,7 @@ class SettingsScreen extends ConsumerWidget {
                   builder: (context, ref, _) {
                     final shift = ref.watch(currentShiftProvider);
                     return ListTile(
-                      leading: IconBadge(Icons.point_of_sale_outlined, tone: 1),
+                      leading: const IconBadge(Icons.point_of_sale_outlined, tone: 1),
                       title: const Text('Shift kasir'),
                       subtitle: Text(
                         shift.maybeWhen(
@@ -177,7 +177,7 @@ class SettingsScreen extends ConsumerWidget {
                 if (isOwner) ...[
                   const Divider(height: 1, indent: 70),
                   ListTile(
-                    leading: IconBadge(Icons.history, tone: 2),
+                    leading: const IconBadge(Icons.history, tone: 2),
                     title: const Text('Riwayat shift dan selisih kas'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _open(context, const ShiftHistoryScreen()),
@@ -193,7 +193,7 @@ class SettingsScreen extends ConsumerWidget {
             child: Column(
               children: [
                 ListTile(
-                  leading: IconBadge(Icons.print_outlined, tone: 3),
+                  leading: const IconBadge(Icons.print_outlined, tone: 3),
                   title: const Text('Printer Bluetooth'),
                   subtitle: Text(
                     settings.get(SettingsKeys.printerName).isEmpty
@@ -215,7 +215,7 @@ class SettingsScreen extends ConsumerWidget {
               child: Column(
                 children: [
                   ListTile(
-                    leading: IconBadge(Icons.storefront_outlined, tone: 4),
+                    leading: const IconBadge(Icons.storefront_outlined, tone: 4),
                     title: const Text('Profil usaha dan nota'),
                     subtitle: Text(
                         settings.get(SettingsKeys.businessName, fallback: '-')),
@@ -225,7 +225,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const Divider(height: 1, indent: 70),
                   ListTile(
-                    leading: IconBadge(Icons.local_offer_outlined, tone: 5),
+                    leading: const IconBadge(Icons.local_offer_outlined, tone: 5),
                     title: const Text('Layanan dan harga'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () =>
@@ -233,7 +233,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const Divider(height: 1, indent: 70),
                   ListTile(
-                    leading: IconBadge(Icons.people_outline, tone: 6),
+                    leading: const IconBadge(Icons.people_outline, tone: 6),
                     title: const Text('Pelanggan'),
                     subtitle: const Text('Ubah data, impor CSV, kirim promo'),
                     trailing: const Icon(Icons.chevron_right),
@@ -241,7 +241,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const Divider(height: 1, indent: 70),
                   ListTile(
-                    leading: IconBadge(Icons.chat_outlined, tone: 7),
+                    leading: const IconBadge(Icons.chat_outlined, tone: 7),
                     title: const Text('Template WhatsApp'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () =>
@@ -249,7 +249,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const Divider(height: 1, indent: 70),
                   ListTile(
-                    leading: IconBadge(Icons.send_outlined, tone: 8),
+                    leading: const IconBadge(Icons.send_outlined, tone: 8),
                     title: const Text('Mode pengiriman dan jam tenang'),
                     subtitle: Text(
                       settings.get(SettingsKeys.whatsappMode,
@@ -272,7 +272,7 @@ class SettingsScreen extends ConsumerWidget {
                       );
 
                       return ListTile(
-                        leading: IconBadge(Icons.mark_chat_unread_outlined, tone: 9),
+                        leading: const IconBadge(Icons.mark_chat_unread_outlined, tone: 9),
                         title: const Text('Pesan belum terkirim'),
                         subtitle: Text(count == 0
                             ? 'Semua pesan sudah terkirim'
@@ -290,14 +290,14 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const Divider(height: 1, indent: 70),
                   ListTile(
-                    leading: IconBadge(Icons.group_outlined, tone: 10),
+                    leading: const IconBadge(Icons.group_outlined, tone: 10),
                     title: const Text('Pengguna dan PIN'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _open(context, const UserSettingsScreen()),
                   ),
                   const Divider(height: 1, indent: 70),
                   ListTile(
-                    leading: IconBadge(Icons.backup_outlined, tone: 11),
+                    leading: const IconBadge(Icons.backup_outlined, tone: 11),
                     title: const Text('Backup dan restore'),
                     subtitle: const Text(
                         'Data hanya ada di ponsel ini. Bagikan backup rutin.'),
@@ -312,7 +312,7 @@ class SettingsScreen extends ConsumerWidget {
             const _Heading('Nota'),
             Card(
               child: ListTile(
-                leading: IconBadge(Icons.image_outlined, tone: 12),
+                leading: const IconBadge(Icons.image_outlined, tone: 12),
                 title: const Text('Logo di nota'),
                 subtitle: Text(
                   settings.get(SettingsKeys.receiptLogoPath).isEmpty
@@ -363,7 +363,7 @@ class SettingsScreen extends ConsumerWidget {
                         children: [
                           const Divider(height: 1, indent: 70),
                           ListTile(
-                            leading: IconBadge(Icons.privacy_tip_outlined, tone: 14),
+                            leading: const IconBadge(Icons.privacy_tip_outlined, tone: 14),
                             title: const Text('Opsi privasi iklan'),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () => ref

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -178,7 +178,7 @@ class _Body extends ConsumerWidget {
           child: Column(
             children: [
               ListTile(
-                leading: IconBadge(Icons.person_outline, tone: 2),
+                leading: const IconBadge(Icons.person_outline, tone: 2),
                 title: Text(order.customerName),
                 subtitle: Text(order.customerPhone.isEmpty
                     ? 'Tanpa nomor WhatsApp'
@@ -199,7 +199,7 @@ class _Body extends ConsumerWidget {
               ),
               const Divider(height: 1),
               ListTile(
-                leading: IconBadge(Icons.schedule_outlined, tone: 3),
+                leading: const IconBadge(Icons.schedule_outlined, tone: 3),
                 title: const Text('Estimasi selesai'),
                 subtitle: Text(formatDateTime(order.estimatedAt)),
               ),
@@ -207,7 +207,7 @@ class _Body extends ConsumerWidget {
               // Rak bisa diubah kapan saja, bukan hanya saat cucian
               // selesai: kantong sering dipindah saat rak penuh.
               ListTile(
-                leading: IconBadge(Icons.inventory_2_outlined, tone: 4),
+                leading: const IconBadge(Icons.inventory_2_outlined, tone: 4),
                 title: const Text('Lokasi rak'),
                 subtitle: Text(
                   order.rack == null || order.rack!.isEmpty
@@ -224,7 +224,7 @@ class _Body extends ConsumerWidget {
               if (order.perfume != null && order.perfume!.isNotEmpty) ...[
                 const Divider(height: 1),
                 ListTile(
-                  leading: IconBadge(Icons.local_florist_outlined, tone: 5),
+                  leading: const IconBadge(Icons.local_florist_outlined, tone: 5),
                   title: const Text('Parfum'),
                   subtitle: Text(order.perfume!),
                 ),
@@ -232,7 +232,7 @@ class _Body extends ConsumerWidget {
               if (order.note != null && order.note!.isNotEmpty) ...[
                 const Divider(height: 1),
                 ListTile(
-                  leading: IconBadge(Icons.sticky_note_2_outlined, tone: 6),
+                  leading: const IconBadge(Icons.sticky_note_2_outlined, tone: 6),
                   title: const Text('Catatan'),
                   subtitle: Text(order.note!),
                 ),
@@ -240,7 +240,7 @@ class _Body extends ConsumerWidget {
               if (order.pickedUpAt != null) ...[
                 const Divider(height: 1),
                 ListTile(
-                  leading: IconBadge(Icons.done_all, tone: 7),
+                  leading: const IconBadge(Icons.done_all, tone: 7),
                   title: const Text('Diambil'),
                   subtitle: Text(
                     '${formatDateTime(order.pickedUpAt!)}'
@@ -899,7 +899,7 @@ class _OverflowMenu extends ConsumerWidget {
             value: 'cancel',
             child: ListTile(
               leading: Icon(Icons.block, color: Theme.of(context).colorScheme.error),
-              title: Text('Batalkan order'),
+              title: const Text('Batalkan order'),
             ),
           ),
       ],
@@ -1050,7 +1050,7 @@ class _StatusTimelineState extends ConsumerState<_StatusTimeline> {
         }
 
         final cancelled = order.laundryStatus == LaundryStatus.dibatalkan;
-        final flow = _StatusTimeline.flow;
+        const flow = _StatusTimeline.flow;
         final currentIndex = flow.indexOf(order.laundryStatus);
 
         return Card(

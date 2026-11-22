@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design_system.dart';
@@ -729,19 +729,19 @@ class _CashierNotice extends StatelessWidget {
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('Laporan')),
         body: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.lock_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                SizedBox(height: 16),
-                Text(
+                const SizedBox(height: 16),
+                const Text(
                   'Laporan pendapatan hanya bisa dibuka Owner.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 15),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
                   'Rekap shift Anda sendiri ada di menu Pengaturan.',
                   textAlign: TextAlign.center,

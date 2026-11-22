@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -155,7 +155,7 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
 
         Card(
           child: ListTile(
-            leading: IconBadge(Icons.chat_outlined, tone: 11),
+            leading: const IconBadge(Icons.chat_outlined, tone: 11),
             title: const Text('Kirim kode ke WhatsApp pemilik'),
             subtitle: Text(
               recovery.canSendViaWhatsApp
@@ -171,7 +171,7 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
 
         Card(
           child: ListTile(
-            leading: IconBadge(Icons.key_outlined, tone: 12),
+            leading: const IconBadge(Icons.key_outlined, tone: 12),
             title: const Text('Pakai kode pemulihan'),
             subtitle: Text(
               recovery.hasRecoveryCode

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -452,18 +452,18 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
           label: const Text('Hubungkan printer'),
         ),
         const SizedBox(height: AppSpacing.xl),
-        Card(
+        const Card(
           child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: EdgeInsets.all(AppSpacing.lg),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Setelah ini',
+                Text('Setelah ini',
                     style: TextStyle(fontWeight: FontWeight.w700)),
-                const SizedBox(height: AppSpacing.sm),
-                const Text('1. Buka shift dan masukkan kas awal di laci'),
-                const Text('2. Tekan Order Baru saat pelanggan datang'),
-                const Text('3. Backup seminggu sekali, simpan di luar HP'),
+                SizedBox(height: AppSpacing.sm),
+                Text('1. Buka shift dan masukkan kas awal di laci'),
+                Text('2. Tekan Order Baru saat pelanggan datang'),
+                Text('3. Backup seminggu sekali, simpan di luar HP'),
               ],
             ),
           ),

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
@@ -116,7 +116,7 @@ class _LogoSettingsScreenState extends ConsumerState<LogoSettingsScreen> {
                       children: [
                         Icon(Icons.image_outlined,
                             size: 56, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                        SizedBox(height: 10),
+                        const SizedBox(height: 10),
                         Text('Belum ada logo',
                             style: Theme.of(context).textTheme.bodySmall),
                       ],

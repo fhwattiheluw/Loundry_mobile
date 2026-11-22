@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
@@ -103,16 +103,16 @@ class _TemplateSettingsScreenState
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
-          Card(
+          const Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Cara kerja pengiriman',
+                  Text('Cara kerja pengiriman',
                       style: TextStyle(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 6),
-                  const Text(
+                  SizedBox(height: 6),
+                  Text(
                     'Aplikasi membuka WhatsApp dengan pesan sudah terisi, '
                     'kasir tinggal menekan tombol kirim. Cara ini gratis dan '
                     'tidak berisiko memblokir nomor usaha Anda.',
