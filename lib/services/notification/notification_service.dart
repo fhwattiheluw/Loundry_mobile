@@ -3,6 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../data/db/app_database.dart';
 import '../../data/db/settings_keys.dart';
+import '../../data/repositories/order_repository.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
@@ -104,10 +105,18 @@ class NotificationService {
   // ---------------------------------------------------------------- kirim
 
   Future<NotificationResult> notify(
-    LaundryOrder order,
+    LaundryOrder given,
     NotificationTrigger trigger, {
     bool force = false,
   }) async {
+    // Order dari daftar (beranda, filter, pengingat) dimuat TANPA item,
+    // dan jumlah dibayarnya bisa sudah berubah sejak daftar dimuat. Pesan
+    // wajib memuat rincian lengkap, jadi order dibaca ulang dari database
+    // setiap kali, apa pun asal objeknya.
+    final order = given.id == null
+        ? given
+        : await OrderRepository(_db).byId(given.id!) ?? given;
+
     if (!_template.isEnabled(trigger) && !force) {
       return const NotificationResult.skipped('Pemicu ini dimatikan pemilik.');
     }

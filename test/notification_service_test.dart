@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:laundry_pos/core/formatters.dart';
 import 'package:laundry_pos/data/db/app_database.dart';
 import 'package:laundry_pos/data/db/settings_keys.dart';
 import 'package:laundry_pos/data/repositories/master_repository.dart';
@@ -111,6 +112,45 @@ void main() {
 
       expect(api.sent.length, 1);
       expect(manual.sent, isEmpty);
+    });
+  });
+
+  group('isi pesan', () {
+    test('order tanpa item (dari daftar) tetap memuat rincian lengkap',
+        () async {
+      // Daftar order dimuat tanpa item; pesan harus tetap lengkap.
+      final fromList = order.copyWith(items: const []);
+
+      await service.notify(
+        fromList,
+        NotificationTrigger.pengingatAmbil,
+        force: true,
+      );
+
+      final message = manual.sent.single.message;
+      expect(message, contains(order.items.first.serviceName));
+      expect(message, contains('${formatQty(order.items.first.qty)} '
+          '${order.items.first.unit.label}'));
+      expect(message, contains('Sudah dibayar'));
+      expect(message, contains('Sisa tagihan'));
+    });
+
+    test('jumlah dibayar mengikuti database, bukan objek yang usang', () async {
+      await orders.addPayment(
+        orderId: order.id!,
+        amount: 10000,
+        method: 'Tunai',
+        user: owner,
+      );
+
+      // `order` dibuat sebelum pembayaran: paid = 0.
+      await service.notify(
+        order,
+        NotificationTrigger.pembayaranDiterima,
+        force: true,
+      );
+
+      expect(manual.sent.single.message, contains(formatRupiah(10000)));
     });
   });
 
