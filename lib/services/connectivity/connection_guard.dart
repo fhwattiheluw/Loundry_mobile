@@ -88,10 +88,13 @@ final connectionProvider =
 
 /// Pembungkus yang menutup seluruh aplikasi saat internet terputus.
 ///
-/// CATATAN TEKNIS: seluruh lapisan data aplikasi ini sebenarnya sanggup
-/// berjalan tanpa internet. Gerbang ini adalah keputusan bisnis, bukan
-/// keterbatasan teknis. Ubah [requireInternet] menjadi false bila suatu saat
-/// konter perlu tetap melayani pelanggan saat jaringan sedang mati.
+/// Aplikasi ini dijalankan dengan [requireInternet] bernilai false, lihat
+/// app.dart: konter tetap melayani pelanggan walau jaringan mati, dan
+/// seluruh lapisan datanya memang sanggup bekerja tanpa internet.
+///
+/// Gerbangnya tidak dihapus karena ia keputusan bisnis, bukan keterbatasan
+/// teknis: bila suatu hari aplikasi harus memaksa pengguna daring, satu
+/// baris di app.dart cukup untuk menghidupkannya kembali.
 class ConnectionGate extends ConsumerWidget {
   const ConnectionGate({
     super.key,

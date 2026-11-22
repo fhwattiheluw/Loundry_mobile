@@ -39,7 +39,11 @@ class LaundryPosApp extends ConsumerWidget {
       },
       // Gerbang internet membungkus seluruh aplikasi. Layar apa pun hanya
       // tergambar setelah koneksi terbukti ada.
-      home: const ConnectionGate(child: _Root()),
+      // Konter harus tetap bisa melayani pelanggan saat jaringan mati, dan
+      // di banyak tempat jaringan memang mati beberapa jam sehari. Iklan
+      // tetap muncul begitu ada internet; yang tidak terjadi hanyalah
+      // menutup seluruh aplikasi karena sinyal hilang.
+      home: const ConnectionGate(requireInternet: false, child: _Root()),
     );
   }
 }

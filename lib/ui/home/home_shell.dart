@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../core/design_system.dart';
+import '../../services/connectivity/connection_guard.dart';
 import '../orders/new_order_screen.dart';
 import '../orders/order_list_screen.dart';
 import '../reports/report_screen.dart';
@@ -82,7 +83,15 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       SettingsScreen(),
     ];
 
-    final body = IndexedStack(index: _index, children: pages);
+    // Tanpa internet aplikasi tetap jalan penuh, tapi pesan WhatsApp
+    // mengantre dan iklan tidak dimuat. Kasir berhak tahu itu, tanpa
+    // dihalangi bekerja.
+    final body = Column(
+      children: [
+        const _OfflineStrip(),
+        Expanded(child: IndexedStack(index: _index, children: pages)),
+      ],
+    );
     final showFab = _index <= 1;
 
     if (wide) {
@@ -141,6 +150,45 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               label: d.label,
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Garis tipis pemberitahuan saat jaringan mati. Sengaja setipis mungkin:
+/// ia memberi tahu, bukan menghalangi.
+class _OfflineStrip extends ConsumerWidget {
+  const _OfflineStrip();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(connectionProvider);
+    if (status != ConnectionState.offline) return const SizedBox.shrink();
+
+    final scheme = Theme.of(context).colorScheme;
+
+    return Material(
+      color: scheme.errorContainer,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md, vertical: 6),
+          child: Row(
+            children: [
+              Icon(Icons.cloud_off, size: 16, color: scheme.onErrorContainer),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Tanpa internet. Transaksi tetap tersimpan, pesan WhatsApp '
+                  'menunggu giliran kirim.',
+                  style: TextStyle(
+                      fontSize: 12, color: scheme.onErrorContainer),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
