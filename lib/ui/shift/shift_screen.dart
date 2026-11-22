@@ -7,6 +7,7 @@ import '../../core/design_system.dart';
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../domain/models/models.dart';
+import '../widgets/layout.dart';
 import '../widgets/stat_tile.dart';
 
 /// Buka dan tutup shift kasir.
@@ -69,12 +70,27 @@ class _OpenShiftFormState extends ConsumerState<_OpenShiftForm> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const Icon(Icons.point_of_sale_outlined, size: 56),
-        const SizedBox(height: 16),
-        const Text(
+        Center(
+          child: Container(
+            width: 96,
+            height: 96,
+            decoration: BoxDecoration(
+              gradient: AppGradient.brand(context),
+              shape: BoxShape.circle,
+              boxShadow: AppShadow.soft(context),
+            ),
+            child: const Icon(
+              Icons.point_of_sale_outlined,
+              size: 44,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
           'Belum ada shift yang dibuka',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 8),
         Text(
@@ -123,7 +139,10 @@ class _OpenShiftView extends ConsumerWidget {
         children: [
           Card(
             child: ListTile(
-              leading: const Icon(Icons.play_circle_outline),
+              leading: IconBadge(
+                Icons.play_circle_outline,
+                color: context.status.selesai,
+              ),
               title: const Text('Shift berjalan'),
               subtitle: Text('Dibuka ${formatDateTime(shift.openedAt)}'),
             ),
@@ -173,12 +192,12 @@ class _OpenShiftView extends ConsumerWidget {
                 Card(
                   child: Column(
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 14, 16, 4),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
                         child: Align(
                           alignment: Alignment.centerLeft,
                           child: Text('Per metode bayar',
-                              style: TextStyle(fontWeight: FontWeight.w700)),
+                              style: Theme.of(context).textTheme.titleMedium),
                         ),
                       ),
                       if (data.byMethod.isEmpty)

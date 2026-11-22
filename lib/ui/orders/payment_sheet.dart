@@ -7,6 +7,7 @@ import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../widgets/layout.dart';
 import '../widgets/number_pad.dart';
 
 /// Layar pembayaran. Mengembalikan true bila ada pembayaran yang tersimpan.
@@ -139,16 +140,26 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
             children: [
               Row(
                 children: [
+                  const IconBadge(Icons.payments_outlined, tone: 6),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
-                    child: Text('Pembayaran ${order.orderNo}',
-                        style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.w700)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Pembayaran',
+                            style: Theme.of(context).textTheme.titleLarge),
+                        Text(
+                          '${order.orderNo}  ·  ${order.customerName}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                  Text(order.customerName,
-                      style: Theme.of(context).textTheme.bodyMedium),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: AppSpacing.lg),
 
               // Tiga angka yang menentukan keputusan kasir, terbaca sekali
               // lihat. Sebelumnya semuanya ditulis sebagai satu baris teks
@@ -286,7 +297,7 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
                               ? context.status.lunas
                               : context.status.belumLunas)
                           .withValues(alpha: context.status.onStatusTint),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                     ),
                     child: Row(
                       children: [
@@ -324,6 +335,9 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, AppTouch.primary),
+                  ),
                   onPressed: _amount > 0 && !_saving ? _save : null,
                   icon: _saving
                       ? const SizedBox(
@@ -347,8 +361,9 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
   }
 }
 
-/// Total, sudah dibayar, dan sisa tagihan berdampingan. Sisa dibuat paling
-/// menonjol karena itu angka yang dipakai kasir memutuskan.
+/// Sisa tagihan sebagai angka terbesar di bidang gradasi, dengan total dan
+/// yang sudah dibayar di bawahnya. Sisa adalah angka yang dipakai kasir
+/// memutuskan, jadi dialah yang pertama dibaca.
 class _Summary extends StatelessWidget {
   const _Summary({
     required this.total,
@@ -362,39 +377,57 @@ class _Summary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final muted = Colors.white.withValues(alpha: 0.78);
 
-    Widget cell(String label, int value, {bool strong = false}) {
-      return Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: Theme.of(context).textTheme.labelSmall),
-            const SizedBox(height: 2),
-            Text(
-              formatRupiah(value),
-              style: TextStyle(
-                fontSize: strong ? 18 : 15,
-                fontWeight: strong ? FontWeight.w700 : FontWeight.w600,
-                color: strong ? scheme.primary : null,
+    Widget cell(String label, int value) => Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: theme.textTheme.bodySmall?.copyWith(color: muted)),
+              const SizedBox(height: 2),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  formatRupiah(value),
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(color: Colors.white),
+                ),
               ),
-            ),
-          ],
-        ),
-      );
-    }
+            ],
+          ),
+        );
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        gradient: AppGradient.brand(context),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          cell('Total', total),
-          cell('Dibayar', paid),
-          cell('Sisa tagihan', remaining, strong: true),
+          Text('Sisa tagihan',
+              style: theme.textTheme.bodyMedium?.copyWith(color: muted)),
+          const SizedBox(height: 2),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              formatRupiah(remaining),
+              style: theme.textTheme.displaySmall
+                  ?.copyWith(color: Colors.white, fontSize: 34),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              cell('Total', total),
+              cell('Sudah dibayar', paid),
+            ],
+          ),
         ],
       ),
     );

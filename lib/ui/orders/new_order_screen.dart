@@ -8,6 +8,7 @@ import '../../core/security.dart';
 import '../../data/db/settings_keys.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../widgets/layout.dart';
 import '../widgets/number_pad.dart';
 import 'order_detail_screen.dart';
 
@@ -284,7 +285,6 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Order Baru')),
@@ -348,15 +348,19 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
           if (_items.isEmpty)
             Card(
               child: InkWell(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
                 onTap: _addItem,
                 child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 28),
-                  child: Center(
-                    child: Text(
-                      'Ketuk untuk menambah layanan',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                  padding: const EdgeInsets.symmetric(vertical: 28),
+                  child: Column(
+                    children: [
+                      const IconBadge(Icons.add_shopping_cart_outlined),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        'Ketuk untuk menambah layanan',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -511,35 +515,40 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
           ),
 
           const SizedBox(height: 20),
-          Card(
-            color: scheme.primaryContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _summaryRow('Subtotal', formatRupiah(_subtotal)),
-                  if (_discount > 0)
-                    _summaryRow('Diskon', '- ${formatRupiah(_discount)}'),
-                  if (_extraFee > 0)
-                    _summaryRow(
-                      ref.watch(settingsRepoProvider).get(
-                          SettingsKeys.extraFeeLabel,
-                          fallback: 'Biaya lain'),
-                      formatRupiah(_extraFee),
-                    ),
-                  const Divider(),
-                  _summaryRow('Total', formatRupiah(_total), big: true),
-                  if (_payNow > 0) ...[
-                    _summaryRow('Dibayar', formatRupiah(_payNow)),
-                    _summaryRow('Sisa', formatRupiah(_total - _payNow)),
-                  ],
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              gradient: AppGradient.brand(context),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              boxShadow: AppShadow.soft(context),
+            ),
+            child: Column(
+              children: [
+                _summaryRow('Subtotal', formatRupiah(_subtotal)),
+                if (_discount > 0)
+                  _summaryRow('Diskon', '- ${formatRupiah(_discount)}'),
+                if (_extraFee > 0)
+                  _summaryRow(
+                    ref.watch(settingsRepoProvider).get(
+                        SettingsKeys.extraFeeLabel,
+                        fallback: 'Biaya lain'),
+                    formatRupiah(_extraFee),
+                  ),
+                Divider(color: Colors.white.withValues(alpha: 0.3)),
+                _summaryRow('Total', formatRupiah(_total), big: true),
+                if (_payNow > 0) ...[
+                  _summaryRow('Dibayar', formatRupiah(_payNow)),
+                  _summaryRow('Sisa', formatRupiah(_total - _payNow)),
                 ],
-              ),
+              ],
             ),
           ),
 
           const SizedBox(height: 20),
           FilledButton.icon(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, AppTouch.primary),
+            ),
             onPressed: _saving ? null : _save,
             icon: _saving
                 ? const SizedBox(
@@ -564,12 +573,14 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
           Expanded(
             child: Text(label,
                 style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
                     fontSize: big ? 16 : 14,
                     fontWeight: big ? FontWeight.w700 : FontWeight.w500)),
           ),
           Text(value,
               style: TextStyle(
-                  fontSize: big ? 20 : 14,
+                  color: Colors.white,
+                  fontSize: big ? 24 : 14,
                   fontWeight: big ? FontWeight.w700 : FontWeight.w600)),
         ],
       ),
@@ -584,9 +595,8 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(text,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+        padding: const EdgeInsets.only(bottom: 8, left: 4),
+        child: Text(text, style: Theme.of(context).textTheme.titleMedium),
       );
 }
 

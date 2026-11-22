@@ -10,6 +10,7 @@ import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
 import '../../data/repositories/report_repository.dart';
 import '../../services/ads/ad_service.dart';
+import '../widgets/layout.dart';
 import '../widgets/stat_tile.dart';
 import 'receivables_screen.dart';
 
@@ -189,8 +190,8 @@ class ReportScreen extends ConsumerWidget {
                       padding: const EdgeInsets.all(14),
                       child: Row(
                         children: [
-                          const Icon(Icons.info_outline, size: 18),
-                          const SizedBox(width: 10),
+                          const IconBadge(Icons.info_outline, tone: 1),
+                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               'Nilai order periode ini ${formatRupiah(data.grossOrderValue)}. '
@@ -399,9 +400,9 @@ class _Heading extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Text(
-        text,
-        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(left: AppSpacing.xs),
+        child: Text(text, style: Theme.of(context).textTheme.titleMedium),
       );
 }
 
@@ -537,9 +538,9 @@ class _RevenueChart extends ConsumerWidget {
 
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 20, 20, 8),
+        padding: const EdgeInsets.fromLTRB(8, 24, 20, 12),
         child: SizedBox(
-          height: 200,
+          height: 220,
           child: data.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Center(child: Text('$e')),
@@ -613,13 +614,21 @@ class _RevenueChart extends ConsumerWidget {
                         for (var i = 0; i < days.length; i++)
                           FlSpot(i.toDouble(), days[i].amount.toDouble()),
                       ],
-                      isCurved: false,
-                      barWidth: 2.5,
+                      isCurved: true,
+                      preventCurveOverShooting: true,
+                      barWidth: 3,
                       color: scheme.primary,
                       dotData: FlDotData(show: days.length <= 14),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: scheme.primary.withValues(alpha: 0.12),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            scheme.primary.withValues(alpha: 0.28),
+                            scheme.primary.withValues(alpha: 0.02),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -671,6 +680,20 @@ class _AmountList extends ConsumerWidget {
               for (var i = 0; i < rows.length; i++) ...[
                 if (i > 0) const Divider(height: 1),
                 ListTile(
+                  leading: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: IconBadge.tones[i % IconBadge.tones.length]
+                        .withValues(alpha: 0.14),
+                    foregroundColor:
+                        IconBadge.tones[i % IconBadge.tones.length],
+                    child: Text(
+                      '${i + 1}',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
                   title: Text(rows[i].name),
                   subtitle: Text(
                     showQty

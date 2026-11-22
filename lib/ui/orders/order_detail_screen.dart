@@ -9,6 +9,8 @@ import '../../core/design_system.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
 import '../../services/photo/order_photo_service.dart';
+import '../widgets/layout.dart';
+import '../widgets/stat_tile.dart';
 import 'payment_sheet.dart';
 import 'status_confirm.dart';
 
@@ -64,38 +66,93 @@ class _Body extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          decoration: BoxDecoration(
+            gradient: AppGradient.brand(context),
+            borderRadius: BorderRadius.circular(AppRadius.xl),
+            boxShadow: AppShadow.soft(context),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      // Nomor pendek yang bisa disebut lewat telepon.
-                      Text(shortOrderNo(order.orderNo),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Nomor pendek yang bisa disebut lewat telepon.
+                        Text(
+                          shortOrderNo(order.orderNo),
                           style: const TextStyle(
-                              fontSize: 26, fontWeight: FontWeight.w800)),
-                      const SizedBox(width: 8),
-                      Text(order.orderNo,
+                            fontSize: 30,
+                            height: 1.1,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          order.orderNo,
                           style: TextStyle(
-                              fontSize: 13, color: scheme.onSurfaceVariant)),
-                    ],
+                            fontSize: 12.5,
+                            color: Colors.white.withValues(alpha: 0.75),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(formatDateTime(order.createdAt),
-                      style: TextStyle(
-                          fontSize: 13.5, color: scheme.onSurfaceVariant)),
+                  StatusChip(
+                    label: order.laundryStatus.label,
+                    color: Colors.white,
+                  ),
                 ],
               ),
-            ),
-            // Status tidak dipasang di sini: timeline di bawahnya sudah
-            // menyebutkannya, dan dua kali dalam satu layar hanya memakan
-            // tempat yang dibutuhkan angka dan tombol.
-            const SizedBox.shrink(),
-          ],
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                order.customerName,
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: Colors.white),
+              ),
+              Text(
+                formatDateTime(order.createdAt),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white.withValues(alpha: 0.75),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _HeroFigure(
+                        label: 'Total',
+                        value: formatRupiah(order.total),
+                      ),
+                    ),
+                    Expanded(
+                      child: _HeroFigure(
+                        label: order.remaining > 0 ? 'Sisa tagihan' : 'Status',
+                        value: order.remaining > 0
+                            ? formatRupiah(order.remaining)
+                            : 'LUNAS',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
 
         if (order.laundryStatus == LaundryStatus.dibatalkan &&
@@ -104,7 +161,7 @@ class _Body extends ConsumerWidget {
           Card(
             color: scheme.errorContainer,
             child: ListTile(
-              leading: const Icon(Icons.block),
+              leading: IconBadge(Icons.block, color: scheme.error),
               title: const Text('Order dibatalkan'),
               subtitle: Text(order.cancelReason!),
             ),
@@ -119,7 +176,7 @@ class _Body extends ConsumerWidget {
           child: Column(
             children: [
               ListTile(
-                leading: const Icon(Icons.person_outline),
+                leading: IconBadge(Icons.person_outline, tone: 2),
                 title: Text(order.customerName),
                 subtitle: Text(order.customerPhone.isEmpty
                     ? 'Tanpa nomor WhatsApp'
@@ -140,7 +197,7 @@ class _Body extends ConsumerWidget {
               ),
               const Divider(height: 1),
               ListTile(
-                leading: const Icon(Icons.schedule_outlined),
+                leading: IconBadge(Icons.schedule_outlined, tone: 3),
                 title: const Text('Estimasi selesai'),
                 subtitle: Text(formatDateTime(order.estimatedAt)),
               ),
@@ -148,7 +205,7 @@ class _Body extends ConsumerWidget {
               // Rak bisa diubah kapan saja, bukan hanya saat cucian
               // selesai: kantong sering dipindah saat rak penuh.
               ListTile(
-                leading: const Icon(Icons.inventory_2_outlined),
+                leading: IconBadge(Icons.inventory_2_outlined, tone: 4),
                 title: const Text('Lokasi rak'),
                 subtitle: Text(
                   order.rack == null || order.rack!.isEmpty
@@ -165,7 +222,7 @@ class _Body extends ConsumerWidget {
               if (order.perfume != null && order.perfume!.isNotEmpty) ...[
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.local_florist_outlined),
+                  leading: IconBadge(Icons.local_florist_outlined, tone: 5),
                   title: const Text('Parfum'),
                   subtitle: Text(order.perfume!),
                 ),
@@ -173,7 +230,7 @@ class _Body extends ConsumerWidget {
               if (order.note != null && order.note!.isNotEmpty) ...[
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.sticky_note_2_outlined),
+                  leading: IconBadge(Icons.sticky_note_2_outlined, tone: 6),
                   title: const Text('Catatan'),
                   subtitle: Text(order.note!),
                 ),
@@ -181,7 +238,7 @@ class _Body extends ConsumerWidget {
               if (order.pickedUpAt != null) ...[
                 const Divider(height: 1),
                 ListTile(
-                  leading: const Icon(Icons.done_all),
+                  leading: IconBadge(Icons.done_all, tone: 7),
                   title: const Text('Diambil'),
                   subtitle: Text(
                     '${formatDateTime(order.pickedUpAt!)}'
@@ -356,6 +413,42 @@ Future<void> askRack(
 /// Diletakkan dekat bagian atas, bukan di dasar layar: foto yang harus
 /// dicari tidak akan pernah diambil, dan bukti yang tidak diambil tidak
 /// menolong siapa pun saat pelanggan datang marah dua hari kemudian.
+class _HeroFigure extends StatelessWidget {
+  const _HeroFigure({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.white.withValues(alpha: 0.75),
+          ),
+        ),
+        const SizedBox(height: 2),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PhotoCard extends ConsumerWidget {
   const _PhotoCard({required this.orderId});
 
