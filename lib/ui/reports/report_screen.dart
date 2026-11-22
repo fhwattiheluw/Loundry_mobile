@@ -40,8 +40,20 @@ class ReportScreen extends ConsumerWidget {
           PopupMenuButton<String>(
             tooltip: 'Ekspor',
             icon: const Icon(Icons.ios_share),
-            onSelected: (value) => _export(context, ref, asPdf: value == 'pdf'),
+            onSelected: (value) => switch (value) {
+              'print' => _printReport(context, ref),
+              'pdf' => _export(context, ref, asPdf: true),
+              _ => _export(context, ref, asPdf: false),
+            },
             itemBuilder: (_) => const [
+              PopupMenuItem(
+                value: 'print',
+                child: ListTile(
+                  leading: Icon(Icons.print_outlined),
+                  title: Text('Cetak di printer struk'),
+                  subtitle: Text('Lewat printer Bluetooth'),
+                ),
+              ),
               PopupMenuItem(
                 value: 'csv',
                 child: ListTile(
@@ -226,6 +238,50 @@ class ReportScreen extends ConsumerWidget {
   /// CSV selalu gratis supaya pemilik tidak pernah terhalang mengambil
   /// datanya sendiri. PDF ditawarkan lewat rewarded ad yang benar-benar
   /// bisa ditolak, sesuai format iklan yang memang diizinkan AdMob.
+  /// Mencetak laporan periode yang sedang dilihat ke printer struk.
+  ///
+  /// Angka-angkanya dibaca ulang dari provider yang sama dengan yang
+  /// menggambar layar, bukan dari salinan, supaya kertas dan layar tidak
+  /// pernah menyebut dua angka berbeda.
+  Future<void> _printReport(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final range = ref.read(reportRangeProvider);
+
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Menyiapkan laporan...')),
+    );
+
+    try {
+      final summary = await ref.read(revenueSummaryProvider.future);
+      final byMethod = await ref.read(revenueByMethodProvider.future);
+      final byService = await ref.read(revenueByServiceProvider.future);
+
+      final bytes = await ref.read(receiptBuilderProvider).buildRevenueReport(
+            rangeLabel: range.label,
+            from: range.from,
+            to: range.to,
+            summary: summary,
+            byMethod: byMethod,
+            byService: byService,
+            printedBy: ref.read(currentUserProvider).name,
+          );
+
+      final result = await ref.read(printerProvider).printBytes(bytes);
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(result.success
+              ? 'Laporan tercetak.'
+              : 'Gagal mencetak. ${result.message}'),
+        ),
+      );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Gagal menyiapkan laporan: $e')),
+      );
+    }
+  }
+
   Future<void> _export(
     BuildContext context,
     WidgetRef ref, {

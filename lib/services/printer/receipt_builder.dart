@@ -7,6 +7,7 @@ import '../../core/formatters.dart';
 import '../../core/security.dart';
 import '../../data/db/settings_keys.dart';
 import '../../data/repositories/settings_repository.dart';
+import '../../data/repositories/report_repository.dart';
 import '../../data/repositories/shift_repository.dart';
 import '../../domain/models/models.dart';
 
@@ -216,6 +217,88 @@ class ReceiptBuilder {
       formatPlain(diff),
       bold: true,
     ));
+
+    bytes.addAll(_footer(g, withPolicy: false));
+    return bytes;
+  }
+
+  /// Laporan pendapatan untuk satu rentang tanggal, dicetak di printer
+  /// struk 58 atau 80 mm.
+  ///
+  /// Pemilik laundry yang menutup toko malam hari lebih sering memegang
+  /// kertas daripada membuka PDF. Isinya sengaja sama persis dengan yang
+  /// ada di layar Laporan, supaya tidak ada dua versi kebenaran.
+  Future<List<int>> buildRevenueReport({
+    required String rangeLabel,
+    required DateTime from,
+    required DateTime to,
+    required RevenueSummary summary,
+    List<NamedAmount> byService = const [],
+    List<NamedAmount> byMethod = const [],
+    String? printedBy,
+  }) async {
+    final profile = await CapabilityProfile.load();
+    final g = Generator(_paperSize, profile);
+    final bytes = <int>[];
+
+    bytes.addAll(_header(g));
+    bytes.addAll(g.text('LAPORAN PENDAPATAN',
+        styles: const PosStyles(align: PosAlign.center, bold: true)));
+    bytes.addAll(g.text(
+      _ascii(rangeLabel),
+      styles: const PosStyles(align: PosAlign.center),
+    ));
+    bytes.addAll(g.text(
+      '${formatDate(from)} - ${formatDate(to)}',
+      styles: const PosStyles(
+          align: PosAlign.center, fontType: PosFontType.fontB),
+    ));
+    bytes.addAll(g.text(_line()));
+
+    bytes.addAll(_row(g, 'Jumlah order', summary.orderCount.toString()));
+    bytes.addAll(
+        _row(g, 'Nilai transaksi', formatPlain(summary.grossOrderValue)));
+
+    if (summary.discountTotal > 0) {
+      bytes.addAll(
+          _row(g, 'Diskon diberikan', formatPlain(summary.discountTotal)));
+    }
+    if (summary.refundTotal > 0) {
+      bytes.addAll(_row(g, 'Refund', '-${formatPlain(summary.refundTotal)}'));
+    }
+
+    bytes.addAll(g.text(_line()));
+    // Pendapatan dicetak tebal karena inilah satu-satunya angka yang berarti
+    // uang sungguhan. Nilai transaksi di atasnya termasuk yang belum dibayar.
+    bytes.addAll(
+        _row(g, 'PENDAPATAN', formatPlain(summary.cashIn), bold: true));
+    bytes.addAll(_row(g, 'Piutang baru', formatPlain(summary.newReceivable)));
+
+    if (byMethod.isNotEmpty) {
+      bytes.addAll(g.text(_line()));
+      bytes.addAll(g.text('Per metode bayar',
+          styles: const PosStyles(fontType: PosFontType.fontB)));
+      for (final item in byMethod) {
+        bytes.addAll(_row(g, _ascii(item.name), formatPlain(item.amount)));
+      }
+    }
+
+    if (byService.isNotEmpty) {
+      bytes.addAll(g.text(_line()));
+      bytes.addAll(g.text('Per layanan',
+          styles: const PosStyles(fontType: PosFontType.fontB)));
+      for (final item in byService) {
+        bytes.addAll(_row(g, _ascii(item.name), formatPlain(item.amount)));
+      }
+    }
+
+    bytes.addAll(g.text(_line()));
+    bytes.addAll(g.text('Dicetak ${formatDateTime(DateTime.now())}',
+        styles: const PosStyles(fontType: PosFontType.fontB)));
+    if (printedBy != null && printedBy.isNotEmpty) {
+      bytes.addAll(g.text('Oleh: ${_ascii(printedBy)}',
+          styles: const PosStyles(fontType: PosFontType.fontB)));
+    }
 
     bytes.addAll(_footer(g, withPolicy: false));
     return bytes;
