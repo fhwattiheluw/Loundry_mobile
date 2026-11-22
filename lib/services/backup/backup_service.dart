@@ -197,12 +197,14 @@ class BackupService {
     if (!result.success || result.file == null) return result;
 
     try {
-      await Share.shareXFiles(
-        [XFile(result.file!.path)],
-        subject: 'Backup POS Laundry',
-        text: 'Simpan berkas ini di tempat pribadi di luar ponsel. '
-            'Isinya memuat data pelanggan dan riwayat transaksi, '
-            'jadi jangan dikirim ke grup.',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(result.file!.path)],
+          subject: 'Backup POS Laundry',
+          text: 'Simpan berkas ini di tempat pribadi di luar ponsel. '
+              'Isinya memuat data pelanggan dan riwayat transaksi, '
+              'jadi jangan dikirim ke grup.',
+        ),
       );
       return const BackupResult.ok('Backup siap dibagikan.');
     } catch (e) {

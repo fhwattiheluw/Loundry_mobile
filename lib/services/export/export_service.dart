@@ -82,9 +82,11 @@ class ExportService {
       // BOM supaya Excel membaca huruf beraksen dengan benar.
       await file.writeAsString('﻿$csv');
 
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'Laporan Pendapatan $businessName',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: 'Laporan Pendapatan $businessName',
+        ),
       );
 
       return const ExportResult.ok('Laporan CSV siap dibagikan.');
@@ -163,9 +165,11 @@ class ExportService {
       final file = File(p.join(dir.path, 'laporan-${_stamp(from, to)}.pdf'));
       await file.writeAsBytes(await doc.save());
 
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        subject: 'Laporan Pendapatan $businessName',
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(file.path)],
+          subject: 'Laporan Pendapatan $businessName',
+        ),
       );
 
       return const ExportResult.ok('Laporan PDF siap dibagikan.');

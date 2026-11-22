@@ -43,7 +43,10 @@ dependencies:
 
   # Utilitas
   crypto: ^3.0.3
-  share_plus: ^9.0.0
+  # API SharePlus.instance.share ada sejak 11.0.0. Rentang dibuka
+  # sampai sebelum 14 supaya pub bisa mencari yang cocok dengan
+  # file_picker, yang sama-sama bergantung pada paket web.
+  share_plus: '>=11.0.0 <14.0.0'
   csv: ^6.0.0
   fl_chart: ^0.68.0
   # Memilih berkas backup saat restore
