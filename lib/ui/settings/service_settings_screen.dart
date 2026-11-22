@@ -5,6 +5,7 @@ import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../widgets/layout.dart';
 
 class ServiceSettingsScreen extends ConsumerWidget {
   const ServiceSettingsScreen({super.key});
@@ -24,14 +25,17 @@ class ServiceSettingsScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Gagal memuat: $e')),
         data: (list) => ListView.separated(
-          padding: const EdgeInsets.fromLTRB(0, 8, 0, 96),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
           itemCount: list.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
+          separatorBuilder: (_, __) => const SizedBox(height: 8),
           itemBuilder: (context, i) {
             final service = list[i];
-            return ListTile(
+            return Card(
+                child: ListTile(
+              leading: IconBadge(Icons.local_laundry_service_outlined,
+                  tone: i),
               title: Text(service.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
+                  style: Theme.of(context).textTheme.titleMedium),
               subtitle: Text(
                 '${formatRupiah(service.price)} / ${service.unit.label}'
                 ' · selesai ${service.durationHours} jam'
@@ -55,7 +59,7 @@ class ServiceSettingsScreen extends ConsumerWidget {
                 ],
               ),
               onTap: () => _edit(context, ref, service),
-            );
+            ));
           },
         ),
       ),

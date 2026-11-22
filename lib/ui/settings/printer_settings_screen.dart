@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
+import '../../core/design_system.dart';
 import '../../data/db/settings_keys.dart';
+import '../widgets/layout.dart';
 import '../../services/printer/receipt_printer.dart';
 
 class PrinterSettingsScreen extends ConsumerStatefulWidget {
@@ -123,8 +125,8 @@ class _PrinterSettingsScreenState
           ),
 
           const SizedBox(height: 20),
-          const Text('Jumlah salinan nota',
-              style: TextStyle(fontWeight: FontWeight.w700)),
+          Text('Jumlah salinan nota',
+              style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 4),
           Row(
             children: [
@@ -169,8 +171,8 @@ class _PrinterSettingsScreenState
           ),
 
           const SizedBox(height: 24),
-          const Text('Pilih printer',
-              style: TextStyle(fontWeight: FontWeight.w700)),
+          Text('Pilih printer',
+              style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
 
           if (_loading)
@@ -184,7 +186,7 @@ class _PrinterSettingsScreenState
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
-                    const Icon(Icons.info_outline),
+                    const IconBadge(Icons.info_outline, tone: 1),
                     const SizedBox(width: 12),
                     Expanded(child: Text(_message!)),
                   ],
@@ -198,6 +200,7 @@ class _PrinterSettingsScreenState
                   for (var i = 0; i < _devices.length; i++) ...[
                     if (i > 0) const Divider(height: 1),
                     RadioListTile<String>(
+                      secondary: IconBadge(Icons.print_outlined, tone: i),
                       value: _devices[i].address,
                       groupValue: selected,
                       title: Text(_devices[i].name),
@@ -217,6 +220,9 @@ class _PrinterSettingsScreenState
 
           const SizedBox(height: 24),
           FilledButton.icon(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, AppTouch.comfortable),
+            ),
             onPressed: selected.isEmpty ? null : _testPrint,
             icon: const Icon(Icons.print_outlined),
             label: const Text('Uji cetak'),

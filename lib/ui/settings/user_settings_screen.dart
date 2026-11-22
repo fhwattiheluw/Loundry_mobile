@@ -6,6 +6,7 @@ import '../../application/providers.dart';
 import '../../core/security.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../widgets/layout.dart';
 
 class UserSettingsScreen extends ConsumerStatefulWidget {
   const UserSettingsScreen({super.key});
@@ -135,7 +136,7 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
           Card(
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
             child: ListTile(
-              leading: const Icon(Icons.key_outlined),
+              leading: IconBadge(Icons.key_outlined, tone: 11),
               title: const Text('Kode pemulihan PIN'),
               subtitle: Text(
                 ref.read(pinRecoveryProvider).hasRecoveryCode

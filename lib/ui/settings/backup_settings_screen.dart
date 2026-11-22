@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../services/backup/backup_service.dart';
+import '../widgets/layout.dart';
+import '../../core/design_system.dart';
 
 class BackupSettingsScreen extends ConsumerStatefulWidget {
   const BackupSettingsScreen({super.key});
@@ -105,7 +107,7 @@ class _BackupSettingsScreenState
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.warning_amber_rounded),
+                  IconBadge(Icons.warning_amber_rounded, tone: 2),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -123,6 +125,9 @@ class _BackupSettingsScreenState
 
           const SizedBox(height: 20),
           FilledButton.icon(
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(0, AppTouch.comfortable),
+            ),
             onPressed: _busy
                 ? null
                 : () => _run(ref.read(backupServiceProvider).shareLatest),
@@ -155,7 +160,7 @@ class _BackupSettingsScreenState
 
               return Card(
                 child: ListTile(
-                  leading: const Icon(Icons.folder_outlined),
+                  leading: IconBadge(Icons.folder_outlined, tone: 4),
                   title: const Text('Folder backup otomatis'),
                   subtitle: Text(
                     path,
@@ -184,9 +189,9 @@ class _BackupSettingsScreenState
           ),
 
           const SizedBox(height: 28),
-          const Text(
+          Text(
             'Backup tersimpan di perangkat',
-            style: TextStyle(fontWeight: FontWeight.w700),
+            style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 4),
           Text(
@@ -210,7 +215,7 @@ class _BackupSettingsScreenState
                   for (var i = 0; i < _backups.length; i++) ...[
                     if (i > 0) const Divider(height: 1),
                     ListTile(
-                      leading: const Icon(Icons.description_outlined),
+                      leading: IconBadge(Icons.description_outlined, tone: 5),
                       title: Text(_backups[i].name),
                       subtitle: Text(
                         '${formatDateTime(_backups[i].createdAt)} · '

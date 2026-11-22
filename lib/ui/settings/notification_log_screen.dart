@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design_system.dart';
+import '../widgets/layout.dart';
+import '../widgets/states.dart';
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../domain/models/enums.dart';
@@ -73,34 +75,25 @@ class _NotificationLogScreenState
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _rows.isEmpty
-              ? const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.mark_chat_read_outlined,
-                            size: 48, color: Color(0xFF2E7D32)),
-                        SizedBox(height: 16),
-                        Text(
-                          'Semua pesan sudah terkirim.',
-                          style: TextStyle(fontSize: 15),
-                        ),
-                      ],
-                    ),
-                  ),
+              ? const EmptyState(
+                  icon: Icons.mark_chat_read_outlined,
+                  title: 'Semua pesan sudah terkirim',
+                  message: 'Pesan yang gagal akan muncul di sini untuk dicoba lagi.',
+                  tone: EmptyTone.good,
                 )
               : ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                   itemCount: _rows.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
                   itemBuilder: (context, i) {
                     final row = _rows[i];
                     final pending = row['status'] == 'tertunda';
                     final attempts = (row['attempts'] as num?)?.toInt() ?? 0;
                     final nextAt = row['next_attempt_at'] as String?;
 
-                    return ListTile(
-                      leading: Icon(
+                    return Card(
+                        child: ListTile(
+                      leading: IconBadge(
                         pending ? Icons.schedule : Icons.error_outline,
                         color: pending
                             ? scheme.primary
@@ -124,7 +117,7 @@ class _NotificationLogScreenState
                         icon: const Icon(Icons.send),
                         onPressed: () => _resend(row['id'] as int),
                       ),
-                    );
+                    ));
                   },
                 ),
     );

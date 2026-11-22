@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../core/design_system.dart';
+import '../widgets/layout.dart';
 
 /// Pemulihan PIN pemilik.
 ///
@@ -154,7 +155,7 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
 
         Card(
           child: ListTile(
-            leading: const Icon(Icons.chat_outlined),
+            leading: IconBadge(Icons.chat_outlined, tone: 11),
             title: const Text('Kirim kode ke WhatsApp pemilik'),
             subtitle: Text(
               recovery.canSendViaWhatsApp
@@ -170,7 +171,7 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
 
         Card(
           child: ListTile(
-            leading: const Icon(Icons.key_outlined),
+            leading: IconBadge(Icons.key_outlined, tone: 12),
             title: const Text('Pakai kode pemulihan'),
             subtitle: Text(
               recovery.hasRecoveryCode

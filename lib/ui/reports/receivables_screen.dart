@@ -6,6 +6,8 @@ import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../core/security.dart';
 import '../orders/order_detail_screen.dart';
+import '../widgets/layout.dart';
+import '../widgets/states.dart';
 
 /// Daftar piutang, diurutkan dari yang paling lama.
 /// Ini layar yang membuat uang tidak hilang diam-diam.
@@ -23,90 +25,124 @@ class ReceivablesScreen extends ConsumerWidget {
         error: (e, _) => Center(child: Text('Gagal memuat: $e')),
         data: (rows) {
           if (rows.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(32),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.verified_outlined,
-                        size: 48, color: Color(0xFF2E7D32)),
-                    SizedBox(height: 16),
-                    Text('Tidak ada piutang. Semua order sudah lunas.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 15)),
-                  ],
-                ),
-              ),
+            return const EmptyState(
+              icon: Icons.verified_outlined,
+              title: 'Tidak ada piutang',
+              message: 'Semua order sudah lunas. Kerja bagus!',
+              tone: EmptyTone.good,
             );
           }
 
           final total = rows.fold(0, (sum, r) => sum + r.remaining);
 
+          final theme = Theme.of(context);
+          final bad = context.status.belumLunas;
+
           return Column(
             children: [
               Container(
                 width: double.infinity,
-                color: Theme.of(context).colorScheme.errorContainer,
-                padding: const EdgeInsets.all(16),
+                margin: EdgeInsets.fromLTRB(
+                  context.screenPadding,
+                  AppSpacing.sm,
+                  context.screenPadding,
+                  AppSpacing.sm,
+                ),
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFB71C1C), Color(0xFFE53935)],
+                  ),
+                  borderRadius: BorderRadius.circular(AppRadius.xl),
+                  boxShadow: AppShadow.soft(context),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Total piutang belum tertagih',
-                        style: TextStyle(fontSize: 13)),
-                    const SizedBox(height: 4),
                     Text(
-                      formatRupiah(total),
-                      style: const TextStyle(
-                          fontSize: 26, fontWeight: FontWeight.w700),
+                      'Total piutang belum tertagih',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
                     ),
-                    Text('${rows.length} order',
-                        style: const TextStyle(fontSize: 12.5)),
+                    const SizedBox(height: AppSpacing.xs),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        formatRupiah(total),
+                        style: theme.textTheme.displaySmall?.copyWith(
+                          color: Colors.white,
+                          fontSize: 34,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${rows.length} order',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
                   ],
                 ),
               ),
               Expanded(
                 child: ListView.separated(
+                  padding: EdgeInsets.fromLTRB(
+                    context.screenPadding,
+                    AppSpacing.sm,
+                    context.screenPadding,
+                    AppSpacing.xxxl,
+                  ),
                   itemCount: rows.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, i) {
                     final row = rows[i];
                     final old = row.ageInDays >= 14;
 
-                    return ListTile(
-                      title: Text(row.customerName,
-                          style:
-                              const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                        '${row.orderNo} · ${prettyPhone(row.customerPhone)}\n'
-                        'Dibuat ${formatDate(row.createdAt)} · ${row.ageInDays} hari lalu',
-                      ),
-                      isThreeLine: true,
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            formatRupiah(row.remaining),
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: old ? context.status.belumLunas : null,
+                    return Card(
+                      child: ListTile(
+                        leading: IconBadge(
+                          old
+                              ? Icons.warning_amber_rounded
+                              : Icons.schedule_outlined,
+                          color: old ? bad : context.status.diterima,
+                        ),
+                        title: Text(row.customerName,
+                            style: theme.textTheme.titleMedium),
+                        subtitle: Text(
+                          '${row.orderNo} · ${prettyPhone(row.customerPhone)}\n'
+                          'Dibuat ${formatDate(row.createdAt)} · ${row.ageInDays} hari lalu',
+                        ),
+                        isThreeLine: true,
+                        trailing: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              formatRupiah(row.remaining),
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: old ? bad : null,
+                              ),
                             ),
-                          ),
-                          if (row.paid > 0)
-                            Text('dari ${formatRupiah(row.total)}',
-                                style: Theme.of(context).textTheme.bodySmall),
-                        ],
+                            if (row.paid > 0)
+                              Text('dari ${formatRupiah(row.total)}',
+                                  style: theme.textTheme.bodySmall),
+                          ],
+                        ),
+                        onTap: () async {
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  OrderDetailScreen(orderId: row.orderId),
+                            ),
+                          );
+                          ref.refreshOrderData();
+                        },
                       ),
-                      onTap: () async {
-                        await Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                OrderDetailScreen(orderId: row.orderId),
-                          ),
-                        );
-                        ref.refreshOrderData();
-                      },
                     );
                   },
                 ),

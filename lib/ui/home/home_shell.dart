@@ -86,10 +86,23 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     // Tanpa internet aplikasi tetap jalan penuh, tapi pesan WhatsApp
     // mengantre dan iklan tidak dimuat. Kasir berhak tahu itu, tanpa
     // dihalangi bekerja.
+    //
+    // Garis itu sudah memakai ruang status bar. Layar di bawahnya tidak
+    // boleh menambah jarak status bar lagi, kalau tidak muncul celah kosong.
+    final offline = ref.watch(connectionProvider) == NetworkStatus.offline;
+    final stack = IndexedStack(index: _index, children: pages);
     final body = Column(
       children: [
         const _OfflineStrip(),
-        Expanded(child: IndexedStack(index: _index, children: pages)),
+        Expanded(
+          child: offline
+              ? MediaQuery.removePadding(
+                  context: context,
+                  removeTop: true,
+                  child: stack,
+                )
+              : stack,
+        ),
       ],
     );
     final showFab = _index <= 1;
