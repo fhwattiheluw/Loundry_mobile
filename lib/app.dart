@@ -40,11 +40,15 @@ class LaundryPosApp extends ConsumerWidget {
       },
       // Gerbang internet membungkus seluruh aplikasi. Layar apa pun hanya
       // tergambar setelah koneksi terbukti ada.
-      // Konter harus tetap bisa melayani pelanggan saat jaringan mati, dan
-      // di banyak tempat jaringan memang mati beberapa jam sehari. Iklan
-      // tetap muncul begitu ada internet; yang tidak terjadi hanyalah
-      // menutup seluruh aplikasi karena sinyal hilang.
-      home: const ConnectionGate(requireInternet: false, child: _Root()),
+      // Aplikasi ini gratis dan hidup dari iklan, dan iklan hanya bisa
+      // dimuat saat ada internet. Pemakaian luring berarti pemakaian yang
+      // tidak menghasilkan apa pun, jadi internet diwajibkan.
+      //
+      // Harganya nyata: konter yang sinyalnya mati tidak bisa menerima
+      // cucian sama sekali. Bila ternyata itu terlalu mahal di lapangan,
+      // satu baris di bawah ini mengembalikannya - seluruh lapisan data
+      // aplikasi tetap sanggup bekerja tanpa internet.
+      home: const ConnectionGate(requireInternet: true, child: _Root()),
     );
   }
 }
