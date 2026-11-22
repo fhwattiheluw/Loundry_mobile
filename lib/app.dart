@@ -9,6 +9,7 @@ import 'services/connectivity/connection_guard.dart';
 import 'ui/auth/pin_login_screen.dart';
 import 'ui/home/home_shell.dart';
 import 'ui/license/subscription_screen.dart';
+import 'ui/onboarding/setup_wizard.dart';
 import 'ui/widgets/states.dart';
 
 class LaundryPosApp extends ConsumerWidget {
@@ -89,6 +90,15 @@ class _Root extends ConsumerWidget {
         ref.read(licenseServiceProvider).init();
 
         if (user == null) return const PinLoginScreen();
+
+        // Pemasangan baru lewat wizard dulu. Tanpa itu, toko baru mendarat
+        // di dashboard bernama "Laundry Saya" dengan harga contoh, dan
+        // sebagian besar pemilik tidak akan pernah menemukan Pengaturan
+        // sendiri.
+        final settingsRepo = ref.read(settingsRepoProvider);
+        if (!settingsRepo.getBool(SettingsKeys.setupDone)) {
+          return const SetupWizard();
+        }
 
         // Gerbang langganan diletakkan setelah masuk, bukan sebelumnya,
         // supaya pemilik tetap bisa membuka aplikasi dan mengambil

@@ -32,6 +32,10 @@ abstract final class SettingsKeys {
   static const licenseLastVerified = 'license_last_verified';
   static const trialStartedAt = 'trial_started_at';
 
+  /// Menandai wizard pengaturan awal sudah dilewati, supaya ia hanya
+  /// muncul sekali di pemasangan baru.
+  static const setupDone = 'setup_done';
+
   /// Waktu terakhir yang pernah dilihat aplikasi. Dipakai menangkap jam
   /// perangkat yang dimundurkan untuk memperpanjang masa pakai.
   static const clockLastSeen = 'clock_last_seen';

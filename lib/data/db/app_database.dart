@@ -87,7 +87,20 @@ class AppDatabase {
   Future<void> _migrate(sql.Database db, int from, int to) async {
     if (from < 2) await _v2(db);
     if (from < 3) await _v3(db);
-    if (from < 4) await _v4(db);
+    if (from < 4) {
+      await _v4(db);
+
+      // Pemasangan yang sudah berjalan tidak boleh disambut wizard
+      // pengaturan awal. Penandanya dipasang di sini, di jalur migrasi,
+      // karena hanya jalur inilah yang berarti "database ini sudah ada
+      // sebelum wizard dibuat". Pemasangan baru melewati jalur onCreate
+      // dan tetap mendapat wizardnya.
+      await db.insert(
+        'settings',
+        {'key': 'setup_done', 'value': '1'},
+        conflictAlgorithm: sql.ConflictAlgorithm.replace,
+      );
+    }
   }
 
   /// Versi 4: lokasi rak penyimpanan.
