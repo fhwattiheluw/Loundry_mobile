@@ -74,16 +74,16 @@ wajar di judul, deskripsi singkat, dan deskripsi panjang.
 
 ## Build rilis
 
-ID iklan dan langganan tidak ditulis di kode. Semuanya diberikan saat build:
+ID unit iklan produksi diisi di `lib/services/ads/ad_config.dart`, dan ID
+Aplikasi AdMob di `AndroidManifest.xml`. Lalu:
 
 ```bash
-flutter build appbundle --release \
-  --dart-define=ADMOB_BANNER_ID=ca-app-pub-xxx/111 \
-  --dart-define=ADMOB_INTERSTITIAL_ID=ca-app-pub-xxx/222 \
-  --dart-define=ADMOB_REWARDED_ID=ca-app-pub-xxx/333 \
-  --dart-define=ADMOB_APP_OPEN_ID=ca-app-pub-xxx/444 \
-  --dart-define=ADMOB_NATIVE_ID=ca-app-pub-xxx/555
+flutter build appbundle --release
 ```
+
+Opsional: ID bisa ditimpa dengan `--dart-define=ADMOB_BANNER_ID=...`
+(juga `ADMOB_NATIVE_ID`, `ADMOB_INTERSTITIAL_ID`, `ADMOB_APP_OPEN_ID`,
+`ADMOB_REWARDED_ID`).
 
 ## Model pendapatan
 

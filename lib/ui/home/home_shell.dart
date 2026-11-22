@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../core/design_system.dart';
+import '../../services/ads/ad_service.dart';
 import '../../services/connectivity/connection_guard.dart';
 import '../orders/new_order_screen.dart';
 import '../orders/order_list_screen.dart';
@@ -48,7 +49,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       // Interstitial ditayangkan SEKALI per sesi, di titik transisi setelah
       // kasir masuk, dan tidak pernah di tengah transaksi. Kebijakan AdMob
       // melarang interstitial yang terpicu setelah setiap aksi pengguna.
-      ref.read(adServiceProvider).maybeShowSessionInterstitial();
+      ref.read(adServiceProvider).maybeShowSessionInterstitial(
+        // Hanya bila kasir masih di layar utama, bukan sedang mengisi order.
+        canShow: () => mounted && (ModalRoute.of(context)?.isCurrent ?? false),
+      );
 
       // Backup otomatis maksimal sekali sehari. Data aplikasi ini hanya ada
       // di satu perangkat, jadi salinan harian adalah pengaman paling murah.
@@ -102,6 +106,20 @@ class _HomeShellState extends ConsumerState<HomeShell> {
                   child: stack,
                 )
               : stack,
+        ),
+
+        // Banner tetap di dasar layar utama, terlihat di setiap tab, bukan
+        // terkubur di ujung daftar yang jarang digulung. Disembunyikan
+        // (tetap termuat) di Pengaturan, tempat banyak sakelar dan tombol.
+        // Tidak pernah tampil di layar input order atau pembayaran, karena
+        // itu layar terpisah di atas rangka ini.
+        Visibility(
+          visible: _index != 3,
+          maintainState: true,
+          child: SafeBannerAd(
+            enabled: ref.watch(adServiceProvider).enabled,
+            compact: true,
+          ),
         ),
       ],
     );

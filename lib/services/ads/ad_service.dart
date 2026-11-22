@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -6,6 +7,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../../data/db/settings_keys.dart';
 import '../../data/repositories/settings_repository.dart';
+import 'ad_config.dart';
 import 'consent_manager.dart';
 
 /// ID unit iklan.
@@ -25,25 +27,59 @@ abstract final class AdIds {
   static const _testAppOpen = 'ca-app-pub-3940256099942544/9257395921';
   static const _testNative = 'ca-app-pub-3940256099942544/2247696110';
 
-  static String _pick(String fromEnv, String test) {
-    if (kDebugMode || fromEnv.isEmpty) return test;
-    return fromEnv;
+  /// Urutan prioritas: mode debug selalu uji; lalu --dart-define; lalu
+  /// [AdConfig]; terakhir ID uji.
+  static String _pick(String fromEnv, String fromConfig, String test) {
+    if (kDebugMode) return test;
+    if (fromEnv.isNotEmpty) return fromEnv;
+    if (fromConfig.isNotEmpty) return fromConfig;
+    return test;
   }
 
-  static String get banner =>
-      _pick(const String.fromEnvironment('ADMOB_BANNER_ID'), _testBanner);
+  static String get banner => _pick(
+      const String.fromEnvironment('ADMOB_BANNER_ID'),
+      AdConfig.banner,
+      _testBanner);
 
   static String get interstitial => _pick(
-      const String.fromEnvironment('ADMOB_INTERSTITIAL_ID'), _testInterstitial);
+      const String.fromEnvironment('ADMOB_INTERSTITIAL_ID'),
+      AdConfig.interstitial,
+      _testInterstitial);
 
-  static String get rewarded =>
-      _pick(const String.fromEnvironment('ADMOB_REWARDED_ID'), _testRewarded);
+  static String get rewarded => _pick(
+      const String.fromEnvironment('ADMOB_REWARDED_ID'),
+      AdConfig.rewarded,
+      _testRewarded);
 
-  static String get appOpen =>
-      _pick(const String.fromEnvironment('ADMOB_APP_OPEN_ID'), _testAppOpen);
+  static String get appOpen => _pick(
+      const String.fromEnvironment('ADMOB_APP_OPEN_ID'),
+      AdConfig.appOpen,
+      _testAppOpen);
 
-  static String get native =>
-      _pick(const String.fromEnvironment('ADMOB_NATIVE_ID'), _testNative);
+  static String get native => _pick(
+      const String.fromEnvironment('ADMOB_NATIVE_ID'),
+      AdConfig.native,
+      _testNative);
+
+  /// True bila ID yang dipakai bukan ID uji Google.
+  static bool _isReal(String id) => !id.startsWith('ca-app-pub-3940256099942544');
+
+  /// Jenis unit yang SUDAH memakai ID produksi, dan yang MASIH uji.
+  static Map<String, bool> get realByFormat => {
+        'Banner': _isReal(banner),
+        'Native': _isReal(native),
+        'Interstitial': _isReal(interstitial),
+        'App open': _isReal(appOpen),
+        'Rewarded': _isReal(rewarded),
+      };
+
+  /// Semua unit memakai ID produksi. Hanya dalam keadaan inilah iklan
+  /// menghasilkan uang.
+  static bool get allProduction => realByFormat.values.every((v) => v);
+
+  /// Tidak ada satu pun ID produksi. Build rilis dalam keadaan ini hanya
+  /// menayangkan iklan uji dan pendapatannya nol.
+  static bool get allTest => realByFormat.values.every((v) => !v);
 }
 
 /// Aturan penempatan iklan di aplikasi ini.
@@ -64,6 +100,43 @@ class AdService {
   final SettingsRepository _settings;
   final ConsentManager consent;
 
+  /// True setelah persetujuan terkumpul dan SDK selesai diinisialisasi.
+  /// Banner dan iklan native menunggu ini sebelum meminta iklan: meminta
+  /// sebelum SDK siap membuat permintaan gagal, dan meminta sebelum
+  /// persetujuan adalah pelanggaran kebijakan UMP.
+  static final ValueNotifier<bool> sdkReady = ValueNotifier(false);
+
+  /// Hasil muat terakhir tiap jenis iklan, untuk layar Status iklan.
+  static final ValueNotifier<Map<String, String>> report = ValueNotifier({});
+
+  static void note(String key, String value) {
+    report.value = {...report.value, key: value};
+  }
+
+  /// Muat ulang otomatis bila iklan gagal. Tanpa ini, satu kegagalan
+  /// ("no fill" itu normal, terutama pada unit baru) membuat jenis iklan
+  /// tersebut mati sampai aplikasi dibuka ulang.
+  static const _maxRetries = 6;
+  final _retryCount = <String, int>{};
+  final _retryTimers = <String, Timer>{};
+
+  void _scheduleRetry(String key, VoidCallback load) {
+    final n = (_retryCount[key] ?? 0) + 1;
+    _retryCount[key] = n;
+    if (n > _maxRetries) return;
+
+    // 30 dtk, 1 mnt, 2 mnt, 4 mnt, lalu 5 mnt.
+    final seconds = (30 * (1 << (n - 1))).clamp(30, 300).toInt();
+    _retryTimers[key]?.cancel();
+    _retryTimers[key] = Timer(Duration(seconds: seconds), load);
+  }
+
+  void _loaded(String key) {
+    _retryCount[key] = 0;
+    note(key, 'Siap');
+  }
+
+  bool _initStarted = false;
   bool _initialized = false;
   bool _interstitialShownThisSession = false;
 
@@ -91,33 +164,56 @@ class AdService {
   /// adalah cara kehilangan mereka sebelum sempat mencoba.
   static const _appOpenMinLaunches = 4;
 
+  /// Iklan selalu menyala di perangkat Android. Satu-satunya pengecualian
+  /// adalah pemilik yang membeli versi bebas iklan. Sengaja TIDAK ada
+  /// sakelar di Pengaturan: aplikasi ini gratis dan hidup dari iklan.
   bool get enabled =>
-      // Pembelian bebas iklan mengalahkan sakelar apa pun. Pemilik yang
-      // sudah membayar tidak boleh melihat iklan lagi karena salah setel.
       !_settings.getBool(SettingsKeys.adsRemoved) &&
-      _settings.getBool(SettingsKeys.adsEnabled, fallback: true) &&
       (Platform.isAndroid || Platform.isIOS);
 
   Future<void> init() async {
-    if (_initialized || !enabled) return;
+    if (_initialized || _initStarted || !enabled) return;
+    _initStarted = true;
 
     try {
       // Persetujuan privasi diminta SEBELUM iklan pertama. Meminta iklan
       // lebih dulu adalah pelanggaran kebijakan UMP.
+      note('Persetujuan', 'Memeriksa...');
       final allowed = await consent.gatherConsent();
       if (!allowed) {
+        note('Persetujuan', 'Belum mengizinkan iklan');
         debugPrint('Pengguna tidak mengizinkan iklan. AdMob dilewati.');
+        _initStarted = false;
         return;
       }
+      note('Persetujuan', 'OK');
 
       await MobileAds.instance.initialize();
       _initialized = true;
+      sdkReady.value = true;
+      note('SDK', 'Siap');
+
       _preloadInterstitial();
       _preloadRewarded();
       await _startAppOpen();
     } catch (e) {
+      note('SDK', 'Gagal: $e');
       debugPrint('AdMob gagal diinisialisasi: $e');
+      _initStarted = false;
     }
+  }
+
+  /// Memuat ulang semua iklan layar penuh. Dipakai tombol di layar Status
+  /// iklan untuk memeriksa ulang setelah ID produksi diganti.
+  void reloadAll() {
+    if (!_initialized) {
+      init();
+      return;
+    }
+    _retryCount.clear();
+    _preloadInterstitial();
+    _preloadRewarded();
+    _loadAppOpen();
   }
 
   // ----------------------------------------------------------- interstitial
@@ -129,28 +225,54 @@ class AdService {
       adUnitId: AdIds.interstitial,
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
-        onAdLoaded: (ad) => _interstitial = ad,
-        onAdFailedToLoad: (_) => _interstitial = null,
+        onAdLoaded: (ad) {
+          _interstitial = ad;
+          _loaded('Interstitial');
+        },
+        onAdFailedToLoad: (error) {
+          _interstitial = null;
+          note('Interstitial', 'Gagal (${error.code}): ${error.message}');
+          _scheduleRetry('Interstitial', _preloadInterstitial);
+        },
       ),
     );
   }
 
   /// Dipanggil sekali saja, di titik transisi setelah kasir masuk.
   ///
-  /// Mengembalikan segera bila iklan belum siap: alur kerja tidak pernah
-  /// menunggu iklan.
-  Future<void> maybeShowSessionInterstitial() async {
+  /// Iklan baru mulai dimuat setelah persetujuan dan SDK siap, jadi saat
+  /// dipanggil ia biasanya belum ada. Fungsi ini menunggu sebentar (tanpa
+  /// menahan layar) dan hanya menayangkan bila [canShow] masih mengizinkan,
+  /// misalnya kasir belum membuka layar lain. Bila waktu habis, iklan
+  /// dilewati; tidak ada yang menunggu iklan.
+  Future<void> maybeShowSessionInterstitial({bool Function()? canShow}) async {
     if (!enabled || _interstitialShownThisSession) return;
 
+    for (var i = 0; i < 20 && _interstitial == null; i++) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+      if (!enabled) return;
+    }
+
     final ad = _interstitial;
-    if (ad == null) return;
+    if (ad == null || _showingFullScreen) return;
+    if (canShow != null && !canShow()) return;
 
     _interstitialShownThisSession = true;
     _interstitial = null;
+    _lastInterstitialAt = DateTime.now();
+    _showingFullScreen = true;
 
     ad.fullScreenContentCallback = FullScreenContentCallback(
-      onAdDismissedFullScreenContent: (ad) => ad.dispose(),
-      onAdFailedToShowFullScreenContent: (ad, _) => ad.dispose(),
+      onAdDismissedFullScreenContent: (ad) {
+        _showingFullScreen = false;
+        ad.dispose();
+        _preloadInterstitial();
+      },
+      onAdFailedToShowFullScreenContent: (ad, _) {
+        _showingFullScreen = false;
+        ad.dispose();
+        _preloadInterstitial();
+      },
     );
 
     await ad.show();
@@ -236,8 +358,13 @@ class AdService {
         onAdLoaded: (ad) {
           _appOpen = ad;
           _appOpenLoadedAt = DateTime.now();
+          _loaded('App open');
         },
-        onAdFailedToLoad: (_) => _appOpen = null,
+        onAdFailedToLoad: (error) {
+          _appOpen = null;
+          note('App open', 'Gagal (${error.code}): ${error.message}');
+          _scheduleRetry('App open', _loadAppOpen);
+        },
       ),
     );
   }
@@ -289,8 +416,15 @@ class AdService {
       adUnitId: AdIds.rewarded,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) => _rewarded = ad,
-        onAdFailedToLoad: (_) => _rewarded = null,
+        onAdLoaded: (ad) {
+          _rewarded = ad;
+          _loaded('Rewarded');
+        },
+        onAdFailedToLoad: (error) {
+          _rewarded = null;
+          note('Rewarded', 'Gagal (${error.code}): ${error.message}');
+          _scheduleRetry('Rewarded', _preloadRewarded);
+        },
       ),
     );
   }
@@ -325,6 +459,9 @@ class AdService {
   }
 
   void dispose() {
+    for (final timer in _retryTimers.values) {
+      timer.cancel();
+    }
     _interstitial?.dispose();
     _rewarded?.dispose();
     _appOpen?.dispose();
@@ -333,12 +470,15 @@ class AdService {
 
 /// Banner yang menghilang sendiri bila iklan tidak tersedia.
 ///
-/// Tidak pernah menyisakan ruang kosong saat gagal dimuat, dan selalu
-/// berjarak dari tombol aktif supaya tidak memicu klik tidak sengaja.
+/// Menunggu SDK siap sebelum meminta iklan, dan mencoba lagi dengan jeda
+/// bila gagal. Tidak pernah menyisakan ruang kosong saat belum ada iklan.
 class SafeBannerAd extends StatefulWidget {
-  const SafeBannerAd({super.key, required this.enabled});
+  const SafeBannerAd({super.key, required this.enabled, this.compact = false});
 
   final bool enabled;
+
+  /// Jarak tipis, untuk banner yang menempel di atas bilah navigasi.
+  final bool compact;
 
   @override
   State<SafeBannerAd> createState() => _SafeBannerAdState();
@@ -347,11 +487,20 @@ class SafeBannerAd extends StatefulWidget {
 class _SafeBannerAdState extends State<SafeBannerAd> {
   BannerAd? _ad;
   bool _loaded = false;
+  int _failures = 0;
+  Timer? _retry;
 
   @override
   void initState() {
     super.initState();
-    if (widget.enabled) _load();
+    AdService.sdkReady.addListener(_maybeLoad);
+    _maybeLoad();
+  }
+
+  void _maybeLoad() {
+    if (!mounted || !widget.enabled || _ad != null) return;
+    if (!AdService.sdkReady.value) return;
+    _load();
   }
 
   void _load() {
@@ -361,11 +510,23 @@ class _SafeBannerAdState extends State<SafeBannerAd> {
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (_) {
+          _failures = 0;
+          AdService.note('Banner', 'Siap');
           if (mounted) setState(() => _loaded = true);
         },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
+          _ad = null;
+          AdService.note('Banner', 'Gagal (${error.code}): ${error.message}');
           if (mounted) setState(() => _loaded = false);
+
+          // Coba lagi dengan jeda yang membesar: 30 dtk sampai 5 mnt.
+          _failures++;
+          if (_failures <= 6) {
+            final seconds = (30 * (1 << (_failures - 1))).clamp(30, 300);
+            _retry?.cancel();
+            _retry = Timer(Duration(seconds: seconds.toInt()), _maybeLoad);
+          }
         },
       ),
     );
@@ -376,6 +537,8 @@ class _SafeBannerAdState extends State<SafeBannerAd> {
 
   @override
   void dispose() {
+    AdService.sdkReady.removeListener(_maybeLoad);
+    _retry?.cancel();
     _ad?.dispose();
     super.dispose();
   }
@@ -387,9 +550,8 @@ class _SafeBannerAdState extends State<SafeBannerAd> {
     }
 
     return Padding(
-      // Jarak 24 di atas dan bawah menjaga iklan tidak bersentuhan dengan
-      // tombol aktif mana pun.
-      padding: const EdgeInsets.symmetric(vertical: 24),
+      // Jarak menjaga iklan tidak bersentuhan dengan tombol aktif mana pun.
+      padding: EdgeInsets.symmetric(vertical: widget.compact ? 6 : 24),
       child: Center(
         child: SizedBox(
           width: _ad!.size.width.toDouble(),
@@ -401,7 +563,6 @@ class _SafeBannerAdState extends State<SafeBannerAd> {
   }
 }
 
-
 /// Iklan native yang menyatu dengan daftar order.
 ///
 /// Dipakai sebagai pengganti banner di dalam daftar: bentuknya mengikuti
@@ -410,7 +571,8 @@ class _SafeBannerAdState extends State<SafeBannerAd> {
 /// memang wajib.
 ///
 /// Memakai template bawaan plugin, jadi tidak ada kode Android tambahan
-/// yang harus dirawat. Bila gagal dimuat, widget ini hilang sama sekali.
+/// yang harus dirawat. Menunggu SDK siap, mencoba lagi bila gagal, dan
+/// hilang sama sekali bila memang tidak ada iklan.
 class SafeNativeAd extends StatefulWidget {
   const SafeNativeAd({super.key, required this.enabled});
 
@@ -423,11 +585,20 @@ class SafeNativeAd extends StatefulWidget {
 class _SafeNativeAdState extends State<SafeNativeAd> {
   NativeAd? _ad;
   bool _loaded = false;
+  int _failures = 0;
+  Timer? _retry;
 
   @override
   void initState() {
     super.initState();
-    if (widget.enabled) _load();
+    AdService.sdkReady.addListener(_maybeLoad);
+    _maybeLoad();
+  }
+
+  void _maybeLoad() {
+    if (!mounted || !widget.enabled || _ad != null) return;
+    if (!AdService.sdkReady.value) return;
+    _load();
   }
 
   void _load() {
@@ -440,11 +611,22 @@ class _SafeNativeAdState extends State<SafeNativeAd> {
       ),
       listener: NativeAdListener(
         onAdLoaded: (_) {
+          _failures = 0;
+          AdService.note('Native', 'Siap');
           if (mounted) setState(() => _loaded = true);
         },
         onAdFailedToLoad: (ad, error) {
           ad.dispose();
+          _ad = null;
+          AdService.note('Native', 'Gagal (${error.code}): ${error.message}');
           if (mounted) setState(() => _loaded = false);
+
+          _failures++;
+          if (_failures <= 6) {
+            final seconds = (30 * (1 << (_failures - 1))).clamp(30, 300);
+            _retry?.cancel();
+            _retry = Timer(Duration(seconds: seconds.toInt()), _maybeLoad);
+          }
         },
       ),
     );
@@ -455,6 +637,8 @@ class _SafeNativeAdState extends State<SafeNativeAd> {
 
   @override
   void dispose() {
+    AdService.sdkReady.removeListener(_maybeLoad);
+    _retry?.cancel();
     _ad?.dispose();
     super.dispose();
   }

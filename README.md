@@ -216,20 +216,21 @@ Ganti ID aplikasi di `android/app/src/main/AndroidManifest.xml`:
     android:value="ca-app-pub-XXXXXXXX~YYYYYYYY" />
 ```
 
-ID unit iklan diisi saat build:
+ID unit iklan produksi diisi di **satu berkas**: `lib/services/ads/ad_config.dart`
+(banner, native, interstitial, app open, rewarded). ID iklan bukan rahasia dan
+aman ada di repositori. Bisa juga ditimpa saat build dengan `--dart-define`
+(`ADMOB_BANNER_ID`, `ADMOB_NATIVE_ID`, `ADMOB_INTERSTITIAL_ID`,
+`ADMOB_APP_OPEN_ID`, `ADMOB_REWARDED_ID`).
 
-```bash
-flutter build appbundle --release \
-  --dart-define=ADMOB_BANNER_ID=ca-app-pub-XXXX/1111 \
-  --dart-define=ADMOB_INTERSTITIAL_ID=ca-app-pub-XXXX/2222 \
-  --dart-define=ADMOB_REWARDED_ID=ca-app-pub-XXXX/3333
-```
+**Selama berkas itu kosong, build rilis memakai ID uji dan pendapatannya nol.**
+Cek lewat Pengaturan -> Iklan -> Status iklan di aplikasi: layar itu
+menunjukkan unit mana yang masih uji, dan hasil muat tiap jenis iklan.
 
 ### Di mana iklan muncul
 
 | Layar | Iklan |
 | --- | --- |
-| Beranda, daftar order, laporan | Banner, berjarak 24 dp dari tombol mana pun |
+| Beranda, Order, Laporan | Banner tetap di dasar layar, di atas bilah navigasi (disembunyikan di Pengaturan) |
 | Setelah login | Interstitial, maksimal sekali per sesi |
 | Ekspor laporan PDF | Rewarded ad opsional, bisa ditolak; ekspor CSV selalu gratis |
 | Input order, pembayaran, proses cetak | **Tidak ada iklan** |
@@ -279,11 +280,11 @@ Angka setelah `+` harus selalu naik di setiap unggahan.
 ### 4. Build
 
 ```bash
-flutter build appbundle --release \
-  --dart-define=ADMOB_BANNER_ID=... \
-  --dart-define=ADMOB_INTERSTITIAL_ID=... \
-  --dart-define=ADMOB_REWARDED_ID=...
+flutter build appbundle --release
 ```
+
+ID iklan dibaca dari `lib/services/ads/ad_config.dart`. Pastikan sudah terisi
+dan ID Aplikasi di `AndroidManifest.xml` sudah milik Anda, bukan ID uji.
 
 Hasilnya di `build/app/outputs/bundle/release/app-release.aab`.
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -6,7 +7,9 @@ import '../../core/design_system.dart';
 import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
 import '../customers/customer_screen.dart';
+import '../../services/ads/ad_service.dart';
 import '../widgets/layout.dart';
+import 'ad_status_screen.dart';
 import '../shift/shift_screen.dart';
 import 'backup_settings_screen.dart';
 import 'business_settings_screen.dart';
@@ -326,20 +329,25 @@ class SettingsScreen extends ConsumerWidget {
             Card(
               child: Column(
                 children: [
-                  SwitchListTile(
-                    secondary: IconBadge(Icons.ads_click, tone: 13),
-                    title: const Text('Tampilkan iklan'),
-                    subtitle: const Text(
-                      'Banner di daftar order dan laporan. Tidak pernah '
-                      'muncul di layar input order maupun pembayaran.',
+                  ListTile(
+                    leading: IconBadge(
+                      !kDebugMode && !AdIds.allProduction
+                          ? Icons.warning_amber_rounded
+                          : Icons.ads_click,
+                      color: !kDebugMode && !AdIds.allProduction
+                          ? context.status.belumLunas
+                          : null,
                     ),
-                    value: settings.getBool(SettingsKeys.adsEnabled,
-                        fallback: true),
-                    onChanged: (value) async {
-                      await settings.set(
-                          SettingsKeys.adsEnabled, value ? '1' : '0');
-                      ref.invalidate(settingsLoadedProvider);
-                    },
+                    title: const Text('Status iklan'),
+                    subtitle: Text(
+                      kDebugMode
+                          ? 'Mode pengembangan: iklan uji'
+                          : AdIds.allProduction
+                              ? 'ID produksi terpasang'
+                              : 'Masih ID uji: belum menghasilkan uang',
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _open(context, const AdStatusScreen()),
                   ),
                   const Divider(height: 1, indent: 70),
                   const _RemoveAdsTile(),

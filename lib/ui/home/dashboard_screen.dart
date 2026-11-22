@@ -9,7 +9,6 @@ import '../../data/repositories/order_repository.dart';
 import '../../data/repositories/report_repository.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
-import '../../services/ads/ad_service.dart';
 import '../customers/customer_screen.dart';
 import '../orders/new_order_screen.dart';
 import '../orders/order_detail_screen.dart';
@@ -37,7 +36,6 @@ class DashboardScreen extends ConsumerWidget {
     final user = ref.watch(sessionProvider);
     final summary = ref.watch(revenueSummaryProvider);
     final stale = ref.watch(staleOrdersProvider);
-    final ads = ref.watch(adServiceProvider);
 
     return Scaffold(
       body: RefreshIndicator(
@@ -117,7 +115,6 @@ class DashboardScreen extends ConsumerWidget {
                   );
                 }),
 
-                SafeBannerAd(enabled: ads.enabled),
               ],
             ),
           ),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -775,6 +777,14 @@ class _ActionBar extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Status diubah ke ${next.label}.')),
       );
+    }
+
+    // Cucian diambil: pelanggan sudah pergi dan kasir berhenti sejenak.
+    // Ini titik jeda yang wajar. Jeda minimum antar-interstitial ditahan
+    // oleh AdService, jadi tidak pernah muncul beruntun.
+    if (next == LaundryStatus.diambil) {
+      unawaited(
+          ref.read(adServiceProvider).showInterstitialAt('cucian diambil'));
     }
   }
 

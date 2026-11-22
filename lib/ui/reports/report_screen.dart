@@ -22,7 +22,6 @@ class ReportScreen extends ConsumerWidget {
     final user = ref.watch(sessionProvider);
     final range = ref.watch(reportRangeProvider);
     final summary = ref.watch(revenueSummaryProvider);
-    final ads = ref.watch(adServiceProvider);
 
     // Kasir hanya melihat shift sendiri. Laporan keseluruhan milik Owner.
     if (user != null && !user.isOwner) {
@@ -237,7 +236,6 @@ class ReportScreen extends ConsumerWidget {
             const SizedBox(height: 8),
             _AmountList(provider: topCustomersProvider),
 
-            SafeBannerAd(enabled: ads.enabled),
           ],
         ),
       ),

@@ -68,9 +68,6 @@ class PurchaseService {
         case PurchaseStatus.purchased:
         case PurchaseStatus.restored:
           await _settings.set(SettingsKeys.adsRemoved, '1');
-          // Iklan juga dimatikan, supaya efeknya langsung terasa tanpa
-          // pemilik perlu mencari sakelarnya sendiri.
-          await _settings.set(SettingsKeys.adsEnabled, '0');
 
         case PurchaseStatus.error:
           debugPrint('Pembelian gagal: ${purchase.error?.message}');
