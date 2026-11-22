@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart' as sql;
 import 'package:sqflite_sqlcipher/sqflite.dart' as cipher;
 
 import 'database_key.dart';
+import 'default_templates.dart';
 import 'seed.dart';
 
 /// Database lokal. Tidak ada server: seluruh data hidup di file ini.
@@ -16,7 +17,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const _fileName = 'laundry_pos.db';
-  static const _schemaVersion = 5;
+  static const _schemaVersion = 6;
 
   final _key = DatabaseKey();
 
@@ -104,6 +105,43 @@ class AppDatabase {
       );
     }
     if (from < 5) await _v5(db);
+    if (from < 6) await _v6(db);
+  }
+
+  /// Versi 6: template WhatsApp yang memuat rincian pesanan.
+  ///
+  /// Template bawaan lama hanya menyebut nama layanan dan total. Pesan yang
+  /// baru memuat tiap item, satuan, harga, subtotal, dibayar, dan sisa.
+  /// Hanya template yang PERSIS sama dengan bawaan lama yang diganti;
+  /// template yang sudah disunting pemilik dibiarkan apa adanya.
+  Future<void> _v6(sql.Database db) async {
+    const swaps = {
+      'template_order_created': [
+        DefaultTemplates.legacyOrderCreated,
+        DefaultTemplates.orderCreated,
+      ],
+      'template_order_done': [
+        DefaultTemplates.legacyOrderDone,
+        DefaultTemplates.orderDone,
+      ],
+      'template_reminder': [
+        DefaultTemplates.legacyReminder,
+        DefaultTemplates.reminder,
+      ],
+      'template_payment': [
+        DefaultTemplates.legacyPayment,
+        DefaultTemplates.payment,
+      ],
+    };
+
+    for (final entry in swaps.entries) {
+      await db.update(
+        'settings',
+        {'value': entry.value[1]},
+        where: 'key = ? AND value = ?',
+        whereArgs: [entry.key, entry.value[0]],
+      );
+    }
   }
 
   /// Versi 5: foto cucian saat diterima.

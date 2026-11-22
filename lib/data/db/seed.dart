@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../core/security.dart';
+import 'default_templates.dart';
 import 'settings_keys.dart';
 
 /// Data awal supaya aplikasi langsung bisa dipakai setelah dipasang.
@@ -109,31 +110,10 @@ Future<void> seedInitialData(Database db) async {
     SettingsKeys.quietHoursEnabled: '0',
     SettingsKeys.quietHoursStart: '21:00',
     SettingsKeys.quietHoursEnd: '08:00',
-    SettingsKeys.templateOrderCreated:
-        'Halo {nama}, pesanan laundry Anda sudah kami terima.\n\n'
-        'No. Nota: {no_order}\n'
-        'Layanan: {layanan}\n'
-        'Total: {total}\n'
-        'Status bayar: {status_bayar}\n'
-        'Estimasi selesai: {estimasi}\n\n'
-        'Terima kasih. {nama_usaha}',
-    SettingsKeys.templateOrderDone:
-        'Halo {nama}, cucian Anda sudah selesai dan siap diambil.\n\n'
-        'No. Nota: {no_order}\n'
-        'Sisa tagihan: {sisa}\n'
-        '{jam_buka}\n\n'
-        'Terima kasih. {nama_usaha}',
-    SettingsKeys.templateReminder:
-        'Halo {nama}, cucian Anda dengan nota {no_order} sudah selesai '
-        'sejak {estimasi} dan belum diambil.\n\n'
-        'Sisa tagihan: {sisa}\n'
-        'Mohon diambil ya. Terima kasih. {nama_usaha}',
-    SettingsKeys.templatePayment:
-        'Halo {nama}, pembayaran Anda sudah kami terima.\n\n'
-        'No. Nota: {no_order}\n'
-        'Dibayar: {dibayar}\n'
-        'Sisa tagihan: {sisa}\n\n'
-        'Terima kasih. {nama_usaha}',
+    SettingsKeys.templateOrderCreated: DefaultTemplates.orderCreated,
+    SettingsKeys.templateOrderDone: DefaultTemplates.orderDone,
+    SettingsKeys.templateReminder: DefaultTemplates.reminder,
+    SettingsKeys.templatePayment: DefaultTemplates.payment,
     SettingsKeys.seededAt: now,
   };
 

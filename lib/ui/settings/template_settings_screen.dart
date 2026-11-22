@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
+import '../../data/db/default_templates.dart';
 import '../../data/db/settings_keys.dart';
 
 /// Template pesan WhatsApp yang bisa diubah pemilik (FR-65).
@@ -24,6 +25,14 @@ class _TemplateSettingsScreenState
     SettingsKeys.templatePayment: 'Saat pembayaran diterima',
   };
 
+  /// Isi bawaan tiap template, untuk tombol "Pulihkan bawaan".
+  static const _defaults = <String, String>{
+    SettingsKeys.templateOrderCreated: DefaultTemplates.orderCreated,
+    SettingsKeys.templateOrderDone: DefaultTemplates.orderDone,
+    SettingsKeys.templateReminder: DefaultTemplates.reminder,
+    SettingsKeys.templatePayment: DefaultTemplates.payment,
+  };
+
   static const _toggles = <String, String>{
     SettingsKeys.notifyOrderCreated: 'Kirim saat order diterima',
     SettingsKeys.notifyOrderDone: 'Kirim saat cucian selesai',
@@ -35,10 +44,18 @@ class _TemplateSettingsScreenState
     '{nama}',
     '{no_order}',
     '{layanan}',
+    '{rincian}',
+    '{ringkasan}',
+    '{subtotal}',
+    '{diskon}',
+    '{biaya_lain}',
     '{total}',
     '{dibayar}',
     '{sisa}',
     '{status_bayar}',
+    '{rak}',
+    '{parfum}',
+    '{catatan}',
     '{estimasi}',
     '{tanggal}',
     '{nama_usaha}',
@@ -131,6 +148,13 @@ class _TemplateSettingsScreenState
                 children: [
                   const Text('Variabel yang bisa dipakai',
                       style: TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  const Text(
+                    '{rincian} memuat tiap item dengan jumlah, satuan, harga, '
+                    'dan subtotalnya. {ringkasan} memuat subtotal, diskon, '
+                    'total, sudah dibayar, dan sisa tagihan.',
+                    style: TextStyle(fontSize: 13),
+                  ),
                   const SizedBox(height: 10),
                   Wrap(
                     spacing: 6,
@@ -151,12 +175,26 @@ class _TemplateSettingsScreenState
 
           const SizedBox(height: 20),
           for (final entry in _templates.entries) ...[
-            Text(entry.value,
-                style: const TextStyle(fontWeight: FontWeight.w700)),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(entry.value,
+                      style: Theme.of(context).textTheme.titleMedium),
+                ),
+                TextButton.icon(
+                  onPressed: () => setState(() {
+                    _controllers[entry.key]!.text = _defaults[entry.key]!;
+                  }),
+                  icon: const Icon(Icons.restore, size: 18),
+                  label: const Text('Pulihkan bawaan'),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
             TextField(
               controller: _controllers[entry.key],
-              maxLines: 7,
+              minLines: 8,
+              maxLines: 20,
               decoration: const InputDecoration(
                 alignLabelWithHint: true,
               ),
