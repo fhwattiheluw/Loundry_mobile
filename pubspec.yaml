@@ -36,7 +36,7 @@ dependencies:
   url_launcher: ^6.3.0
 
   # Iklan
-  google_mobile_ads: ^5.1.0
+  google_mobile_ads: ^9.0.0
 
   # Pemeriksa koneksi internet
   connectivity_plus: ^6.0.3
