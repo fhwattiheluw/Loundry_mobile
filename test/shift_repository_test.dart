@@ -114,9 +114,9 @@ void main() {
         shiftId: shift.id,
       );
 
-      // Refund tercatat dengan metode "Refund", bukan "Tunai", sehingga
-      // tidak ikut mengurangi kas laci secara otomatis.
-      expect(await shifts.expectedCash(shift), 128000);
+      // Refund tersimpan sebagai pembayaran negatif, jadi kas yang
+      // seharusnya ada di laci ikut turun: 100.000 + 28.000 - 8.000.
+      expect(await shifts.expectedCash(shift), 120000);
     });
 
     test('pembayaran di luar shift tidak ikut terhitung', () async {

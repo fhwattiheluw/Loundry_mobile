@@ -305,12 +305,15 @@ class ReportRepository {
     return summary(previousFrom, previousTo);
   }
 
-  /// Uang tunai yang seharusnya ada di laci untuk satu shift.
+  /// Uang tunai yang masuk laci selama satu shift: pembayaran tunai dikurangi
+  /// refund. Harus memakai aturan yang sama dengan
+  /// ShiftRepository.expectedCash, kalau tidak laporan dan layar shift akan
+  /// menyebut dua angka berbeda untuk hal yang sama.
   Future<int> expectedCashFor(int shiftId) async {
     final db = await _db.database;
     final result = await db.rawQuery(
       "SELECT COALESCE(SUM(amount), 0) AS c FROM payments "
-      "WHERE shift_id = ? AND method = 'Tunai'",
+      "WHERE shift_id = ? AND method IN ('Tunai', 'Refund')",
       [shiftId],
     );
     return (result.first['c'] as num).toInt();

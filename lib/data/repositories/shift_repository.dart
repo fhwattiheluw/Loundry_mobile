@@ -45,15 +45,22 @@ class ShiftRepository {
     return Shift(id: id, userId: userId, openedAt: now, openingCash: openingCash);
   }
 
-  /// Uang tunai yang seharusnya ada di laci: kas awal ditambah seluruh
-  /// pembayaran tunai yang tercatat pada shift ini. Transfer dan QRIS tidak
-  /// dihitung karena uangnya tidak masuk laci.
+  /// Uang tunai yang seharusnya ada di laci: kas awal, ditambah pembayaran
+  /// tunai, dikurangi refund. Transfer dan QRIS tidak dihitung karena uangnya
+  /// tidak masuk laci.
+  ///
+  /// Refund tercatat sebagai pembayaran bernilai negatif dengan metode
+  /// "Refund", jadi ikut dijumlahkan dan otomatis mengurangi kas. Tanpa ini,
+  /// uang yang sudah dikembalikan ke pelanggan muncul sebagai selisih kurang
+  /// saat tutup shift, dan kasir yang disalahkan. Refund lewat transfer akan
+  /// ikut terpotong di sini; itu kasus yang jarang di kasir laundry, dan lebih
+  /// baik salah ke arah yang terlihat daripada menuduh kasir.
   Future<int> expectedCash(Shift shift) async {
     final db = await _db.database;
 
     final result = await db.rawQuery(
       "SELECT COALESCE(SUM(amount), 0) AS c FROM payments "
-      "WHERE shift_id = ? AND method = 'Tunai'",
+      "WHERE shift_id = ? AND method IN ('Tunai', 'Refund')",
       [shift.id],
     );
 
