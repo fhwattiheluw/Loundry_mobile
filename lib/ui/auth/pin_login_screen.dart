@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../data/db/settings_keys.dart';
 import '../widgets/app_logo.dart';
+import 'forgot_pin_screen.dart';
 
 /// Login memakai PIN, bukan email dan kata sandi, supaya kasir bisa masuk
 /// dalam dua detik saat konter ramai.
@@ -168,6 +169,28 @@ class _PinLoginScreenState extends ConsumerState<PinLoginScreen>
                           ),
                   ),
                   const SizedBox(height: 12),
+                  // Hanya pemilik yang punya jalan pemulihan. Kasir yang
+                  // lupa PIN cukup diberi PIN baru oleh pemiliknya.
+                  TextButton(
+                    onPressed: () async {
+                      final changed = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute(
+                          builder: (_) => const ForgotPinScreen(),
+                        ),
+                      );
+                      if (changed == true && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'PIN pemilik sudah diganti. Masuk dengan PIN baru.'),
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text('Lupa PIN pemilik?'),
+                  ),
+                  const SizedBox(height: 4),
+
                   _Keypad(
                     onDigit: _tap,
                     onBackspace: _backspace,

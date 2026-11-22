@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
@@ -148,11 +149,73 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
 
   Future<void> _finish() async {
     setState(() => _saving = true);
+
+    // Kode pemulihan dibuat di akhir wizard, bukan saat PIN diganti:
+    // pemilik yang melewati langkah PIN pun tetap harus punya jalan masuk
+    // kembali bila suatu hari ia terkunci di luar.
+    final code = await ref.read(pinRecoveryProvider).generateRecoveryCode();
+
     await ref
         .read(settingsRepoProvider)
         .set(SettingsKeys.setupDone, '1');
+
+    if (mounted) await _showRecoveryCode(code);
+
     ref.invalidate(settingsLoadedProvider);
     if (mounted) setState(() => _saving = false);
+  }
+
+  Future<void> _showRecoveryCode(String code) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.key_outlined),
+        title: const Text('Catat kode pemulihan'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Kode ini satu-satunya jalan masuk kembali bila Anda lupa '
+              'PIN pemilik. Tulis di buku, atau simpan di tempat yang '
+              'hanya Anda tahu.',
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            SelectableText(
+              code,
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 3,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Kode ini tidak bisa dilihat lagi setelah layar ini ditutup. '
+              'Kalau hilang, buat yang baru di Pengaturan.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: code));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Kode disalin.')),
+              );
+            },
+            icon: const Icon(Icons.copy, size: 18),
+            label: const Text('Salin'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Saya sudah mencatat'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

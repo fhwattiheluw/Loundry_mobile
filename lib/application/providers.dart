@@ -11,6 +11,7 @@ import '../domain/models/models.dart';
 import '../domain/price_calculator.dart';
 import '../services/photo/order_photo_service.dart';
 import '../services/ads/ad_service.dart';
+import '../services/auth/pin_recovery.dart';
 import '../services/ads/consent_manager.dart';
 import '../services/ads/purchase_service.dart';
 import '../services/backup/backup_service.dart';
@@ -136,6 +137,14 @@ final orderPhotosProvider =
     FutureProvider.family<List<OrderPhoto>, int>((ref, orderId) {
   return ref.watch(orderPhotoServiceProvider).of(orderId);
 });
+
+final pinRecoveryProvider = Provider<PinRecoveryService>(
+  (ref) => PinRecoveryService(
+    ref.watch(settingsRepoProvider),
+    ref.watch(userRepoProvider),
+    ref.watch(whatsAppApiSenderProvider),
+  ),
+);
 
 final purchaseServiceProvider = Provider<PurchaseService>((ref) {
   final service = PurchaseService(ref.watch(settingsRepoProvider));

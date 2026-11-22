@@ -31,6 +31,13 @@ abstract final class SettingsKeys {
   /// muncul sekali di pemasangan baru.
   static const setupDone = 'setup_done';
 
+  /// Pemulihan PIN pemilik. Yang disimpan hanya hasil pengacakan kodenya,
+  /// sama seperti PIN: kode yang bisa dibaca kembali dari database sama
+  /// saja dengan tidak punya kunci sama sekali.
+  static const recoveryCodeHash = 'recovery_code_hash';
+  static const pinResetCodeHash = 'pin_reset_code_hash';
+  static const pinResetExpiresAt = 'pin_reset_expires_at';
+
   /// 'system', 'light', atau 'dark'.
   static const themeMode = 'theme_mode';
 

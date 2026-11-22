@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 
 import '../../core/security.dart';
+import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
 import '../db/app_database.dart';
 
@@ -201,6 +202,16 @@ class UserRepository {
       orderBy: 'role, name',
     );
     return rows.map(AppUser.fromMap).toList();
+  }
+
+  /// Pemilik pertama yang masih aktif. Dipakai pemulihan PIN, yang selalu
+  /// menyasar akun pemilik, bukan kasir.
+  Future<AppUser?> firstOwner() async {
+    final users = await all();
+    for (final user in users) {
+      if (user.role == UserRole.owner) return user;
+    }
+    return null;
   }
 
   Future<AppUser?> authenticate(String pin) async {

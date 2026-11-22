@@ -29,6 +29,87 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
     if (mounted) setState(() => _users = users);
   }
 
+  /// Membuat kode pemulihan baru dan menampilkannya satu kali.
+  ///
+  /// Kode lama langsung mati begitu yang baru dibuat, jadi dikonfirmasi
+  /// dulu: pemilik yang masih menyimpan catatan lama tidak boleh
+  /// kehilangannya karena salah ketuk.
+  Future<void> _regenerateRecoveryCode() async {
+    final recovery = ref.read(pinRecoveryProvider);
+
+    if (recovery.hasRecoveryCode) {
+      final yes = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Buat kode pemulihan baru?'),
+          content: const Text(
+              'Kode lama langsung tidak berlaku. Pastikan Anda mencatat '
+              'yang baru.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Buat baru'),
+            ),
+          ],
+        ),
+      );
+      if (yes != true) return;
+    }
+
+    final code = await recovery.generateRecoveryCode();
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.key_outlined),
+        title: const Text('Catat kode ini'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SelectableText(
+              code,
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 3,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Tidak bisa dilihat lagi setelah layar ini ditutup.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton.icon(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: code));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Kode disalin.')),
+              );
+            },
+            icon: const Icon(Icons.copy, size: 18),
+            label: const Text('Salin'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Saya sudah mencatat'),
+          ),
+        ],
+      ),
+    );
+
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -49,6 +130,23 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
+          // Kode pemulihan hanya berguna bila pemilik tahu ia ada. Ditaruh
+          // di atas daftar pengguna, bukan terkubur di bawahnya.
+          Card(
+            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            child: ListTile(
+              leading: const Icon(Icons.key_outlined),
+              title: const Text('Kode pemulihan PIN'),
+              subtitle: Text(
+                ref.read(pinRecoveryProvider).hasRecoveryCode
+                    ? 'Sudah dibuat. Buat baru bila catatannya hilang.'
+                    : 'Belum ada. Buat sekarang dan catat di tempat aman.',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _regenerateRecoveryCode,
+            ),
+          ),
+
           for (final user in _users) ...[
             ListTile(
               leading: CircleAvatar(
