@@ -86,7 +86,7 @@ class _PrinterSettingsScreenState
     final settings = ref.watch(settingsRepoProvider);
     final selected = settings.get(SettingsKeys.printerAddress);
     final paperWidth = settings.get(SettingsKeys.paperWidth, fallback: '58');
-    final copies = settings.getInt(SettingsKeys.receiptCopies, fallback: 1);
+    final copies = settings.getInt(SettingsKeys.receiptCopies, fallback: 2);
 
     return Scaffold(
       appBar: AppBar(

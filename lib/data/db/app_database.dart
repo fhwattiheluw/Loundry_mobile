@@ -17,7 +17,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const _fileName = 'laundry_pos.db';
-  static const _schemaVersion = 6;
+  static const _schemaVersion = 7;
 
   final _key = DatabaseKey();
 
@@ -106,6 +106,21 @@ class AppDatabase {
     }
     if (from < 5) await _v5(db);
     if (from < 6) await _v6(db);
+    if (from < 7) await _v7(db);
+  }
+
+  /// Versi 7: salinan nota bawaan menjadi 2 lembar.
+  ///
+  /// Satu lembar untuk pelanggan, satu ditempel di kantong cucian. Nilai
+  /// lama "1" adalah bawaan lama, dan aplikasi belum dirilis sehingga belum
+  /// ada pemilik yang memilihnya dengan sengaja. Nilai selain "1" dibiarkan.
+  Future<void> _v7(sql.Database db) async {
+    await db.update(
+      'settings',
+      {'value': '2'},
+      where: 'key = ? AND value = ?',
+      whereArgs: ['receipt_copies', '1'],
+    );
   }
 
   /// Versi 6: template WhatsApp yang memuat rincian pesanan.

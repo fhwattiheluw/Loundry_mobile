@@ -86,7 +86,7 @@ Future<void> seedInitialData(Database db) async {
     SettingsKeys.paperWidth: '58',
     SettingsKeys.printerAddress: '',
     SettingsKeys.printerName: '',
-    SettingsKeys.receiptCopies: '1',
+    SettingsKeys.receiptCopies: '2',
     SettingsKeys.reminderDays: '3',
     SettingsKeys.maxCashierDiscount: '10000',
     SettingsKeys.openHours: 'Buka 08.00 - 20.00',

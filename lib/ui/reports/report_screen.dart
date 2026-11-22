@@ -277,7 +277,7 @@ class ReportScreen extends ConsumerWidget {
             printedBy: ref.read(currentUserProvider).name,
           );
 
-      final result = await ref.read(printerProvider).printBytes(bytes);
+      final result = await ref.read(printerProvider).printBytes(bytes, copies: 1);
 
       messenger.showSnackBar(
         SnackBar(

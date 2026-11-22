@@ -126,7 +126,7 @@ class ReceiptPrinter {
     if (!connection.success) return connection;
 
     final count =
-        copies ?? _settings.getInt(SettingsKeys.receiptCopies, fallback: 1);
+        copies ?? _settings.getInt(SettingsKeys.receiptCopies, fallback: 2);
 
     try {
       for (var i = 0; i < count.clamp(1, 5); i++) {
