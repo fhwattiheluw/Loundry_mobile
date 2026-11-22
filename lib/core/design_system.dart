@@ -113,7 +113,9 @@ class StatusPalette extends ThemeExtension<StatusPalette> {
   final double onStatusTint;
 
   static const light = StatusPalette(
-    diterima: Color(0xFF4E6A78),
+    // Kuning tua, bukan abu kebiruan. Di daftar order, abu-abu di atas
+    // kartu abu-abu membuat semua baris terlihat sama dari jarak satu meja.
+    diterima: Color(0xFF9A6300),
     diproses: Color(0xFF1565C0),
     selesai: Color(0xFF2E7D32),
     diambil: Color(0xFF6D4C41),
@@ -126,7 +128,7 @@ class StatusPalette extends ThemeExtension<StatusPalette> {
   /// Di latar gelap, warna pekat jadi sulit dibaca. Semua naik ke nada
   /// yang lebih terang, dan kadar latarnya diturunkan.
   static const dark = StatusPalette(
-    diterima: Color(0xFF9FB8C4),
+    diterima: Color(0xFFFFCC80),
     diproses: Color(0xFF82B1FF),
     selesai: Color(0xFF81C784),
     diambil: Color(0xFFBCAAA4),

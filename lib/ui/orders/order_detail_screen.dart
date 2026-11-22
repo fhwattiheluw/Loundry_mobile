@@ -8,7 +8,6 @@ import '../../core/security.dart';
 import '../../core/design_system.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
-import '../widgets/stat_tile.dart';
 import 'payment_sheet.dart';
 import 'status_confirm.dart';
 
@@ -60,7 +59,6 @@ class _Body extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final statusColor = context.status.forStatus(order.laundryStatus.name);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -71,17 +69,31 @@ class _Body extends ConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(order.orderNo,
-                      style: const TextStyle(
-                          fontSize: 20, fontWeight: FontWeight.w700)),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      // Nomor pendek yang bisa disebut lewat telepon.
+                      Text(shortOrderNo(order.orderNo),
+                          style: const TextStyle(
+                              fontSize: 26, fontWeight: FontWeight.w800)),
+                      const SizedBox(width: 8),
+                      Text(order.orderNo,
+                          style: TextStyle(
+                              fontSize: 13, color: scheme.onSurfaceVariant)),
+                    ],
+                  ),
                   const SizedBox(height: 2),
                   Text(formatDateTime(order.createdAt),
                       style: TextStyle(
-                          fontSize: 12.5, color: scheme.onSurfaceVariant)),
+                          fontSize: 13.5, color: scheme.onSurfaceVariant)),
                 ],
               ),
             ),
-            StatusChip(label: order.laundryStatus.label, color: statusColor),
+            // Status tidak dipasang di sini: timeline di bawahnya sudah
+            // menyebutkannya, dan dua kali dalam satu layar hanya memakan
+            // tempat yang dibutuhkan angka dan tombol.
+            const SizedBox.shrink(),
           ],
         ),
 
@@ -639,12 +651,12 @@ class _OverflowMenu extends ConsumerWidget {
 /// diambil dari tabel status_logs. Tahap yang belum dilewati tetap
 /// ditampilkan dalam keadaan pudar, supaya kasir dan pelanggan melihat
 /// sisa prosesnya, bukan hanya posisi sekarang.
-class _StatusTimeline extends ConsumerWidget {
+class _StatusTimeline extends ConsumerStatefulWidget {
   const _StatusTimeline({required this.order});
 
   final LaundryOrder order;
 
-  static const _flow = [
+  static const flow = [
     LaundryStatus.diterima,
     LaundryStatus.diproses,
     LaundryStatus.selesai,
@@ -652,7 +664,22 @@ class _StatusTimeline extends ConsumerWidget {
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_StatusTimeline> createState() => _StatusTimelineState();
+}
+
+class _StatusTimelineState extends ConsumerState<_StatusTimeline> {
+  /// Tertutup secara bawaan.
+  ///
+  /// Dalam bentuk memanjang, tiga baris "Belum" memakan hampir separuh
+  /// layar pertama untuk mengabarkan hal yang belum terjadi, dan mendorong
+  /// total serta tombol aksi ke bawah lipatan. Riwayat lengkapnya tetap
+  /// ada, satu ketukan jauhnya.
+  bool _expanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final order = widget.order;
+
     return FutureBuilder<List<Map<String, Object?>>>(
       future: ref.watch(orderRepoProvider).statusHistory(order.id!),
       builder: (context, snapshot) {
@@ -666,38 +693,194 @@ class _StatusTimeline extends ConsumerWidget {
         }
 
         final cancelled = order.laundryStatus == LaundryStatus.dibatalkan;
-        final currentIndex = _flow.indexOf(order.laundryStatus);
+        final flow = _StatusTimeline.flow;
+        final currentIndex = flow.indexOf(order.laundryStatus);
 
         return Card(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Perjalanan order',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
-                const SizedBox(height: 10),
-                for (var i = 0; i < _flow.length; i++)
-                  _Step(
-                    status: _flow[i],
-                    log: lastOf[_flow[i].name],
-                    done: !cancelled && currentIndex >= i,
-                    current: !cancelled && currentIndex == i,
-                    isLast: i == _flow.length - 1 && !cancelled,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 14, 16, _expanded ? 6 : 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text('Perjalanan order',
+                            style: TextStyle(fontWeight: FontWeight.w700)),
+                      ),
+                      Icon(
+                        _expanded ? Icons.expand_less : Icons.expand_more,
+                        size: 20,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ],
                   ),
-                if (cancelled)
-                  _Step(
-                    status: LaundryStatus.dibatalkan,
-                    log: lastOf[LaundryStatus.dibatalkan.name],
-                    done: true,
-                    current: true,
-                    isLast: true,
-                  ),
-              ],
+                  const SizedBox(height: 12),
+
+                  if (_expanded)
+                    for (var i = 0; i < flow.length; i++)
+                      _Step(
+                        status: flow[i],
+                        log: lastOf[flow[i].name],
+                        done: !cancelled && currentIndex >= i,
+                        current: !cancelled && currentIndex == i,
+                        isLast: i == flow.length - 1 && !cancelled,
+                      )
+                  else
+                    _CompactFlow(
+                      flow: flow,
+                      currentIndex: cancelled ? -1 : currentIndex,
+                      cancelled: cancelled,
+                    ),
+
+                  if (_expanded && cancelled)
+                    _Step(
+                      status: LaundryStatus.dibatalkan,
+                      log: lastOf[LaundryStatus.dibatalkan.name],
+                      done: true,
+                      current: true,
+                      isLast: true,
+                    ),
+
+                  if (!_expanded) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      _summaryLine(order, lastOf, cancelled),
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
         );
       },
+    );
+  }
+
+  String _summaryLine(
+    LaundryOrder order,
+    Map<String, Map<String, Object?>> lastOf,
+    bool cancelled,
+  ) {
+    final log = lastOf[order.laundryStatus.name];
+    final changedAt = log?['changed_at'] as String?;
+    final userName = log?['user_name'] as String?;
+
+    final label = cancelled ? 'Dibatalkan' : order.laundryStatus.label;
+    if (changedAt == null) return label;
+
+    final when = formatDateTime(DateTime.parse(changedAt));
+    return '$label \u00b7 $when${userName == null ? '' : ' \u00b7 $userName'}';
+  }
+}
+
+/// Empat titik dalam satu baris. Terbaca sekali lihat, dan tidak memakan
+/// tempat yang dibutuhkan angka dan tombol di bawahnya.
+class _CompactFlow extends StatelessWidget {
+  const _CompactFlow({
+    required this.flow,
+    required this.currentIndex,
+    required this.cancelled,
+  });
+
+  final List<LaundryStatus> flow;
+  final int currentIndex;
+  final bool cancelled;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    if (cancelled) {
+      return Row(
+        children: [
+          Icon(Icons.block, size: 18, color: context.status.dibatalkan),
+          const SizedBox(width: 8),
+          Text(
+            'Order dibatalkan',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: context.status.dibatalkan,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Row(
+      children: [
+        for (var i = 0; i < flow.length; i++) ...[
+          if (i > 0)
+            Expanded(
+              child: Container(
+                height: 3,
+                margin: const EdgeInsets.only(bottom: 18),
+                color: currentIndex >= i
+                    ? context.status.forStatus(flow[i].name)
+                    : scheme.outlineVariant,
+              ),
+            ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _Dot(
+                color: context.status.forStatus(flow[i].name),
+                done: currentIndex >= i,
+                current: currentIndex == i,
+                muted: scheme.outlineVariant,
+                surface: scheme.surface,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                flow[i].label,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight:
+                      currentIndex == i ? FontWeight.w700 : FontWeight.w400,
+                  color: currentIndex >= i ? null : scheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _Dot extends StatelessWidget {
+  const _Dot({
+    required this.color,
+    required this.done,
+    required this.current,
+    required this.muted,
+    required this.surface,
+  });
+
+  final Color color;
+  final bool done;
+  final bool current;
+  final Color muted;
+  final Color surface;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: current ? 24 : 20,
+      height: current ? 24 : 20,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: done ? color : Colors.transparent,
+        border: Border.all(color: done ? color : muted, width: 2),
+      ),
+      child: done
+          ? Icon(current ? Icons.circle : Icons.check,
+              size: current ? 10 : 12, color: surface)
+          : null,
     );
   }
 }

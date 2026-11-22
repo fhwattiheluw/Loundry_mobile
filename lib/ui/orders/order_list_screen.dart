@@ -174,7 +174,23 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                 message: '$e',
                 onRetry: () => ref.refreshOrderData(),
               ),
-              data: (list) {
+              data: (raw) {
+                // Yang telat naik ke atas, yang paling lama telat paling
+                // dulu. Di konter, tumpukan yang terlupakan itulah yang
+                // harus terlihat pertama, bukan order yang baru saja masuk.
+                final list = [...raw]..sort((a, b) {
+                    final now = DateTime.now();
+                    final aLate =
+                        a.laundryStatus.isOpen && now.isAfter(a.estimatedAt);
+                    final bLate =
+                        b.laundryStatus.isOpen && now.isAfter(b.estimatedAt);
+                    if (aLate != bLate) return aLate ? -1 : 1;
+                    if (aLate && bLate) {
+                      return a.estimatedAt.compareTo(b.estimatedAt);
+                    }
+                    return 0;
+                  });
+
                 if (list.isEmpty) {
                   return EmptyState(
                     icon: Icons.inbox_outlined,
@@ -258,14 +274,28 @@ class _OrderCard extends StatelessWidget {
     final scheme = theme.colorScheme;
     final statusColor = context.status.forStatus(order.laundryStatus.name);
 
+    // Keterlambatan dihitung dari estimasi selesai. Order yang sudah
+    // diambil atau dibatalkan tidak bisa telat lagi.
+    final late = order.laundryStatus.isOpen &&
+        DateTime.now().isAfter(order.estimatedAt);
+    final lateDays = DateTime.now().difference(order.estimatedAt).inDays;
+
     return Card(
       color: selected ? scheme.primaryContainer : null,
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
         onTap: onTap,
         onLongPress: onLongPress,
-        child: Padding(
-          padding: const EdgeInsets.all(14),
+        child: Container(
+          // Garis warna di tepi kiri. Inilah yang membuat daftar bisa
+          // disapu mata tanpa membaca satu kata pun.
+          decoration: BoxDecoration(
+            border: Border(
+              left: BorderSide(color: statusColor, width: 5),
+            ),
+          ),
+          padding: const EdgeInsets.fromLTRB(12, 14, 14, 14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -295,10 +325,45 @@ class _OrderCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 4),
-              Text(
-                '${order.orderNo}  ·  ${formatDateTime(order.createdAt)}',
-                style: TextStyle(fontSize: 12.5, color: scheme.onSurfaceVariant),
+              Row(
+                children: [
+                  // Nomor pendek yang bisa disebut lewat telepon tanpa
+                  // tersendat. Nomor panjangnya tetap ada di nota.
+                  Text(
+                    shortOrderNo(order.orderNo),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  Text(
+                    '  ·  ${formatDateTime(order.createdAt)}',
+                    style:
+                        TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
+                  ),
+                ],
               ),
+              if (late) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Icon(Icons.warning_amber_rounded,
+                        size: 16, color: context.status.belumLunas),
+                    const SizedBox(width: 4),
+                    Text(
+                      lateDays < 1
+                          ? 'Lewat estimasi hari ini'
+                          : 'Telat $lateDays hari',
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: context.status.belumLunas,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 10),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -312,7 +377,7 @@ class _OrderCard extends StatelessWidget {
                               ? 'Estimasi ${formatDateTime(order.estimatedAt)}'
                               : order.items.map((i) => i.serviceName).join(', '),
                           style: TextStyle(
-                              fontSize: 12.5, color: scheme.onSurfaceVariant),
+                              fontSize: 13.5, color: scheme.onSurfaceVariant),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -321,8 +386,8 @@ class _OrderCard extends StatelessWidget {
                           Text(
                             'Sisa ${formatRupiah(order.remaining)}',
                             style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
                               color: context.status.belumLunas,
                             ),
                           )
@@ -330,8 +395,8 @@ class _OrderCard extends StatelessWidget {
                           Text(
                             'Lunas',
                             style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
                               color: context.status.lunas,
                             ),
                           ),

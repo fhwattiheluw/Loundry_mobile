@@ -153,9 +153,14 @@ class ReportScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
+                  // Kotak yang isinya nol hanya memakan tempat untuk
+                  // mengatakan tidak ada apa-apa. Baris ini hilang sama
+                  // sekali bila tidak ada diskon maupun refund.
+                  if (data.discountTotal > 0 || data.refundTotal > 0) ...[
                   const SizedBox(height: 12),
                   Row(
                     children: [
+                      if (data.discountTotal > 0)
                       Expanded(
                         child: StatTile(
                           label: 'Diskon diberikan',
@@ -163,7 +168,9 @@ class ReportScreen extends ConsumerWidget {
                           icon: Icons.discount_outlined,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      if (data.discountTotal > 0 && data.refundTotal > 0)
+                        const SizedBox(width: 12),
+                      if (data.refundTotal > 0)
                       Expanded(
                         child: StatTile(
                           label: 'Refund',
@@ -173,6 +180,7 @@ class ReportScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
+                  ],
                   const SizedBox(height: 8),
                   Card(
                     child: Padding(

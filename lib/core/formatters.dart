@@ -95,3 +95,13 @@ class RupiahInputFormatter extends TextInputFormatter {
 /// Dipakai di setiap kolom uang, supaya tidak ada satu layar pun yang
 /// menampilkan 10000 sementara layar lain menampilkan 10.000.
 const rupiahInputFormatters = <TextInputFormatter>[RupiahInputFormatter()];
+
+/// "20261122-001" menjadi "#001".
+///
+/// Nomor panjang tetap dipakai di nota dan QR karena ia unik lintas hari.
+/// Yang pendek ini untuk disebut lewat telepon dan dicari dengan mata.
+String shortOrderNo(String orderNo) {
+  final dash = orderNo.lastIndexOf('-');
+  if (dash < 0 || dash == orderNo.length - 1) return '#$orderNo';
+  return '#${orderNo.substring(dash + 1)}';
+}
