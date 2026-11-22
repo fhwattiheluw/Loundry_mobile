@@ -9,6 +9,7 @@ import '../data/repositories/settings_repository.dart';
 import '../data/repositories/shift_repository.dart';
 import '../domain/models/models.dart';
 import '../domain/price_calculator.dart';
+import '../services/license/license_service.dart';
 import '../services/ads/ad_service.dart';
 import '../services/ads/consent_manager.dart';
 import '../services/ads/purchase_service.dart';
@@ -126,8 +127,20 @@ final pendingNotificationsProvider = FutureProvider<int>(
   (ref) => ref.watch(notificationServiceProvider).pendingCount(),
 );
 
+final licenseServiceProvider = Provider<LicenseService>(
+  (ref) => LicenseService(ref.watch(settingsRepoProvider)),
+);
+
+/// Dibaca ulang setiap kali layar langganan perlu menggambar keadaan baru.
+final licenseStatusProvider = StateProvider<LicenseStatus>(
+  (ref) => ref.watch(licenseServiceProvider).status,
+);
+
 final purchaseServiceProvider = Provider<PurchaseService>((ref) {
-  final service = PurchaseService(ref.watch(settingsRepoProvider));
+  final service = PurchaseService(
+    ref.watch(settingsRepoProvider),
+    ref.watch(licenseServiceProvider),
+  );
   ref.onDispose(service.dispose);
   return service;
 });

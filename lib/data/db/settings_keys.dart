@@ -23,6 +23,19 @@ abstract final class SettingsKeys {
   static const adsEnabled = 'ads_enabled';
   static const adsRemoved = 'ads_removed';
 
+  /// Langganan bulanan lewat Google Play.
+  ///
+  /// [licenseActiveUntil] disimpan lokal supaya aplikasi tetap bisa dipakai
+  /// tanpa internet. Ia diperpanjang setiap kali Play Store mengabarkan
+  /// langganan masih aktif.
+  static const licenseActiveUntil = 'license_active_until';
+  static const licenseLastVerified = 'license_last_verified';
+  static const trialStartedAt = 'trial_started_at';
+
+  /// Waktu terakhir yang pernah dilihat aplikasi. Dipakai menangkap jam
+  /// perangkat yang dimundurkan untuk memperpanjang masa pakai.
+  static const clockLastSeen = 'clock_last_seen';
+
   /// 'system', 'light', atau 'dark'.
   static const themeMode = 'theme_mode';
 

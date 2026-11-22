@@ -8,6 +8,7 @@ import 'data/db/settings_keys.dart';
 import 'services/connectivity/connection_guard.dart';
 import 'ui/auth/pin_login_screen.dart';
 import 'ui/home/home_shell.dart';
+import 'ui/license/subscription_screen.dart';
 import 'ui/widgets/states.dart';
 
 class LaundryPosApp extends ConsumerWidget {
@@ -82,9 +83,20 @@ class _Root extends ConsumerWidget {
         ),
       ),
       data: (_) {
-        // Inisialisasi iklan berjalan di latar dan tidak menahan layar.
+        // Inisialisasi iklan dan lisensi berjalan di latar, tidak menahan
+        // layar. Keduanya aman dipanggil berulang kali.
         ref.read(adServiceProvider).init();
-        return user == null ? const PinLoginScreen() : const HomeShell();
+        ref.read(licenseServiceProvider).init();
+
+        if (user == null) return const PinLoginScreen();
+
+        // Gerbang langganan diletakkan setelah masuk, bukan sebelumnya,
+        // supaya pemilik tetap bisa membuka aplikasi dan mengambil
+        // backup-nya walau langganan sudah lewat.
+        final license = ref.watch(licenseStatusProvider);
+        if (!license.canUseApp) return SubscriptionScreen(status: license);
+
+        return const HomeShell();
       },
     );
   }

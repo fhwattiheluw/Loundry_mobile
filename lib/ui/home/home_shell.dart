@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../core/design_system.dart';
 import '../../services/connectivity/connection_guard.dart';
+import '../license/subscription_screen.dart';
 import '../orders/new_order_screen.dart';
 import '../orders/order_list_screen.dart';
 import '../reports/report_screen.dart';
@@ -89,6 +90,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     final body = Column(
       children: [
         const _OfflineStrip(),
+        const TrialStrip(),
         Expanded(child: IndexedStack(index: _index, children: pages)),
       ],
     );
