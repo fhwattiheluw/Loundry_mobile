@@ -117,6 +117,27 @@ paling mungkin bentrok:
 Jalankan `flutter pub upgrade --major-versions` bila masih buntu, lalu
 kirimkan keluarannya.
 
+### Jangan naikkan dua paket ini tanpa menyesuaikan kode
+
+| Paket | Alasan |
+| --- | --- |
+| `mobile_scanner` | Di versi 5.x `errorBuilder` menerima tiga argumen `(context, error, child)`. Versi 7.x hanya dua. Batasan `^5.2.3` sengaja mengunci major 5 |
+| `fl_chart` | API grafiknya sering berubah antar rilis minor, dan versinya belum mencapai 1.0 |
+
+### API yang sudah dicocokkan dengan dokumentasi resmi
+
+Saat membangun ini, pemakaian API berikut diperiksa langsung ke sumbernya,
+bukan dari ingatan: `ConsentInformation.canRequestAds`,
+`ConsentForm.loadAndShowConsentFormIfRequired`,
+`getPrivacyOptionsRequirementStatus`, `ConsentForm.showPrivacyOptionsForm`
+(dokumentasi AdMob Flutter); `PrintBluetoothThermal.pairedBluetooths`,
+`connect(macPrinterAddress:)`, `writeBytes`, `connectionStatus`,
+`bluetoothEnabled`, `disconnect`; serta `Generator.image` dan
+`Generator.qrcode` dari `esc_pos_utils_plus`.
+
+Yang belum bisa diverifikasi: kompilasi penuh. Lingkungan tempat kode ini
+ditulis tidak bisa memasang Flutter SDK.
+
 **PIN awal: `1234`** (peran Owner). Ganti lewat Pengaturan → Pengguna dan PIN
 sebelum dipakai di konter.
 
