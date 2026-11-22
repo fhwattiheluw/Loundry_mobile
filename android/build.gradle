@@ -14,20 +14,16 @@ subprojects {
     project.layout.buildDirectory.value(newBuildDir.dir(project.name))
 }
 
-subprojects {
-    project.evaluationDependsOn(":app")
-}
-
-tasks.register("clean", Delete) {
-    delete(rootProject.layout.buildDirectory)
-}
-
 // Beberapa plugin Flutter masih mengunci compileSdk lama (file_picker 8 memakai
 // 34). AGP 9 menolak itu: sebuah pustaka tidak boleh dipakai oleh modul yang
 // compileSdk-nya lebih rendah dari pustaka lain dalam build yang sama. Daripada
 // menunggu setiap plugin diperbarui, kita naikkan lantainya untuk semua modul
 // Android di build ini. Menaikkan compileSdk hanya membuka API baru; ia tidak
 // mengubah targetSdk maupun minSdk, jadi perilaku aplikasi di HP tidak berubah.
+//
+// Blok ini WAJIB berada di atas evaluationDependsOn(":app") di bawah. Baris itu
+// mengevaluasi proyek :app saat ini juga, dan afterEvaluate tidak bisa dipasang
+// pada proyek yang sudah dievaluasi.
 subprojects {
     afterEvaluate { proj ->
         if (proj.plugins.hasPlugin("com.android.library")
@@ -37,4 +33,12 @@ subprojects {
             }
         }
     }
+}
+
+subprojects {
+    project.evaluationDependsOn(":app")
+}
+
+tasks.register("clean", Delete) {
+    delete(rootProject.layout.buildDirectory)
 }
