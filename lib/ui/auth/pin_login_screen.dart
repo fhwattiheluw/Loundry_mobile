@@ -18,10 +18,17 @@ class _PinLoginScreenState extends ConsumerState<PinLoginScreen> {
   bool _checking = false;
   String? _error;
 
+  static const _minLength = 4;
   static const _maxLength = 6;
 
+  /// PIN di aplikasi ini panjangnya 4 sampai 6 digit, dan hash-nya tidak
+  /// memberi tahu panjangnya. Jadi aplikasi tidak boleh menebak kapan
+  /// pengguna selesai mengetik: pengguna yang menyatakannya, lewat tombol
+  /// panah. Mencoba sendiri di digit keempat membuat PIN enam digit tidak
+  /// mungkin dipakai, dan lebih buruk lagi: PIN 1234 akan mencuri login
+  /// pengguna yang PIN-nya 123456, karena empat digit pertamanya cocok.
   Future<void> _submit() async {
-    if (_pin.length < 4 || _checking) return;
+    if (_pin.length < _minLength || _checking) return;
 
     setState(() {
       _checking = true;
@@ -45,17 +52,14 @@ class _PinLoginScreenState extends ConsumerState<PinLoginScreen> {
   }
 
   void _tap(String digit) {
-    if (_pin.length >= _maxLength) return;
+    if (_pin.length >= _maxLength || _checking) return;
     setState(() {
       _pin += digit;
       _error = null;
     });
-    if (_pin.length >= 4) _maybeAutoSubmit();
-  }
-
-  void _maybeAutoSubmit() {
-    // PIN empat digit langsung dicoba. Yang lebih panjang menunggu tombol OK.
-    if (_pin.length == 4) _submit();
+    // Enam digit adalah batas atas. Tidak ada lagi yang bisa diketik, jadi
+    // tidak ada yang perlu ditunggu.
+    if (_pin.length >= _maxLength) _submit();
   }
 
   void _backspace() {
@@ -88,7 +92,7 @@ class _PinLoginScreenState extends ConsumerState<PinLoginScreen> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 4),
-                  const Text('Masukkan PIN Anda'),
+                  const Text('Masukkan PIN Anda, 4 sampai 6 digit'),
                   const SizedBox(height: 28),
                   _Dots(length: _pin.length, max: _maxLength),
                   const SizedBox(height: 12),
@@ -113,6 +117,7 @@ class _PinLoginScreenState extends ConsumerState<PinLoginScreen> {
                     onDigit: _tap,
                     onBackspace: _backspace,
                     onSubmit: _submit,
+                    canSubmit: _pin.length >= _minLength && !_checking,
                   ),
                 ],
               ),
@@ -161,21 +166,28 @@ class _Keypad extends StatelessWidget {
     required this.onDigit,
     required this.onBackspace,
     required this.onSubmit,
+    required this.canSubmit,
   });
 
   final void Function(String) onDigit;
   final VoidCallback onBackspace;
   final VoidCallback onSubmit;
 
+  /// Tombol panah mati sampai PIN cukup panjang, supaya pengguna melihat
+  /// bahwa menekannya sekarang tidak ada gunanya.
+  final bool canSubmit;
+
   @override
   Widget build(BuildContext context) {
-    Widget key(String label, {VoidCallback? onTap, IconData? icon}) {
+    Widget key(String label,
+        {VoidCallback? onTap, IconData? icon, bool enabled = true}) {
       return Padding(
         padding: const EdgeInsets.all(6),
         child: SizedBox(
           height: 64,
           child: OutlinedButton(
-            onPressed: onTap ?? () => onDigit(label),
+            onPressed:
+                enabled ? (onTap ?? () => onDigit(label)) : null,
             style: OutlinedButton.styleFrom(
               shape:
                   RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -206,7 +218,11 @@ class _Keypad extends StatelessWidget {
                 child: key('', onTap: onBackspace, icon: Icons.backspace_outlined)),
             Expanded(child: key('0')),
             Expanded(
-                child: key('', onTap: onSubmit, icon: Icons.arrow_forward)),
+              child: key('',
+                  onTap: onSubmit,
+                  icon: Icons.arrow_forward,
+                  enabled: canSubmit),
+            ),
           ],
         ),
       ],

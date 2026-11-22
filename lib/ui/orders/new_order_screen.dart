@@ -246,7 +246,12 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
               controller: controller,
               obscureText: true,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'PIN Owner'),
+              maxLength: 6,
+              decoration: const InputDecoration(
+                labelText: 'PIN Owner',
+                helperText: '4 sampai 6 digit',
+                counterText: '',
+              ),
             ),
           ],
         ),
