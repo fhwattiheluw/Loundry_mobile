@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:laundry_pos/data/db/app_database.dart';
 import 'package:laundry_pos/data/db/settings_keys.dart';
 import 'package:laundry_pos/data/repositories/master_repository.dart';
@@ -34,6 +35,13 @@ class FakeSender implements NotificationSender {
 void main() {
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
+
+  // Template WhatsApp memformat tanggal, dan DateFormat dengan locale
+  // id_ID menolak bekerja sebelum data locale dimuat. main() aplikasi
+  // sudah melakukannya, tapi pengujian tidak menjalankan main().
+  setUpAll(() async {
+    await initializeDateFormatting('id_ID', null);
+  });
 
   late AppDatabase db;
   late SettingsRepository settings;
