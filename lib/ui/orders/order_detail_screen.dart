@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../core/security.dart';
-import '../../core/theme.dart';
+import '../../core/design_system.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
 import '../widgets/stat_tile.dart';
@@ -59,7 +59,7 @@ class _Body extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
-    final statusColor = AppTheme.statusColor(order.laundryStatus.name, scheme);
+    final statusColor = context.status.forStatus(order.laundryStatus.name);
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),

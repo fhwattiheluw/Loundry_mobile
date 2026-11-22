@@ -23,6 +23,9 @@ abstract final class SettingsKeys {
   static const adsEnabled = 'ads_enabled';
   static const adsRemoved = 'ads_removed';
 
+  /// 'system', 'light', atau 'dark'.
+  static const themeMode = 'theme_mode';
+
   static const notifyOrderCreated = 'notify_order_created';
   static const notifyOrderDone = 'notify_order_done';
   static const notifyReminder = 'notify_reminder';

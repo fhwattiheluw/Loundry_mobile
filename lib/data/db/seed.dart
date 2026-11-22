@@ -96,6 +96,7 @@ Future<void> seedInitialData(Database db) async {
     SettingsKeys.receiptLogoPath: '',
     SettingsKeys.adsEnabled: '1',
     SettingsKeys.adsRemoved: '0',
+    SettingsKeys.themeMode: 'system',
     SettingsKeys.notifyOrderCreated: '1',
     SettingsKeys.notifyOrderDone: '1',
     SettingsKeys.notifyReminder: '1',

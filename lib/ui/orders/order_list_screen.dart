@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app.dart';
 import '../../application/providers.dart';
+import '../../core/design_system.dart';
 import '../../core/formatters.dart';
-import '../../core/theme.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../widgets/layout.dart';
+import '../widgets/states.dart';
 import '../widgets/stat_tile.dart';
 import 'order_detail_screen.dart';
 import 'scan_order_screen.dart';
@@ -90,7 +93,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            padding: EdgeInsets.fromLTRB(context.screenPadding, AppSpacing.sm, context.screenPadding, 0),
             child: TextField(
               controller: _searchController,
               textInputAction: TextInputAction.search,
@@ -114,7 +117,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
             height: 56,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: EdgeInsets.symmetric(horizontal: context.screenPadding - AppSpacing.xs),
               children: [
                 _chip(
                   'Semua',
@@ -148,19 +151,34 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
           ),
           Expanded(
             child: orders.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Gagal memuat: $e')),
+              loading: () => ListView.separated(
+                padding: screenPadding(context, bottom: 96),
+                itemCount: 4,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AppSpacing.md),
+                itemBuilder: (_, __) => const OrderCardSkeleton(),
+              ),
+              error: (e, _) => ErrorState(
+                message: '$e',
+                onRetry: () => ref.refreshOrderData(),
+              ),
               data: (list) {
                 if (list.isEmpty) {
-                  return const _EmptyState();
+                  return EmptyState(
+                    icon: Icons.inbox_outlined,
+                    title: 'Belum ada order di filter ini',
+                    message: filter.statuses.isEmpty && !filter.unpaidOnly
+                        ? 'Order baru akan muncul di sini.'
+                        : 'Coba pilih filter lain di atas.',
+                  );
                 }
 
                 return RefreshIndicator(
                   onRefresh: () async => ref.refreshOrderData(),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                  child: ResponsiveCardGrid(
+                    padding: screenPadding(context, bottom: 96),
                     itemCount: list.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    spacing: AppSpacing.md,
                     itemBuilder: (context, i) => _OrderCard(
                       order: list[i],
                       selected: _selected.contains(list[i].id),
@@ -224,9 +242,9 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final statusColor =
-        AppTheme.statusColor(order.laundryStatus.name, scheme);
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final statusColor = context.status.forStatus(order.laundryStatus.name);
 
     return Card(
       color: selected ? scheme.primaryContainer : null,
@@ -321,23 +339,4 @@ class _OrderCard extends StatelessWidget {
       ),
     );
   }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState();
-
-  @override
-  Widget build(BuildContext context) => ListView(
-        children: const [
-          SizedBox(height: 80),
-          Icon(Icons.inbox_outlined, size: 56, color: Colors.black26),
-          SizedBox(height: 12),
-          Center(
-            child: Text(
-              'Belum ada order di filter ini',
-              style: TextStyle(fontSize: 15, color: Colors.black54),
-            ),
-          ),
-        ],
-      );
 }

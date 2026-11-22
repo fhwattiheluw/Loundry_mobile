@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
+import '../../core/design_system.dart';
 import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
 import '../customers/customer_screen.dart';
@@ -40,6 +41,54 @@ class SettingsScreen extends ConsumerWidget {
                     ref.read(sessionProvider.notifier).signOut(),
                 icon: const Icon(Icons.logout, size: 18),
                 label: const Text('Keluar'),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+          const _Heading('Tampilan'),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Mode warna'),
+                  const SizedBox(height: AppSpacing.md),
+                  SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(
+                        value: 'system',
+                        label: Text('Ikuti HP'),
+                        icon: Icon(Icons.brightness_auto_outlined),
+                      ),
+                      ButtonSegment(
+                        value: 'light',
+                        label: Text('Terang'),
+                        icon: Icon(Icons.light_mode_outlined),
+                      ),
+                      ButtonSegment(
+                        value: 'dark',
+                        label: Text('Gelap'),
+                        icon: Icon(Icons.dark_mode_outlined),
+                      ),
+                    ],
+                    selected: {
+                      settings.get(SettingsKeys.themeMode, fallback: 'system'),
+                    },
+                    onSelectionChanged: (value) async {
+                      await settings.set(
+                          SettingsKeys.themeMode, value.first);
+                      ref.invalidate(settingsLoadedProvider);
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Mode gelap menghemat baterai di layar OLED dan lebih '
+                    'nyaman saat konter tutup malam.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
               ),
             ),
           ),

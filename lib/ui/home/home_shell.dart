@@ -2,12 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
+import '../../core/design_system.dart';
 import '../orders/new_order_screen.dart';
 import '../orders/order_list_screen.dart';
 import '../reports/report_screen.dart';
 import '../settings/settings_screen.dart';
 import 'dashboard_screen.dart';
 
+class _Destination {
+  const _Destination(this.icon, this.selectedIcon, this.label);
+
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+}
+
+const _destinations = [
+  _Destination(Icons.home_outlined, Icons.home, 'Beranda'),
+  _Destination(Icons.receipt_long_outlined, Icons.receipt_long, 'Order'),
+  _Destination(Icons.bar_chart_outlined, Icons.bar_chart, 'Laporan'),
+  _Destination(Icons.settings_outlined, Icons.settings, 'Pengaturan'),
+];
+
+/// Rangka aplikasi yang menyesuaikan lebar layar.
+///
+/// Di HP, navigasi di bawah supaya terjangkau ibu jari. Di tablet, navigasi
+/// pindah ke rel samping: ibu jari tidak sampai ke dasar layar tablet, dan
+/// ruang mendatar yang luas lebih baik dipakai untuk isi.
 class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
@@ -22,10 +43,10 @@ class _HomeShellState extends ConsumerState<HomeShell> {
   void initState() {
     super.initState();
 
-    // Interstitial ditayangkan SEKALI per sesi, di titik transisi setelah
-    // kasir masuk, dan tidak pernah di tengah transaksi. Kebijakan AdMob
-    // melarang interstitial yang terpicu setelah setiap aksi pengguna.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Interstitial ditayangkan SEKALI per sesi, di titik transisi setelah
+      // kasir masuk, dan tidak pernah di tengah transaksi. Kebijakan AdMob
+      // melarang interstitial yang terpicu setelah setiap aksi pengguna.
       ref.read(adServiceProvider).maybeShowSessionInterstitial();
 
       // Backup otomatis maksimal sekali sehari. Data aplikasi ini hanya ada
@@ -40,57 +61,85 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     });
   }
 
+  Future<void> _newOrder() async {
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const NewOrderScreen()),
+    );
+    if (created == true) ref.refreshOrderData();
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(sessionProvider);
     if (user == null) return const SizedBox.shrink();
 
-    final pages = const [
+    final wide = context.isWide;
+
+    const pages = [
       DashboardScreen(),
       OrderListScreen(),
       ReportScreen(),
       SettingsScreen(),
     ];
 
+    final body = IndexedStack(index: _index, children: pages);
+    final showFab = _index <= 1;
+
+    if (wide) {
+      return Scaffold(
+        body: Row(
+          children: [
+            NavigationRail(
+              selectedIndex: _index,
+              onDestinationSelected: (i) => setState(() => _index = i),
+              labelType: NavigationRailLabelType.all,
+              // Tombol order baru ikut di rel, supaya tetap terjangkau
+              // tanpa melayang menutupi isi tabel.
+              leading: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                child: showFab
+                    ? FloatingActionButton(
+                        onPressed: _newOrder,
+                        tooltip: 'Order baru',
+                        child: const Icon(Icons.add),
+                      )
+                    : const SizedBox(height: AppTouch.comfortable),
+              ),
+              destinations: [
+                for (final d in _destinations)
+                  NavigationRailDestination(
+                    icon: Icon(d.icon),
+                    selectedIcon: Icon(d.selectedIcon),
+                    label: Text(d.label),
+                  ),
+              ],
+            ),
+            const VerticalDivider(width: 1),
+            Expanded(child: body),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
-      body: IndexedStack(index: _index, children: pages),
-      floatingActionButton: _index <= 1
+      body: body,
+      floatingActionButton: showFab
           ? FloatingActionButton.extended(
-              onPressed: () async {
-                final created = await Navigator.of(context).push<bool>(
-                  MaterialPageRoute(builder: (_) => const NewOrderScreen()),
-                );
-                if (created == true) ref.refreshOrderData();
-              },
+              onPressed: _newOrder,
               icon: const Icon(Icons.add),
               label: const Text('Order Baru'),
             )
           : null,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
-        height: 68,
         onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Beranda',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
-            label: 'Order',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart),
-            label: 'Laporan',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Pengaturan',
-          ),
+        destinations: [
+          for (final d in _destinations)
+            NavigationDestination(
+              icon: Icon(d.icon),
+              selectedIcon: Icon(d.selectedIcon),
+              label: d.label,
+            ),
         ],
       ),
     );
