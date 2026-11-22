@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
@@ -141,6 +142,38 @@ class _BackupSettingsScreenState
                 : () => _run(ref.read(backupServiceProvider).createLocal),
             icon: const Icon(Icons.save_outlined),
             label: const Text('Backup ke perangkat saja'),
+          ),
+
+          const SizedBox(height: 16),
+          // Pemilik yang tahu jalurnya bisa menyalin berkasnya sendiri
+          // lewat Pengelola File, tanpa membuka aplikasi ini.
+          FutureBuilder<String>(
+            future: ref.read(backupServiceProvider).backupFolderPath(),
+            builder: (context, snapshot) {
+              final path = snapshot.data;
+              if (path == null) return const SizedBox.shrink();
+
+              return Card(
+                child: ListTile(
+                  leading: const Icon(Icons.folder_outlined),
+                  title: const Text('Folder backup otomatis'),
+                  subtitle: Text(
+                    path,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  trailing: IconButton(
+                    tooltip: 'Salin jalur',
+                    icon: const Icon(Icons.copy, size: 18),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: path));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Jalur folder disalin.')),
+                      );
+                    },
+                  ),
+                ),
+              );
+            },
           ),
 
           const SizedBox(height: 12),

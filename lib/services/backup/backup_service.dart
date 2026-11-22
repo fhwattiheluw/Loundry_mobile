@@ -49,12 +49,41 @@ class BackupService {
   static const _folderName = 'backup';
   static const _keepCount = 7;
 
+  /// Folder tempat backup otomatis disimpan.
+  ///
+  /// Di Android dipilih penyimpanan luar milik aplikasi, bukan folder
+  /// dalam: jalurnya bisa dibuka pemilik lewat Pengelola File mana pun,
+  /// sehingga berkasnya bisa disalin ke flashdisk atau dilampirkan ke
+  /// WhatsApp tanpa lewat aplikasi ini.
+  ///
+  /// Folder Download dan Documents tidak dipakai. Sejak Android 10 aplikasi
+  /// tidak boleh menulis ke sana tanpa izin akses seluruh penyimpanan, dan
+  /// izin itu hampir selalu ditolak Google Play untuk aplikasi kasir.
+  ///
+  /// Yang harus diingat: folder ini ikut terhapus bila aplikasi dicopot.
+  /// Backup di dalam HP yang sama tidak menolong saat HP-nya hilang, jadi
+  /// salinan mingguan ke luar HP tetap wajib.
   Future<Directory> _backupDir() async {
-    final base = await getApplicationDocumentsDirectory();
+    Directory? base;
+
+    if (Platform.isAndroid) {
+      try {
+        base = await getExternalStorageDirectory();
+      } catch (_) {
+        base = null;
+      }
+    }
+
+    base ??= await getApplicationDocumentsDirectory();
+
     final dir = Directory(p.join(base.path, _folderName));
     if (!await dir.exists()) await dir.create(recursive: true);
     return dir;
   }
+
+  /// Jalur folder backup apa adanya, untuk ditampilkan di Pengaturan.
+  /// Pemilik yang tahu jalurnya bisa menemukan berkasnya sendiri.
+  Future<String> backupFolderPath() async => (await _backupDir()).path;
 
   Future<File> _databaseFile() async {
     final dir = await getDatabasesPath();
