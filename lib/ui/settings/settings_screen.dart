@@ -349,8 +349,6 @@ class SettingsScreen extends ConsumerWidget {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _open(context, const AdStatusScreen()),
                   ),
-                  const Divider(height: 1, indent: 70),
-                  const _RemoveAdsTile(),
                   // Hanya muncul di wilayah yang mewajibkannya, misalnya
                   // Uni Eropa. Menyediakannya adalah syarat kepatuhan UMP.
                   FutureBuilder<bool>(
@@ -406,74 +404,6 @@ class SettingsScreen extends ConsumerWidget {
 
   void _open(BuildContext context, Widget screen) {
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
-  }
-}
-
-/// Pembelian sekali bayar untuk menghilangkan iklan (FR-118).
-///
-/// Harga selalu diambil dari Play Store, tidak pernah ditulis di kode,
-/// karena mata uang dan pajaknya berbeda per negara.
-class _RemoveAdsTile extends ConsumerStatefulWidget {
-  const _RemoveAdsTile();
-
-  @override
-  ConsumerState<_RemoveAdsTile> createState() => _RemoveAdsTileState();
-}
-
-class _RemoveAdsTileState extends ConsumerState<_RemoveAdsTile> {
-  bool _ready = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _prepare();
-  }
-
-  Future<void> _prepare() async {
-    await ref.read(purchaseServiceProvider).init();
-    if (mounted) setState(() => _ready = true);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final purchases = ref.watch(purchaseServiceProvider);
-    final settings = ref.watch(settingsRepoProvider);
-
-    if (settings.getBool(SettingsKeys.adsRemoved)) {
-      return ListTile(
-        leading: IconBadge(Icons.verified_outlined, color: context.status.lunas),
-        title: const Text('Versi bebas iklan aktif'),
-        subtitle: const Text('Terima kasih sudah mendukung aplikasi ini.'),
-      );
-    }
-
-    if (!_ready || !purchases.isAvailable || purchases.product == null) {
-      return const SizedBox.shrink();
-    }
-
-    return ListTile(
-      leading: IconBadge(Icons.block_outlined, tone: 15),
-      title: const Text('Hilangkan iklan selamanya'),
-      subtitle: Text(
-        'Sekali bayar ${purchases.priceLabel}. '
-        'Tekan lama untuk memulihkan pembelian lama.',
-      ),
-      trailing: FilledButton(
-        onPressed: () async {
-          await purchases.buy();
-          if (mounted) ref.invalidate(settingsLoadedProvider);
-        },
-        child: Text(purchases.priceLabel),
-      ),
-      onLongPress: () async {
-        await purchases.restore();
-        if (!context.mounted) return;
-        ref.invalidate(settingsLoadedProvider);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Memulihkan pembelian...')),
-        );
-      },
-    );
   }
 }
 

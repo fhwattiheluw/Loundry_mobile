@@ -164,12 +164,10 @@ class AdService {
   /// adalah cara kehilangan mereka sebelum sempat mencoba.
   static const _appOpenMinLaunches = 4;
 
-  /// Iklan selalu menyala di perangkat Android. Satu-satunya pengecualian
-  /// adalah pemilik yang membeli versi bebas iklan. Sengaja TIDAK ada
-  /// sakelar di Pengaturan: aplikasi ini gratis dan hidup dari iklan.
-  bool get enabled =>
-      !_settings.getBool(SettingsKeys.adsRemoved) &&
-      (Platform.isAndroid || Platform.isIOS);
+  /// Iklan SELALU menyala. Aplikasi ini gratis dan seluruh pendapatannya
+  /// berasal dari iklan, jadi tidak ada sakelar, tidak ada pembelian bebas
+  /// iklan, dan tidak ada pengaturan yang bisa mematikannya.
+  bool get enabled => Platform.isAndroid || Platform.isIOS;
 
   Future<void> init() async {
     if (_initialized || _initStarted || !enabled) return;

@@ -230,14 +230,13 @@ menunjukkan unit mana yang masih uji, dan hasil muat tiap jenis iklan.
 
 | Layar | Iklan |
 | --- | --- |
-| Beranda, Order, Laporan | Banner tetap di dasar layar, di atas bilah navigasi (disembunyikan di Pengaturan) |
+| Beranda, Order, Laporan | Banner tetap di dasar layar, di atas bilah navigasi, di semua tab |
 | Setelah login | Interstitial, maksimal sekali per sesi |
 | Ekspor laporan PDF | Rewarded ad opsional, bisa ditolak; ekspor CSV selalu gratis |
 | Input order, pembayaran, proses cetak | **Tidak ada iklan** |
 
-Tersedia juga pembelian sekali bayar untuk menghilangkan iklan selamanya.
-Harganya diambil dari Play Store, tidak ditulis di kode. Buat produk
-non-consumable dengan ID `remove_ads` di Play Console sebelum rilis.
+Iklan tidak bisa dimatikan: tidak ada sakelar di Pengaturan dan tidak ada
+pembelian bebas iklan. Aplikasi gratis dan seluruh pendapatannya dari iklan.
 
 Penempatan ini mengikuti kebijakan AdMob, yang melarang interstitial terpicu
 setelah setiap aksi pengguna maupun iklan yang menyela alur kerja inti.

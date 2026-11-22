@@ -99,7 +99,7 @@ class AdStatusScreen extends ConsumerWidget {
                   children: [
                     _Row(
                       label: 'Iklan aktif',
-                      value: ads.enabled ? 'Ya' : 'Tidak (versi bebas iklan)',
+                      value: ads.enabled ? 'Ya, selalu' : 'Tidak (bukan perangkat seluler)',
                       ok: ads.enabled,
                     ),
                     const Divider(height: 1),

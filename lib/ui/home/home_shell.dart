@@ -109,17 +109,12 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         ),
 
         // Banner tetap di dasar layar utama, terlihat di setiap tab, bukan
-        // terkubur di ujung daftar yang jarang digulung. Disembunyikan
-        // (tetap termuat) di Pengaturan, tempat banyak sakelar dan tombol.
-        // Tidak pernah tampil di layar input order atau pembayaran, karena
-        // itu layar terpisah di atas rangka ini.
-        Visibility(
-          visible: _index != 3,
-          maintainState: true,
-          child: SafeBannerAd(
-            enabled: ref.watch(adServiceProvider).enabled,
-            compact: true,
-          ),
+        // terkubur di ujung daftar yang jarang digulung. Tidak pernah
+        // tampil di layar input order atau pembayaran, karena itu layar
+        // terpisah di atas rangka ini.
+        SafeBannerAd(
+          enabled: ref.watch(adServiceProvider).enabled,
+          compact: true,
         ),
       ],
     );

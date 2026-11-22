@@ -20,8 +20,6 @@ abstract final class SettingsKeys {
   static const receiptQrEnabled = 'receipt_qr_enabled';
   static const receiptLogoPath = 'receipt_logo_path';
 
-  static const adsEnabled = 'ads_enabled';
-  static const adsRemoved = 'ads_removed';
 
   /// Berapa kali aplikasi pernah dibuka. Dipakai menahan iklan pembuka
   /// sampai pengguna sempat mengenal aplikasinya lebih dulu.

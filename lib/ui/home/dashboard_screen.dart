@@ -9,6 +9,7 @@ import '../../data/repositories/order_repository.dart';
 import '../../data/repositories/report_repository.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../../services/ads/ad_service.dart';
 import '../customers/customer_screen.dart';
 import '../orders/new_order_screen.dart';
 import '../orders/order_detail_screen.dart';
@@ -114,6 +115,11 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                   );
                 }),
+
+                // Iklan native di ujung beranda, berjarak dari kartu yang
+                // bisa diketuk di atasnya supaya tidak terpencet tanpa sengaja.
+                const SizedBox(height: AppSpacing.xxl),
+                SafeNativeAd(enabled: ref.watch(adServiceProvider).enabled),
 
               ],
             ),

@@ -87,15 +87,13 @@ Opsional: ID bisa ditimpa dengan `--dart-define=ADMOB_BANNER_ID=...`
 
 ## Model pendapatan
 
-Aplikasi gratis sepenuhnya, tanpa langganan dan tanpa masa coba. Seluruh
-pendapatan berasal dari iklan. Satu-satunya pembelian yang ada adalah
-"hilangkan iklan" sekali bayar, dan itu bukan sumber pendapatan utama
-melainkan jalan keluar bagi pemilik yang terganggu iklan di depan
-pelanggan - lebih baik mereka membayar sekali daripada mencopot aplikasi.
+Aplikasi gratis sepenuhnya, tanpa langganan, tanpa masa coba, dan tanpa
+pembelian di dalam aplikasi. Seluruh pendapatan berasal dari iklan, dan iklan
+tidak bisa dimatikan pengguna.
 
-Produk langganan tidak perlu dibuat di Play Console.
+Tidak ada produk langganan maupun pembelian yang perlu dibuat di Play Console.
 
-Tanpa flag ini aplikasi memakai ID uji Google. Itu disengaja: memakai ID
+Selama ad_config.dart kosong, aplikasi memakai ID uji Google. Itu disengaja: memakai ID
 produksi selama pengembangan adalah penyebab paling umum akun AdMob
 ditutup permanen.
 

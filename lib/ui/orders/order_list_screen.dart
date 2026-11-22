@@ -226,10 +226,13 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                 // Tidak disisipkan sama sekali bila order sedang dipilih
                 // untuk aksi massal, supaya nomor urut yang dilihat kasir
                 // tidak bergeser di tengah pemilihan.
-                final adAt =
-                    ads.enabled && list.length >= 3 && _selected.isEmpty
-                        ? 3
-                        : -1;
+                //
+                // Dengan kurang dari tiga order, iklan ditaruh setelah
+                // order terakhir, jadi toko yang masih sepi pun tetap
+                // menayangkan iklan.
+                final adAt = ads.enabled && _selected.isEmpty
+                    ? (list.length >= 3 ? 3 : list.length)
+                    : -1;
 
                 return RefreshIndicator(
                   onRefresh: () async => ref.refreshOrderData(),
