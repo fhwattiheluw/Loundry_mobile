@@ -346,7 +346,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
               child: InkWell(
                 borderRadius: BorderRadius.circular(14),
                 onTap: _addItem,
-                child: const Padding(
+                child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 28),
                   child: Center(
                     child: Text(

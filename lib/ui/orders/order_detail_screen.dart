@@ -510,7 +510,7 @@ class _OverflowMenu extends ConsumerWidget {
             ),
           ),
         if (order.laundryStatus != LaundryStatus.dibatalkan)
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'cancel',
             child: ListTile(
               leading: Icon(Icons.block, color: Theme.of(context).colorScheme.error),

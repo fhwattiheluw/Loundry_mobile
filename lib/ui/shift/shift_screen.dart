@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/design_system.dart';
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
-import '../../data/repositories/shift_repository.dart';
 import '../../domain/models/models.dart';
 import '../widgets/stat_tile.dart';
 

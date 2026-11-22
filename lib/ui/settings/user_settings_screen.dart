@@ -41,7 +41,7 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 96),
         children: [
-          const Padding(
+          Padding(
             padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: Text(
               'Setiap transaksi menyimpan siapa yang membuatnya. Beri PIN '

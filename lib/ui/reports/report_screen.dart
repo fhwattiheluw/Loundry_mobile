@@ -477,7 +477,7 @@ class _RevenueChart extends ConsumerWidget {
               }
 
               if (days.every((d) => d.amount == 0)) {
-                return const Center(
+                return Center(
                   child: Text('Belum ada pemasukan di periode ini',
                       style: Theme.of(context).textTheme.bodySmall),
                 );
@@ -635,7 +635,7 @@ class _CashierNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('Laporan')),
-        body: const Padding(
+        body: Padding(
           padding: EdgeInsets.all(32),
           child: Center(
             child: Column(

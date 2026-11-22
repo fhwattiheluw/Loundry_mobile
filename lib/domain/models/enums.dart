@@ -1,5 +1,5 @@
-/// Status cucian dan status bayar sengaja dipisah.
-/// Cucian bisa Selesai sementara pembayaran masih nol.
+// Status cucian dan status bayar sengaja dipisah.
+// Cucian bisa Selesai sementara pembayaran masih nol.
 
 enum LaundryStatus {
   diterima,

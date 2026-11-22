@@ -18,7 +18,7 @@ class AppDatabase {
   static const _fileName = 'laundry_pos.db';
   static const _schemaVersion = 3;
 
-  final _key = const DatabaseKey();
+  final _key = DatabaseKey();
 
   sql.Database? _db;
 

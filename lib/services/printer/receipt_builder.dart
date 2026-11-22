@@ -4,6 +4,7 @@ import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:image/image.dart' as img;
 
 import '../../core/formatters.dart';
+import '../../core/security.dart';
 import '../../data/db/settings_keys.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../../data/repositories/shift_repository.dart';

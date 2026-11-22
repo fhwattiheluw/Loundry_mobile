@@ -1,4 +1,3 @@
-import 'package:sqflite/sqflite.dart';
 
 import '../../domain/models/models.dart';
 import '../db/app_database.dart';

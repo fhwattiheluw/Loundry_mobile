@@ -308,14 +308,14 @@ class _OrderCard extends StatelessWidget {
                         if (order.remaining > 0)
                           Text(
                             'Sisa ${formatRupiah(order.remaining)}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: context.status.belumLunas,
                             ),
                           )
                         else
-                          const Text(
+                          Text(
                             'Lunas',
                             style: TextStyle(
                               fontSize: 13,

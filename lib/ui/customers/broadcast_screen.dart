@@ -200,7 +200,7 @@ class _BroadcastScreenState extends ConsumerState<BroadcastScreen> {
                                   : prettyPhone(customer.phone),
                             ),
                             secondary: done
-                                ? const Icon(Icons.check_circle,
+                                ? Icon(Icons.check_circle,
                                     color: context.status.lunas)
                                 : IconButton(
                                     tooltip: 'Kirim ke pelanggan ini',

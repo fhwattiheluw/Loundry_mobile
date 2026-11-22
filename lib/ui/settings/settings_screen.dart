@@ -369,7 +369,7 @@ class _RemoveAdsTileState extends ConsumerState<_RemoveAdsTile> {
     final settings = ref.watch(settingsRepoProvider);
 
     if (settings.getBool(SettingsKeys.adsRemoved)) {
-      return const ListTile(
+      return ListTile(
         leading: Icon(Icons.verified_outlined, color: context.status.lunas),
         title: Text('Versi bebas iklan aktif'),
         subtitle: Text('Terima kasih sudah mendukung aplikasi ini.'),

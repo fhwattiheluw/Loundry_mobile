@@ -112,7 +112,7 @@ class _LogoSettingsScreenState extends ConsumerState<LogoSettingsScreen> {
                       ),
                     )
                   else
-                    const Column(
+                    Column(
                       children: [
                         Icon(Icons.image_outlined,
                             size: 56, color: Theme.of(context).colorScheme.onSurfaceVariant),

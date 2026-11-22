@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../core/security.dart';
-import '../../data/repositories/master_repository.dart';
 import '../../domain/models/models.dart';
 import 'broadcast_screen.dart';
 
@@ -53,11 +52,13 @@ class _CustomerScreenState extends ConsumerState<CustomerScreen> {
   /// nomor HP. Baris judul dilewati otomatis. Pemisah koma maupun titik koma
   /// sama-sama dikenali, karena Excel Indonesia memakai titik koma.
   Future<void> _import() async {
+    // Messenger diambil SEBELUM await, karena setelah pemilih berkas
+    // ditutup widget ini bisa saja sudah dilepas dari pohon.
+    final messenger = ScaffoldMessenger.of(context);
+
     final picked = await FilePicker.platform.pickFiles(type: FileType.any);
     final path = picked?.files.single.path;
     if (path == null) return;
-
-    final messenger = ScaffoldMessenger.of(context);
 
     try {
       var text = await File(path).readAsString();

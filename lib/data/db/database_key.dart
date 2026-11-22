@@ -14,7 +14,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// Karena itu backup tetap wajib, dan backup disimpan sebagai berkas
 /// yang terenkripsi dengan kunci yang sama.
 class DatabaseKey {
-  const DatabaseKey();
+  // Bukan const: kunci yang sudah diambil disimpan di _cached, dan
+  // konstruktor const melarang field yang bisa berubah.
+  DatabaseKey();
 
   static const _storageKey = 'db_encryption_key_v1';
 
