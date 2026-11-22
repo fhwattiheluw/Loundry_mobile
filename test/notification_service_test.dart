@@ -258,11 +258,17 @@ void main() {
 
       final raw = await db.database;
       for (var i = 0; i < 5; i++) {
-        await raw.update('notification_logs', {
-          'next_attempt_at': DateTime.now()
-              .subtract(const Duration(minutes: 1))
-              .toIso8601String(),
-        });
+        // Hanya majukan jadwal baris yang MASIH menunggu. Baris yang sudah
+        // menyerah punya next_attempt_at null, dan null itu harus tetap null.
+        await raw.update(
+          'notification_logs',
+          {
+            'next_attempt_at': DateTime.now()
+                .subtract(const Duration(minutes: 1))
+                .toIso8601String(),
+          },
+          where: 'next_attempt_at IS NOT NULL',
+        );
         await service.processQueue();
       }
 
