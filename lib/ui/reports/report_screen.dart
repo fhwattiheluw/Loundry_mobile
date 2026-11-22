@@ -546,7 +546,7 @@ class _RevenueChart extends ConsumerWidget {
                       dotData: FlDotData(show: days.length <= 14),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: scheme.primary.withOpacity(0.12),
+                        color: scheme.primary.withValues(alpha: 0.12),
                       ),
                     ),
                   ],

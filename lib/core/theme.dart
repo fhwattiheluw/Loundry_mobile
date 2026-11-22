@@ -44,13 +44,13 @@ abstract final class AppTheme {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: Colors.white,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(14),
-          side: BorderSide(color: Colors.black.withOpacity(0.07)),
+          side: BorderSide(color: Colors.black.withValues(alpha: 0.07)),
         ),
       ),
       listTileTheme: const ListTileThemeData(

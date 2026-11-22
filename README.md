@@ -87,7 +87,11 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 
 ## Menjalankan pertama kali
 
-Butuh Flutter 3.19 atau lebih baru dan Android SDK.
+Butuh **Flutter 3.32 atau lebih baru** dan Android SDK.
+
+Versi minimum itu bukan pilihan sembarangan: `ThemeData.cardTheme` berubah
+tipenya menjadi `CardThemeData` di Flutter 3.32, dan `sqflite_sqlcipher`
+versi baru menuntut Flutter 3.35 untuk mendukung Android SDK 36.
 
 ```bash
 git clone https://github.com/fhwattiheluw/Loundry_mobile.git
@@ -98,6 +102,20 @@ flutter run
 
 `tool/bootstrap.sh` mengambil Gradle wrapper dan ikon aplikasi yang tidak
 ikut masuk git, lalu menjalankan `flutter pub get`.
+
+### Kalau `flutter pub get` gagal
+
+Batasan versi paket di `pubspec.yaml` ditulis longgar supaya pub bisa
+mencari kombinasi yang cocok dengan versi Flutter Anda. Dua titik yang
+paling mungkin bentrok:
+
+| Paket | Catatan |
+| --- | --- |
+| `sqflite_sqlcipher` | Rilis 3.4 menuntut Flutter 3.35. Dengan Flutter lebih lama, pub otomatis turun ke 3.1-3.3 |
+| `image` | Dipakai langsung oleh aplikasi dan juga oleh `esc_pos_utils_plus`. Rentangnya sengaja `>=3.3.0 <5.0.0` agar keduanya bisa bertemu |
+
+Jalankan `flutter pub upgrade --major-versions` bila masih buntu, lalu
+kirimkan keluarannya.
 
 **PIN awal: `1234`** (peran Owner). Ganti lewat Pengaturan → Pengguna dan PIN
 sebelum dipakai di konter.
