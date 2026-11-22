@@ -21,9 +21,10 @@ abstract final class AppSpacing {
 }
 
 abstract final class AppRadius {
-  static const sm = 8.0;
-  static const md = 12.0;
-  static const lg = 16.0;
+  static const sm = 10.0;
+  static const md = 14.0;
+  static const lg = 20.0;
+  static const xl = 28.0;
   static const pill = 999.0;
 }
 
@@ -77,6 +78,38 @@ abstract final class AppTouch {
   static const minimum = 48.0;
   static const comfortable = 56.0;
   static const primary = 64.0;
+}
+
+/// Bayangan lembut untuk kartu dan bilah navigasi.
+///
+/// Sengaja tipis dan berwarna teal gelap, bukan hitam: bayangan hitam
+/// membuat tampilan terasa berat dan kusam.
+abstract final class AppShadow {
+  static List<BoxShadow> soft(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    if (dark) return const [];
+    return [
+      BoxShadow(
+        color: const Color(0xFF004D40).withValues(alpha: 0.07),
+        blurRadius: 18,
+        offset: const Offset(0, 6),
+      ),
+    ];
+  }
+}
+
+/// Gradasi merek: teal dalam ke teal cerah.
+abstract final class AppGradient {
+  static LinearGradient brand(BuildContext context) {
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: dark
+          ? const [Color(0xFF004D40), Color(0xFF00796B)]
+          : const [Color(0xFF00574B), Color(0xFF00897B)],
+    );
+  }
 }
 
 abstract final class AppDuration {

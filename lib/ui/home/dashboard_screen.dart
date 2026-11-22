@@ -6,16 +6,31 @@ import '../../application/providers.dart';
 import '../../core/design_system.dart';
 import '../../core/formatters.dart';
 import '../../data/repositories/order_repository.dart';
+import '../../data/repositories/report_repository.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
 import '../../services/ads/ad_service.dart';
+import '../customers/customer_screen.dart';
+import '../orders/new_order_screen.dart';
 import '../orders/order_detail_screen.dart';
+import '../orders/scan_order_screen.dart';
+import '../reports/receivables_screen.dart';
 import '../widgets/layout.dart';
 import '../widgets/states.dart';
-import '../widgets/stat_tile.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
+
+  Future<void> _openNewOrder(BuildContext context, WidgetRef ref) async {
+    final created = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const NewOrderScreen()),
+    );
+    if (created == true) ref.refreshOrderData();
+  }
+
+  void _push(BuildContext context, Widget page) {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,116 +38,88 @@ class DashboardScreen extends ConsumerWidget {
     final summary = ref.watch(revenueSummaryProvider);
     final stale = ref.watch(staleOrdersProvider);
     final ads = ref.watch(adServiceProvider);
-    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        titleSpacing: context.screenPadding,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              formatLongDate(DateTime.now()),
-              style: theme.textTheme.bodySmall,
-            ),
-            Text('Halo, ${user?.name ?? ''}', style: theme.textTheme.titleLarge),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Keluar',
-            onPressed: () => ref.read(sessionProvider.notifier).signOut(),
-            icon: const Icon(Icons.logout),
-          ),
-          SizedBox(width: context.screenPadding - AppSpacing.sm),
-        ],
-      ),
       body: RefreshIndicator(
         onRefresh: () async => ref.refreshOrderData(),
-        child: ContentWidth(
-          maxWidth: 900,
-          child: ListView(
-            padding: screenPadding(context, bottom: 72),
-            children: [
-              summary.when(
-                loading: () => const StatGrid(
-                  children: [
-                    _StatSkeleton(),
-                    _StatSkeleton(),
-                    _StatSkeleton(),
-                    _StatSkeleton(),
-                  ],
-                ),
-                error: (e, _) => ErrorState(
-                  message: '$e',
+        child: SafeArea(
+          bottom: false,
+          child: ContentWidth(
+            maxWidth: 900,
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(
+                context.screenPadding,
+                AppSpacing.sm,
+                context.screenPadding,
+                96,
+              ),
+              children: [
+                _HeroCard(
+                  name: user?.name ?? '',
+                  summary: summary,
+                  onSignOut: () => ref.read(sessionProvider.notifier).signOut(),
                   onRetry: () => ref.refreshOrderData(),
                 ),
-                data: (data) => StatGrid(
-                  children: [
-                    StatTile(
-                      label: 'Uang masuk hari ini',
-                      value: formatRupiah(data.cashIn),
-                      icon: Icons.payments_outlined,
-                      highlight: true,
+
+                const SizedBox(height: AppSpacing.xl),
+                _QuickActions(
+                  actions: [
+                    _QuickAction(
+                      icon: Icons.add_circle_outline,
+                      label: 'Order\nBaru',
+                      color: Theme.of(context).colorScheme.primary,
+                      onTap: () => _openNewOrder(context, ref),
                     ),
-                    StatTile(
-                      label: 'Order',
-                      value: '${data.orderCount}',
-                      icon: Icons.receipt_long_outlined,
+                    _QuickAction(
+                      icon: Icons.qr_code_scanner,
+                      label: 'Scan\nNota',
+                      color: context.status.diproses,
+                      onTap: () => _push(context, const ScanOrderScreen()),
                     ),
-                    StatTile(
-                      label: 'Piutang baru',
-                      value: formatRupiah(data.newReceivable),
-                      icon: Icons.schedule_outlined,
+                    _QuickAction(
+                      icon: Icons.account_balance_wallet_outlined,
+                      label: 'Piutang',
+                      color: context.status.belumLunas,
+                      onTap: () => _push(context, const ReceivablesScreen()),
                     ),
-                    StatTile(
-                      label: 'Rata-rata nota',
-                      value: formatRupiah(data.averageOrderValue),
-                      icon: Icons.calculate_outlined,
+                    _QuickAction(
+                      icon: Icons.people_alt_outlined,
+                      label: 'Pelanggan',
+                      color: context.status.diterima,
+                      onTap: () => _push(context, const CustomerScreen()),
                     ),
                   ],
                 ),
-              ),
 
-              const SizedBox(height: AppSpacing.xxl),
-              const SectionHeader('Perlu tindakan'),
-
-              stale.when(
-                loading: () => const LoadingState(height: 120),
-                error: (e, _) => ErrorState(
-                  message: '$e',
-                  onRetry: () => ref.refreshOrderData(),
-                ),
-                data: (orders) => orders.isEmpty
-                    ? Card(
-                        child: ListTile(
-                          leading: Icon(
-                            Icons.check_circle_outline,
-                            color: context.status.selesai,
-                          ),
-                          title: const Text('Tidak ada cucian yang menumpuk'),
-                          subtitle: const Text(
-                            'Semua cucian selesai sudah diambil tepat waktu.',
-                          ),
-                        ),
-                      )
-                    : _StaleOrders(orders: orders),
-              ),
-
-              const SizedBox(height: AppSpacing.xxl),
-              const SectionHeader('Pintasan'),
-              _Shortcuts(onPick: (filter, label) {
-                ref.read(orderFilterProvider.notifier).state = filter;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Filter "$label" dipasang. Buka tab Order.'),
-                    duration: const Duration(seconds: 2),
+                const SizedBox(height: AppSpacing.xxl),
+                const SectionHeader('Perlu tindakan'),
+                stale.when(
+                  loading: () => const LoadingState(height: 120),
+                  error: (e, _) => ErrorState(
+                    message: '$e',
+                    onRetry: () => ref.refreshOrderData(),
                   ),
-                );
-              }),
+                  data: (orders) => orders.isEmpty
+                      ? const _AllClear()
+                      : _StaleOrders(orders: orders),
+                ),
 
-              SafeBannerAd(enabled: ads.enabled),
-            ],
+                const SizedBox(height: AppSpacing.xxl),
+                const SectionHeader('Pantau cucian'),
+                _StatusShortcuts(onPick: (filter, label) {
+                  ref.read(orderFilterProvider.notifier).state = filter;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content:
+                          Text('Filter "$label" dipasang. Buka tab Order.'),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                }),
+
+                SafeBannerAd(enabled: ads.enabled),
+              ],
+            ),
           ),
         ),
       ),
@@ -140,23 +127,320 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
-class _StatSkeleton extends StatelessWidget {
-  const _StatSkeleton();
+/// Kartu utama beranda: sapaan, pendapatan hari ini, dan tiga angka
+/// pendukung dalam satu bidang gradasi, supaya mata langsung tahu
+/// angka mana yang paling penting.
+class _HeroCard extends StatelessWidget {
+  const _HeroCard({
+    required this.name,
+    required this.summary,
+    required this.onSignOut,
+    required this.onRetry,
+  });
+
+  final String name;
+  final AsyncValue<RevenueSummary> summary;
+  final VoidCallback onSignOut;
+  final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) => const Card(
-        child: Padding(
-          padding: EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    const onBrand = Colors.white;
+    final muted = Colors.white.withValues(alpha: 0.75);
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: AppGradient.brand(context),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        boxShadow: AppShadow.soft(context),
+      ),
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Skeleton(height: 12, width: 90),
-              SizedBox(height: AppSpacing.md),
-              Skeleton(height: 24, width: 120),
+              Container(
+                width: 44,
+                height: 44,
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Image.asset('assets/brand/logo.png'),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      formatLongDate(DateTime.now()),
+                      style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                    ),
+                    Text(
+                      'Halo, $name',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge
+                          ?.copyWith(color: onBrand),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Keluar',
+                onPressed: onSignOut,
+                color: onBrand,
+                icon: const Icon(Icons.logout),
+              ),
             ],
           ),
+          const SizedBox(height: AppSpacing.xl),
+          Text(
+            'Uang masuk hari ini',
+            style: theme.textTheme.bodyMedium?.copyWith(color: muted),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          summary.when(
+            loading: () => const _HeroLoading(),
+            error: (e, _) => Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Data belum bisa dimuat',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(color: onBrand),
+                  ),
+                ),
+                TextButton(
+                  onPressed: onRetry,
+                  style: TextButton.styleFrom(foregroundColor: onBrand),
+                  child: const Text('Coba lagi'),
+                ),
+              ],
+            ),
+            data: (data) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    formatRupiah(data.cashIn),
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      fontSize: 36,
+                      color: onBrand,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.md,
+                    horizontal: AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  child: Row(
+                    children: [
+                      _HeroStat(
+                        label: 'Order',
+                        value: '${data.orderCount}',
+                      ),
+                      _HeroDivider(),
+                      _HeroStat(
+                        label: 'Piutang baru',
+                        value: formatRupiah(data.newReceivable),
+                      ),
+                      _HeroDivider(),
+                      _HeroStat(
+                        label: 'Rata-rata nota',
+                        value: formatRupiah(data.averageOrderValue),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroLoading extends StatelessWidget {
+  const _HeroLoading();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Skeleton(height: 36, width: 200),
+            SizedBox(height: AppSpacing.lg),
+            Skeleton(height: 52),
+          ],
         ),
       );
+}
+
+class _HeroStat extends StatelessWidget {
+  const _HeroStat({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Expanded(
+      child: Column(
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: theme.textTheme.titleMedium
+                  ?.copyWith(color: Colors.white),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: Colors.white.withValues(alpha: 0.75),
+              fontSize: 11.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 1,
+        height: 28,
+        color: Colors.white.withValues(alpha: 0.25),
+      );
+}
+
+class _QuickAction {
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+}
+
+/// Empat tombol bulat untuk pekerjaan yang paling sering dilakukan.
+class _QuickActions extends StatelessWidget {
+  const _QuickActions({required this.actions});
+
+  final List<_QuickAction> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      children: [
+        for (final a in actions)
+          Expanded(
+            child: InkWell(
+              onTap: a.onTap,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        color: a.color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(AppRadius.lg),
+                      ),
+                      child: Icon(a.icon, color: a.color, size: 28),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      a.label,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      style: theme.textTheme.labelSmall,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _AllClear extends StatelessWidget {
+  const _AllClear();
+
+  @override
+  Widget build(BuildContext context) {
+    final color = context.status.selesai;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.check_rounded, color: color),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Semua beres',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  Text(
+                    'Tidak ada cucian selesai yang menumpuk.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _StaleOrders extends ConsumerWidget {
@@ -233,46 +517,98 @@ class _StaleOrders extends ConsumerWidget {
   }
 }
 
-class _Shortcuts extends StatelessWidget {
-  const _Shortcuts({required this.onPick});
+class _StatusShortcuts extends StatelessWidget {
+  const _StatusShortcuts({required this.onPick});
 
   final void Function(OrderFilter filter, String label) onPick;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Column(
-        children: [
-          ListTile(
-            leading: const Icon(Icons.local_laundry_service_outlined),
-            title: const Text('Sedang diproses'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => onPick(
-              const OrderFilter(statuses: [LaundryStatus.diproses]),
-              'Sedang diproses',
+    final palette = context.status;
+
+    return Row(
+      children: [
+        _StatusTile(
+          icon: Icons.local_laundry_service_outlined,
+          label: 'Diproses',
+          color: palette.diproses,
+          onTap: () => onPick(
+            const OrderFilter(statuses: [LaundryStatus.diproses]),
+            'Sedang diproses',
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        _StatusTile(
+          icon: Icons.inventory_2_outlined,
+          label: 'Siap diambil',
+          color: palette.selesai,
+          onTap: () => onPick(
+            const OrderFilter(statuses: [LaundryStatus.selesai]),
+            'Siap diambil',
+          ),
+        ),
+        const SizedBox(width: AppSpacing.md),
+        _StatusTile(
+          icon: Icons.money_off_csred_outlined,
+          label: 'Belum lunas',
+          color: palette.belumLunas,
+          onTap: () => onPick(
+            const OrderFilter(unpaidOnly: true),
+            'Belum lunas',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _StatusTile extends StatelessWidget {
+  const _StatusTile({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tint = context.status.onStatusTint;
+
+    return Expanded(
+      child: Material(
+        color: color.withValues(alpha: tint),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: AppSpacing.lg,
+              horizontal: AppSpacing.sm,
+            ),
+            child: Column(
+              children: [
+                Icon(icon, color: color, size: 26),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelMedium
+                      ?.copyWith(color: color),
+                ),
+              ],
             ),
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.inventory_2_outlined),
-            title: const Text('Siap diambil'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => onPick(
-              const OrderFilter(statuses: [LaundryStatus.selesai]),
-              'Siap diambil',
-            ),
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.money_off_csred_outlined),
-            title: const Text('Belum lunas'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => onPick(
-              const OrderFilter(unpaidOnly: true),
-              'Belum lunas',
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

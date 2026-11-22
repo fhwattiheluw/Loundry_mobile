@@ -49,6 +49,17 @@ abstract final class AppTheme {
         titleTextStyle: text.titleLarge,
       ),
 
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        elevation: 4,
+        highlightElevation: 6,
+        extendedTextStyle: text.labelLarge,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+      ),
+
       // Tombol utama setinggi 56: cukup besar untuk ditekan tanpa melihat.
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -131,10 +142,15 @@ abstract final class AppTheme {
       ),
 
       navigationBarTheme: NavigationBarThemeData(
-        height: 72,
+        height: 74,
+        elevation: 8,
+        shadowColor: Colors.black.withValues(alpha: 0.25),
         backgroundColor: surface,
         surfaceTintColor: Colors.transparent,
         indicatorColor: scheme.primaryContainer,
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+        ),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStatePropertyAll(text.labelSmall),
       ),
