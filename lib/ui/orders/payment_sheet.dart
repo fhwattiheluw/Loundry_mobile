@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
@@ -43,7 +42,7 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
   void initState() {
     super.initState();
     // Bawaan: pelunasan penuh. Kasir tinggal menekan simpan.
-    _amountController.text = widget.order.remaining.toString();
+    _amountController.text = formatPlain(widget.order.remaining);
   }
 
   @override
@@ -138,41 +137,58 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Pembayaran ${order.orderNo}',
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 4),
-              Text(
-                'Total ${formatRupiah(order.total)} · sudah dibayar ${formatRupiah(order.paid)}',
-                style: Theme.of(context).textTheme.bodySmall,
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('Pembayaran ${order.orderNo}',
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w700)),
+                  ),
+                  Text(order.customerName,
+                      style: Theme.of(context).textTheme.bodyMedium),
+                ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
+
+              // Tiga angka yang menentukan keputusan kasir, terbaca sekali
+              // lihat. Sebelumnya semuanya ditulis sebagai satu baris teks
+              // kecil, dan sisa tagihan yang paling penting justru tenggelam.
+              _Summary(
+                total: order.total,
+                paid: order.paid,
+                remaining: order.remaining,
+              ),
+              const SizedBox(height: 18),
 
               TextField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: rupiahInputFormatters,
                 onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText: 'Jumlah dibayar (Rp)',
-                  helperText: 'Sisa tagihan ${formatRupiah(order.remaining)}',
-                  prefixIcon: const Icon(Icons.payments_outlined),
+                style: const TextStyle(
+                    fontSize: 22, fontWeight: FontWeight.w700),
+                decoration: const InputDecoration(
+                  labelText: 'Jumlah dibayar',
+                  prefixText: 'Rp ',
+                  prefixIcon: Icon(Icons.payments_outlined),
                 ),
               ),
               const SizedBox(height: 10),
 
               Wrap(
                 spacing: 8,
+                runSpacing: 8,
                 children: [
                   ActionChip(
+                    avatar: const Icon(Icons.done_all, size: 18),
                     label: const Text('Lunasi'),
-                    onPressed: () => setState(() =>
-                        _amountController.text = order.remaining.toString()),
+                    onPressed: () => setState(() => _amountController.text =
+                        formatPlain(order.remaining)),
                   ),
                   ActionChip(
                     label: const Text('Setengah'),
                     onPressed: () => setState(() => _amountController.text =
-                        (order.remaining ~/ 2).toString()),
+                        formatPlain(order.remaining ~/ 2)),
                   ),
                 ],
               ),
@@ -191,7 +207,39 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
               ),
 
               if (_method == 'Tunai') ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
+
+                // Pecahan uang yang benar-benar diserahkan pelanggan di
+                // konter. Satu ketukan lebih cepat daripada mengetik lima
+                // digit, dan tidak bisa salah ketik.
+                Text('Uang diterima',
+                    style: Theme.of(context).textTheme.labelLarge),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ActionChip(
+                      avatar: const Icon(Icons.price_check, size: 18),
+                      label: const Text('Uang pas'),
+                      onPressed: () => setState(
+                          () => _cashController.text = formatPlain(_amount)),
+                    ),
+                    for (final nominal in const [
+                      25000,
+                      50000,
+                      100000,
+                      150000,
+                      200000,
+                    ])
+                      ActionChip(
+                        label: Text(formatPlain(nominal)),
+                        onPressed: () => setState(() =>
+                            _cashController.text = formatPlain(nominal)),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 10),
                 InkWell(
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   onTap: () async {
@@ -200,7 +248,8 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
                       title: 'Uang diterima',
                       initialValue: _cashController.text,
                       isMoney: true,
-                      // Pecahan yang benar-benar dipegang pelanggan.
+                      // Tombol papan angka menambah, bukan mengganti, jadi
+                      // pecahan kecil berguna di sini.
                       quickValues: const [5000, 10000, 20000, 50000, 100000],
                       submitLabel: 'Hitung kembalian',
                     );
@@ -210,7 +259,7 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
                   },
                   child: InputDecorator(
                     decoration: const InputDecoration(
-                      labelText: 'Uang diterima (Rp)',
+                      labelText: 'Jumlah lain',
                       prefixIcon: Icon(Icons.account_balance_wallet_outlined),
                       suffixIcon: Icon(Icons.keyboard_arrow_right),
                       helperText: 'Ketuk untuk membuka papan angka',
@@ -239,12 +288,33 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
                           .withValues(alpha: context.status.onStatusTint),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(
-                      _change >= 0
-                          ? 'Kembalian ${formatRupiah(_change)}'
-                          : 'Uang kurang ${formatRupiah(-_change)}',
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w700),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _change >= 0
+                              ? Icons.check_circle_outline
+                              : Icons.error_outline,
+                          size: 22,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _change >= 0 ? 'Kembalian' : 'Uang kurang',
+                                style:
+                                    Theme.of(context).textTheme.labelMedium,
+                              ),
+                              Text(
+                                formatRupiah(_change.abs()),
+                                style: const TextStyle(
+                                    fontSize: 24, fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -272,6 +342,60 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Total, sudah dibayar, dan sisa tagihan berdampingan. Sisa dibuat paling
+/// menonjol karena itu angka yang dipakai kasir memutuskan.
+class _Summary extends StatelessWidget {
+  const _Summary({
+    required this.total,
+    required this.paid,
+    required this.remaining,
+  });
+
+  final int total;
+  final int paid;
+  final int remaining;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    Widget cell(String label, int value, {bool strong = false}) {
+      return Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: Theme.of(context).textTheme.labelSmall),
+            const SizedBox(height: 2),
+            Text(
+              formatRupiah(value),
+              style: TextStyle(
+                fontSize: strong ? 18 : 15,
+                fontWeight: strong ? FontWeight.w700 : FontWeight.w600,
+                color: strong ? scheme.primary : null,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        children: [
+          cell('Total', total),
+          cell('Dibayar', paid),
+          cell('Sisa tagihan', remaining, strong: true),
+        ],
       ),
     );
   }

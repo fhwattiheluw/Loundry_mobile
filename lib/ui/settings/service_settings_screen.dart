@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
@@ -104,7 +103,8 @@ class _ServiceFormState extends ConsumerState<_ServiceForm> {
     final s = widget.service;
 
     _name = TextEditingController(text: s?.name ?? '');
-    _price = TextEditingController(text: s?.price.toString() ?? '');
+    _price = TextEditingController(
+        text: s == null ? '' : formatPlain(s.price));
     _duration = TextEditingController(text: s?.durationHours.toString() ?? '48');
     _minQty = TextEditingController(text: formatQty(s?.minQty ?? 0));
     _rounding = TextEditingController(text: formatQty(s?.roundingStep ?? 0));
@@ -195,9 +195,10 @@ class _ServiceFormState extends ConsumerState<_ServiceForm> {
               TextField(
                 controller: _price,
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: rupiahInputFormatters,
                 decoration: InputDecoration(
-                  labelText: 'Harga per ${_unit.label} (Rp)',
+                  labelText: 'Harga per ${_unit.label}',
+                  prefixText: 'Rp ',
                 ),
               ),
               const SizedBox(height: 14),

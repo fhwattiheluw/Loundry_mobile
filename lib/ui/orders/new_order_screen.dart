@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
@@ -418,10 +417,11 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                   TextField(
                     controller: _discountController,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    inputFormatters: rupiahInputFormatters,
                     onChanged: (_) => setState(() {}),
                     decoration: const InputDecoration(
-                      labelText: 'Diskon (Rp)',
+                      labelText: 'Diskon',
+                      prefixText: 'Rp ',
                       prefixIcon: Icon(Icons.discount_outlined),
                     ),
                   ),
@@ -429,11 +429,13 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                   TextField(
                     controller: _extraFeeController,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    inputFormatters: rupiahInputFormatters,
                     onChanged: (_) => setState(() {}),
                     decoration: InputDecoration(
-                      labelText:
-                          '${ref.watch(settingsRepoProvider).get(SettingsKeys.extraFeeLabel, fallback: 'Biaya lain')} (Rp)',
+                      labelText: ref.watch(settingsRepoProvider).get(
+                          SettingsKeys.extraFeeLabel,
+                          fallback: 'Biaya lain'),
+                      prefixText: 'Rp ',
                       helperText: 'Tidak ikut didiskon',
                       prefixIcon: const Icon(Icons.local_shipping_outlined),
                     ),
@@ -458,13 +460,45 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                   TextField(
                     controller: _payController,
                     keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    inputFormatters: rupiahInputFormatters,
                     onChanged: (_) => setState(() {}),
                     decoration: const InputDecoration(
-                      labelText: 'Bayar sekarang (Rp)',
+                      labelText: 'Bayar sekarang',
+                      prefixText: 'Rp ',
                       helperText: 'Kosongkan bila bayar nanti saat diambil',
                       prefixIcon: Icon(Icons.payments_outlined),
                     ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Pecahan yang paling sering diserahkan pelanggan, dan
+                  // "Lunasi" untuk pembayaran penuh. Mengetik lima digit di
+                  // konter yang ramai adalah sumber salah ketik.
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ActionChip(
+                        avatar: const Icon(Icons.done_all, size: 18),
+                        label: const Text('Lunasi'),
+                        onPressed: _total <= 0
+                            ? null
+                            : () => setState(() =>
+                                _payController.text = formatPlain(_total)),
+                      ),
+                      for (final nominal in const [
+                        25000,
+                        50000,
+                        100000,
+                        150000,
+                        200000,
+                      ])
+                        ActionChip(
+                          label: Text(formatPlain(nominal)),
+                          onPressed: () => setState(() =>
+                              _payController.text = formatPlain(nominal)),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   _MethodSelector(

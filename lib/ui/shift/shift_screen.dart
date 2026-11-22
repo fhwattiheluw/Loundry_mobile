@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/design_system.dart';
@@ -86,9 +85,10 @@ class _OpenShiftFormState extends ConsumerState<_OpenShiftForm> {
         TextField(
           controller: _controller,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          inputFormatters: rupiahInputFormatters,
           decoration: const InputDecoration(
-            labelText: 'Kas awal di laci (Rp)',
+            labelText: 'Kas awal di laci',
+            prefixText: 'Rp ',
             prefixIcon: Icon(Icons.account_balance_wallet_outlined),
           ),
         ),
@@ -260,10 +260,11 @@ class _OpenShiftView extends ConsumerWidget {
                   controller: controller,
                   autofocus: true,
                   keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  inputFormatters: rupiahInputFormatters,
                   onChanged: (_) => setDialogState(() {}),
                   decoration: const InputDecoration(
-                    labelText: 'Kas fisik (Rp)',
+                    labelText: 'Kas fisik',
+                    prefixText: 'Rp ',
                   ),
                 ),
                 if (controller.text.isNotEmpty) ...[

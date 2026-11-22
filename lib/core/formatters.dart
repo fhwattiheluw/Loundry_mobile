@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 final _rupiah = NumberFormat.currency(
@@ -58,3 +59,39 @@ String relativeDays(DateTime from, DateTime to) {
   if (days == 1) return 'kemarin';
   return '$days hari lalu';
 }
+
+
+/// Memberi titik ribuan sambil kasir mengetik: 10000 tampil sebagai 10.000.
+///
+/// Angka uang tanpa pemisah mudah salah dibaca satu digit, dan satu digit
+/// pada harga laundry adalah selisih sepuluh kali. Kursor selalu pindah ke
+/// ujung kanan, karena menyisipkan digit di tengah angka uang hampir selalu
+/// kekeliruan, bukan niat.
+class RupiahInputFormatter extends TextInputFormatter {
+  const RupiahInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+
+    if (digits.isEmpty) return const TextEditingValue();
+
+    // Lebih dari dua belas digit bukan harga laundry, dan int.parse bisa
+    // melimpah. Ketikan itu ditolak, isian lama dipertahankan.
+    if (digits.length > 12) return oldValue;
+
+    final text = formatPlain(int.parse(digits));
+
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+/// Dipakai di setiap kolom uang, supaya tidak ada satu layar pun yang
+/// menampilkan 10000 sementara layar lain menampilkan 10.000.
+const rupiahInputFormatters = <TextInputFormatter>[RupiahInputFormatter()];
