@@ -321,6 +321,15 @@ class SettingsScreen extends ConsumerWidget {
 
           const SizedBox(height: 24),
           Center(
+            child: Image.asset(
+              'assets/brand/logo.png',
+              width: 44,
+              height: 44,
+              errorBuilder: (context, _, __) => const SizedBox.shrink(),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Center(
             child: Text(
               'Laundry Manise v0.1.0',
               style: TextStyle(

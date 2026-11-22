@@ -1,8 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../data/db/settings_keys.dart';
+import '../widgets/app_logo.dart';
 
 /// Login memakai PIN, bukan email dan kata sandi, supaya kasir bisa masuk
 /// dalam dua detik saat konter ramai.
@@ -13,7 +17,22 @@ class PinLoginScreen extends ConsumerStatefulWidget {
   ConsumerState<PinLoginScreen> createState() => _PinLoginScreenState();
 }
 
-class _PinLoginScreenState extends ConsumerState<PinLoginScreen> {
+class _PinLoginScreenState extends ConsumerState<PinLoginScreen>
+    with SingleTickerProviderStateMixin {
+  /// Getaran kecil pada titik-titik PIN saat PIN salah. Kasir yang salah
+  /// ketik biasanya sedang tidak menatap layar, jadi umpan baliknya dibuat
+  /// terasa, bukan hanya terbaca.
+  late final AnimationController _shake = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 420),
+  );
+
+  @override
+  void dispose() {
+    _shake.dispose();
+    super.dispose();
+  }
+
   String _pin = '';
   bool _checking = false;
   String? _error;
@@ -45,6 +64,8 @@ class _PinLoginScreenState extends ConsumerState<PinLoginScreen> {
         _error = 'PIN salah.';
         _pin = '';
       });
+      _shake.forward(from: 0);
+      HapticFeedback.mediumImpact();
       return;
     }
 
@@ -83,18 +104,52 @@ class _PinLoginScreenState extends ConsumerState<PinLoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.local_laundry_service_outlined, size: 56),
-                  const SizedBox(height: 12),
-                  Text(
-                    businessName,
-                    style: const TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.w700),
-                    textAlign: TextAlign.center,
+                  const AnimatedAppLogo(size: 104),
+                  const SizedBox(height: 14),
+
+                  // Nama usaha dan petunjuk muncul sedikit setelah logo,
+                  // supaya mata berhenti dulu di logo, baru membaca.
+                  TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0, end: 1),
+                    duration: const Duration(milliseconds: 650),
+                    curve: const Interval(0.35, 1, curve: Curves.easeOut),
+                    builder: (context, t, child) => Opacity(
+                      opacity: t,
+                      child: Transform.translate(
+                        offset: Offset(0, (1 - t) * 10),
+                        child: child,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          businessName,
+                          style: const TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.w700),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 4),
+                        const Text('Masukkan PIN Anda, 4 sampai 6 digit'),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 4),
-                  const Text('Masukkan PIN Anda, 4 sampai 6 digit'),
                   const SizedBox(height: 28),
-                  _Dots(length: _pin.length, max: _maxLength),
+
+                  AnimatedBuilder(
+                    animation: _shake,
+                    builder: (context, child) {
+                      final t = _shake.value;
+                      // Ayunan yang mengecil, bukan getaran tetap: terasa
+                      // seperti kepala menggeleng sekali, lalu berhenti.
+                      final offset =
+                          math.sin(t * math.pi * 4) * 12 * (1 - t);
+                      return Transform.translate(
+                        offset: Offset(offset, 0),
+                        child: child,
+                      );
+                    },
+                    child: _Dots(length: _pin.length, max: _maxLength),
+                  ),
                   const SizedBox(height: 12),
                   SizedBox(
                     height: 24,
