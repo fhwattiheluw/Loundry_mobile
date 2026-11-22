@@ -10,6 +10,7 @@ import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
 import '../widgets/stat_tile.dart';
 import 'payment_sheet.dart';
+import 'status_confirm.dart';
 
 class OrderDetailScreen extends ConsumerWidget {
   const OrderDetailScreen({super.key, required this.orderId});
@@ -96,6 +97,9 @@ class _Body extends ConsumerWidget {
             ),
           ),
         ],
+
+        const SizedBox(height: 16),
+        _StatusTimeline(order: order),
 
         const SizedBox(height: 16),
         Card(
@@ -372,6 +376,18 @@ class _ActionBar extends ConsumerWidget {
 
     final user = ref.read(currentUserProvider);
 
+    final approved = await confirmStatusChange(
+      context,
+      to: next,
+      subject: '${order.orderNo} · ${order.customerName}',
+      willNotifyCustomer: order.customerPhone.isNotEmpty,
+      extraWarning: next == LaundryStatus.diambil && order.remaining > 0
+          ? 'Sisa tagihan ${formatRupiah(order.remaining)} belum dibayar. '
+              'Layar pembayaran akan terbuka dulu.'
+          : null,
+    );
+    if (!approved || !context.mounted) return;
+
     // Cucian yang diambil tapi belum lunas harus lewat layar pembayaran dulu.
     if (next == LaundryStatus.diambil && order.remaining > 0) {
       final paid = await showPaymentSheet(context, ref, order);
@@ -614,5 +630,165 @@ class _OverflowMenu extends ConsumerWidget {
     } on StateError catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     }
+  }
+}
+
+/// Perjalanan satu nota: Diterima, Diproses, Selesai, Diambil.
+///
+/// Tahap yang sudah dilewati membawa waktu dan nama orang yang mengubahnya,
+/// diambil dari tabel status_logs. Tahap yang belum dilewati tetap
+/// ditampilkan dalam keadaan pudar, supaya kasir dan pelanggan melihat
+/// sisa prosesnya, bukan hanya posisi sekarang.
+class _StatusTimeline extends ConsumerWidget {
+  const _StatusTimeline({required this.order});
+
+  final LaundryOrder order;
+
+  static const _flow = [
+    LaundryStatus.diterima,
+    LaundryStatus.diproses,
+    LaundryStatus.selesai,
+    LaundryStatus.diambil,
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return FutureBuilder<List<Map<String, Object?>>>(
+      future: ref.watch(orderRepoProvider).statusHistory(order.id!),
+      builder: (context, snapshot) {
+        final logs = snapshot.data ?? const <Map<String, Object?>>[];
+
+        // Satu status bisa tercatat lebih dari sekali bila kasir
+        // memundurkannya. Yang ditampilkan adalah catatan terakhir.
+        final lastOf = <String, Map<String, Object?>>{};
+        for (final log in logs) {
+          lastOf[log['status'] as String] = log;
+        }
+
+        final cancelled = order.laundryStatus == LaundryStatus.dibatalkan;
+        final currentIndex = _flow.indexOf(order.laundryStatus);
+
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Perjalanan order',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 10),
+                for (var i = 0; i < _flow.length; i++)
+                  _Step(
+                    status: _flow[i],
+                    log: lastOf[_flow[i].name],
+                    done: !cancelled && currentIndex >= i,
+                    current: !cancelled && currentIndex == i,
+                    isLast: i == _flow.length - 1 && !cancelled,
+                  ),
+                if (cancelled)
+                  _Step(
+                    status: LaundryStatus.dibatalkan,
+                    log: lastOf[LaundryStatus.dibatalkan.name],
+                    done: true,
+                    current: true,
+                    isLast: true,
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _Step extends StatelessWidget {
+  const _Step({
+    required this.status,
+    required this.log,
+    required this.done,
+    required this.current,
+    required this.isLast,
+  });
+
+  final LaundryStatus status;
+  final Map<String, Object?>? log;
+  final bool done;
+  final bool current;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final color = done
+        ? context.status.forStatus(status.name)
+        : scheme.onSurfaceVariant.withValues(alpha: 0.4);
+
+    final changedAt = log?['changed_at'] as String?;
+    final userName = log?['user_name'] as String?;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Bulatan tahap dan garis penghubung ke tahap berikutnya.
+        Column(
+          children: [
+            Container(
+              width: 22,
+              height: 22,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: done ? color : Colors.transparent,
+                border: Border.all(color: color, width: 2),
+              ),
+              child: done
+                  ? Icon(
+                      current ? Icons.circle : Icons.check,
+                      size: 12,
+                      color: scheme.surface,
+                    )
+                  : null,
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 30,
+                color: color.withValues(alpha: done ? 0.5 : 0.25),
+              ),
+          ],
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  status.label,
+                  style: TextStyle(
+                    fontWeight: current ? FontWeight.w700 : FontWeight.w600,
+                    color: done ? null : scheme.onSurfaceVariant,
+                  ),
+                ),
+                if (changedAt != null)
+                  Text(
+                    '${formatDateTime(DateTime.parse(changedAt))}'
+                    '${userName == null ? '' : ' \u00b7 $userName'}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  )
+                else
+                  Text(
+                    'Belum',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onSurfaceVariant.withValues(alpha: 0.7),
+                        ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }

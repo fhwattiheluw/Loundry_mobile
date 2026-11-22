@@ -13,6 +13,7 @@ import '../widgets/states.dart';
 import '../widgets/stat_tile.dart';
 import 'order_detail_screen.dart';
 import 'scan_order_screen.dart';
+import 'status_confirm.dart';
 
 class OrderListScreen extends ConsumerStatefulWidget {
   const OrderListScreen({super.key});
@@ -37,6 +38,17 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
 
   Future<void> _bulkChangeStatus(LaundryStatus status) async {
     final user = ref.read(currentUserProvider);
+
+    final approved = await confirmStatusChange(
+      context,
+      to: status,
+      subject: '${_selected.length} order terpilih',
+      willNotifyCustomer: true,
+      extraWarning: 'Perubahan berlaku untuk semua order yang dipilih, dan '
+          'tidak bisa dibatalkan sekaligus.',
+    );
+    if (!approved || !mounted) return;
+
     await ref
         .read(orderRepoProvider)
         .changeStatusBulk(_selected.toList(), status, user: user);
