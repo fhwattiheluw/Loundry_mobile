@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -283,6 +285,12 @@ class ReportScreen extends ConsumerWidget {
               : 'Gagal mencetak. ${result.message}'),
         ),
       );
+
+      // Laporan sudah di tangan pemilik. Tidak ada pekerjaan yang terpotong
+      // di sini, dan jeda minimum di AdService menahan iklan kedua bila ia
+      // baru saja menutup shift.
+      unawaited(
+          ref.read(adServiceProvider).showInterstitialAt('cetak laporan'));
     } catch (e) {
       messenger.showSnackBar(
         SnackBar(content: Text('Gagal menyiapkan laporan: $e')),

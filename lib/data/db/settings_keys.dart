@@ -23,6 +23,10 @@ abstract final class SettingsKeys {
   static const adsEnabled = 'ads_enabled';
   static const adsRemoved = 'ads_removed';
 
+  /// Berapa kali aplikasi pernah dibuka. Dipakai menahan iklan pembuka
+  /// sampai pengguna sempat mengenal aplikasinya lebih dulu.
+  static const appOpenCount = 'app_open_count';
+
   /// Langganan bulanan lewat Google Play.
   ///
   /// [licenseActiveUntil] disimpan lokal supaya aplikasi tetap bisa dipakai

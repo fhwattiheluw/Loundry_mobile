@@ -8,6 +8,7 @@ import '../../core/formatters.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../../services/ads/ad_service.dart';
 import '../widgets/layout.dart';
 import '../widgets/states.dart';
 import '../widgets/stat_tile.dart';
@@ -67,6 +68,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
   Widget build(BuildContext context) {
     final filter = ref.watch(orderFilterProvider);
     final orders = ref.watch(orderListProvider);
+    final ads = ref.watch(adServiceProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -201,31 +203,52 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                   );
                 }
 
+                // Iklan native disisipkan setelah kartu ketiga, bukan di
+                // puncak daftar: tiga order teratas adalah yang paling
+                // sering dicari kasir, dan mendorongnya turun akan
+                // memperlambat pekerjaan setiap hari.
+                //
+                // Tidak disisipkan sama sekali bila order sedang dipilih
+                // untuk aksi massal, supaya nomor urut yang dilihat kasir
+                // tidak bergeser di tengah pemilihan.
+                final adAt =
+                    ads.enabled && list.length >= 3 && _selected.isEmpty
+                        ? 3
+                        : -1;
+
                 return RefreshIndicator(
                   onRefresh: () async => ref.refreshOrderData(),
                   child: ResponsiveCardGrid(
                     padding: screenPadding(context, bottom: 96),
-                    itemCount: list.length,
+                    itemCount: list.length + (adAt >= 0 ? 1 : 0),
                     spacing: AppSpacing.md,
-                    itemBuilder: (context, i) => _OrderCard(
-                      order: list[i],
-                      selected: _selected.contains(list[i].id),
-                      selectionMode: _selected.isNotEmpty,
-                      onTap: () async {
-                        if (_selected.isNotEmpty) {
-                          setState(() => _toggle(list[i].id!));
-                          return;
-                        }
-                        await Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                OrderDetailScreen(orderId: list[i].id!),
-                          ),
-                        );
-                        ref.refreshOrderData();
-                      },
-                      onLongPress: () => setState(() => _toggle(list[i].id!)),
-                    ),
+                    itemBuilder: (context, i) {
+                      if (adAt >= 0 && i == adAt) {
+                        return const SafeNativeAd(enabled: true);
+                      }
+
+                      final order = list[adAt >= 0 && i > adAt ? i - 1 : i];
+
+                      return _OrderCard(
+                        order: order,
+                        selected: _selected.contains(order.id),
+                        selectionMode: _selected.isNotEmpty,
+                        onTap: () async {
+                          if (_selected.isNotEmpty) {
+                            setState(() => _toggle(order.id!));
+                            return;
+                          }
+                          await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  OrderDetailScreen(orderId: order.id!),
+                            ),
+                          );
+                          ref.refreshOrderData();
+                        },
+                        onLongPress: () => setState(() => _toggle(order.id!)),
+                      );
+                    },
                   ),
                 );
               },

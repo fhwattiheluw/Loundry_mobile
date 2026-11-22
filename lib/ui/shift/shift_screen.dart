@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -337,6 +339,11 @@ class _OpenShiftView extends ConsumerWidget {
             : 'Shift ditutup. Laporan gagal dicetak: ${result.message}'),
       ),
     );
+
+    // Shift sudah tertutup dan laporannya tercetak: kasir berhenti bekerja
+    // di titik ini. Iklan di sini tidak menyela apa pun. Pemanggilan ini
+    // tidak ditunggu, jadi tidak ada yang tertahan bila iklannya lambat.
+    unawaited(ref.read(adServiceProvider).showInterstitialAt('tutup shift'));
   }
 }
 
