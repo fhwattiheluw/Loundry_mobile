@@ -37,3 +37,6 @@ ad_ids_production.dart
 # OS
 .DS_Store
 Thumbs.db
+
+# Pratinjau sementara dari pembuatan ikon.
+design/preview_*.png
