@@ -9,6 +9,8 @@ import '../../data/repositories/report_repository.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
 import '../../services/ads/ad_service.dart';
+import '../../services/backup/backup_reminder.dart';
+import '../backup/backup_wizard_screen.dart';
 import '../customers/customer_screen.dart';
 import '../orders/new_order_screen.dart';
 import '../orders/order_detail_screen.dart';
@@ -36,6 +38,7 @@ class DashboardScreen extends ConsumerWidget {
     final user = ref.watch(sessionProvider);
     final summary = ref.watch(revenueSummaryProvider);
     final stale = ref.watch(staleOrdersProvider);
+    final backup = ref.watch(backupStatusProvider);
 
     return Scaffold(
       body: RefreshIndicator(
@@ -88,6 +91,17 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
+
+                // Muncul hanya bila backup terlambat, di atas semua hal lain:
+                // kehilangan data lebih mahal daripada cucian yang telat
+                // diambil, dan pemilik tidak akan mencarinya sendiri.
+                if (backup.overdue) ...[
+                  const SizedBox(height: AppSpacing.xl),
+                  _BackupReminderCard(
+                    status: backup,
+                    onBackup: () => _push(context, const BackupWizardScreen()),
+                  ),
+                ],
 
                 const SizedBox(height: AppSpacing.xxl),
                 const SectionHeader('Perlu tindakan'),
@@ -397,6 +411,63 @@ class _QuickActions extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _BackupReminderCard extends StatelessWidget {
+  const _BackupReminderCard({required this.status, required this.onBackup});
+
+  final BackupStatus status;
+  final VoidCallback onBackup;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    final title = status.neverBackedUp
+        ? 'Data Anda belum pernah di-backup'
+        : 'Backup terakhir ${status.daysSince} hari lalu';
+
+    return Card(
+      color: scheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.cloud_off_outlined, color: scheme.onErrorContainer),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: scheme.onErrorContainer,
+                        ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    'Kalau HP hilang atau rusak, riwayat order dan piutang '
+                    'ikut hilang. Backup butuh satu menit.',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onErrorContainer,
+                        ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  FilledButton.icon(
+                    onPressed: onBackup,
+                    icon: const Icon(Icons.shield_outlined),
+                    label: const Text('Backup sekarang'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

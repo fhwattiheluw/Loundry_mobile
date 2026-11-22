@@ -62,4 +62,17 @@ abstract final class SettingsKeys {
   static const templatePayment = 'template_payment';
 
   static const seededAt = 'seeded_at';
+
+  /// Kapan pemilik terakhir membuat backup SENDIRI lewat wizard atau tombol
+  /// di Pengaturan (waktu ISO 8601). Backup harian otomatis sengaja tidak
+  /// dihitung: ia ada di dalam HP yang sama dan tidak melindungi dari HP
+  /// hilang, jadi tidak boleh membungkam pengingat.
+  static const backupLastAt = 'backup_last_at';
+
+  /// 'share' (dibagikan ke luar HP) atau 'device' (disimpan di HP).
+  static const backupLastMethod = 'backup_last_method';
+
+  /// Terakhir kali dialog pengingat backup ditampilkan, supaya tidak muncul
+  /// berkali-kali dalam sehari.
+  static const backupPromptedAt = 'backup_prompted_at';
 }

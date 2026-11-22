@@ -10,12 +10,21 @@ import '../../data/db/app_database.dart';
 
 class BackupResult {
   const BackupResult.ok(this.message, {this.file})
-      : success = true;
+      : success = true,
+        cancelled = false;
   const BackupResult.failed(this.message)
       : success = false,
+        cancelled = false,
         file = null;
 
+  /// Pemilik menutup lembar bagikan tanpa mengirim ke mana pun. Bukan
+  /// kegagalan, tapi juga bukan backup yang boleh dihitung selesai.
+  const BackupResult.cancelled(this.message, {this.file})
+      : success = false,
+        cancelled = true;
+
   final bool success;
+  final bool cancelled;
   final String message;
   final File? file;
 }
@@ -226,7 +235,7 @@ class BackupService {
     if (!result.success || result.file == null) return result;
 
     try {
-      await SharePlus.instance.share(
+      final shared = await SharePlus.instance.share(
         ShareParams(
           files: [XFile(result.file!.path)],
           subject: 'Backup Laundry Manise',
@@ -235,7 +244,17 @@ class BackupService {
               'jadi jangan dikirim ke grup.',
         ),
       );
-      return const BackupResult.ok('Backup siap dibagikan.');
+
+      // Android sering tidak melaporkan hasil bagikan (status unavailable),
+      // jadi hanya penutupan yang jelas-jelas dilaporkan yang ditolak.
+      if (shared.status == ShareResultStatus.dismissed) {
+        return BackupResult.cancelled(
+          'Backup belum dibagikan. Coba lagi dan pilih tujuan pengiriman.',
+          file: result.file,
+        );
+      }
+
+      return BackupResult.ok('Backup siap dibagikan.', file: result.file);
     } catch (e) {
       return BackupResult.failed('Gagal membagikan backup: $e');
     }

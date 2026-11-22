@@ -9,8 +9,9 @@ import '../../data/db/settings_keys.dart';
 import '../../domain/models/models.dart';
 import '../settings/printer_settings_screen.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/layout.dart';
 
-/// Empat langkah yang harus dilewati toko baru sebelum melayani pelanggan.
+/// Lima langkah yang harus dilewati toko baru sebelum melayani pelanggan.
 ///
 /// Tanpa layar ini, toko baru mendarat di dashboard bernama "Laundry Saya"
 /// dengan harga contoh, dan sebagian besar pemilik tidak akan pernah
@@ -28,8 +29,13 @@ class SetupWizard extends ConsumerStatefulWidget {
 
 class _SetupWizardState extends ConsumerState<SetupWizard> {
   final _page = PageController();
+  static const _lastIndex = 4;
+
   int _index = 0;
   bool _saving = false;
+
+  /// Hasil permintaan izin notifikasi di langkah terakhir. Null: belum diminta.
+  bool? _reminderAllowed;
 
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
@@ -62,7 +68,7 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
     final ok = await _saveCurrentStep();
     if (!ok || !mounted) return;
 
-    if (_index >= 3) {
+    if (_index >= _lastIndex) {
       await _finish();
       return;
     }
@@ -231,7 +237,7 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
                   AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
               child: Row(
                 children: [
-                  for (var i = 0; i < 4; i++)
+                  for (var i = 0; i <= _lastIndex; i++)
                     Expanded(
                       child: Container(
                         height: 5,
@@ -257,6 +263,7 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
                   _stepPrices(),
                   _stepPin(),
                   _stepPrinter(),
+                  _stepBackup(),
                 ],
               ),
             ),
@@ -282,8 +289,9 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
                   const Spacer(),
                   FilledButton.icon(
                     onPressed: _saving ? null : _next,
-                    icon: Icon(_index >= 3 ? Icons.check : Icons.arrow_forward),
-                    label: Text(_index >= 3 ? 'Mulai pakai' : 'Lanjut'),
+                    icon: Icon(
+                        _index >= _lastIndex ? Icons.check : Icons.arrow_forward),
+                    label: Text(_index >= _lastIndex ? 'Mulai pakai' : 'Lanjut'),
                   ),
                 ],
               ),
@@ -310,6 +318,61 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
         Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
         const SizedBox(height: AppSpacing.xl),
         ...children,
+      ],
+    );
+  }
+
+  Future<void> _enableReminder() async {
+    final allowed = await ref.read(backupReminderProvider).requestPermission();
+    if (mounted) setState(() => _reminderAllowed = allowed);
+  }
+
+  Widget _stepBackup() {
+    final scheme = Theme.of(context).colorScheme;
+
+    return _wrap(
+      title: 'Jaga data Anda',
+      subtitle: 'Data order dan piutang hanya tersimpan di HP ini. Kalau HP '
+          'hilang atau rusak, semuanya ikut hilang kecuali Anda punya '
+          'backup.',
+      children: [
+        const Card(
+          child: ListTile(
+            leading: IconBadge(Icons.notifications_active_outlined, tone: 2),
+            title: Text('Pengingat backup tiap minggu'),
+            subtitle: Text(
+              'Aplikasi mengirim notifikasi seminggu sekali agar Anda '
+              'membuat backup. Backup bisa dibagikan ke WhatsApp pribadi, '
+              'email, atau disimpan di HP.',
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        if (_reminderAllowed == true)
+          Card(
+            color: scheme.primaryContainer,
+            child: const ListTile(
+              leading: Icon(Icons.check_circle_outline),
+              title: Text('Pengingat aktif'),
+            ),
+          )
+        else
+          OutlinedButton.icon(
+            onPressed: _enableReminder,
+            icon: const Icon(Icons.notifications_outlined),
+            label: Text(
+              _reminderAllowed == false
+                  ? 'Izin ditolak, coba lagi'
+                  : 'Izinkan notifikasi',
+            ),
+          ),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'Anda bisa membuat backup pertama kapan saja lewat Pengaturan, '
+          'Backup dan Restore, atau lewat wizard backup di Beranda saat '
+          'pengingat muncul.',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
       ],
     );
   }

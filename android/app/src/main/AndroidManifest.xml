@@ -7,6 +7,14 @@
     <!-- AdMob: Advertising ID harus dideklarasikan juga di Play Console -->
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
 
+    <!--
+      Pengingat backup mingguan. POST_NOTIFICATIONS izin runtime di Android 13
+      ke atas. RECEIVE_BOOT_COMPLETED agar jadwal pengingat terpasang kembali
+      setelah HP dinyalakan ulang.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <!-- Memindai QR nomor nota saat pengambilan -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature
@@ -88,6 +96,21 @@
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3940256099942544~3347511713" />
+
+        <!-- Pengingat backup: penerima alarm dan pemasang ulang setelah reboot -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
 
     </application>
 </manifest>

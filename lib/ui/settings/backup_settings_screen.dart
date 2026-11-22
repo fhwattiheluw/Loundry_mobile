@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
+import '../../services/backup/backup_reminder.dart';
 import '../../services/backup/backup_service.dart';
+import '../backup/backup_wizard_screen.dart';
 import '../widgets/layout.dart';
 import '../../core/design_system.dart';
 
@@ -35,11 +37,21 @@ class _BackupSettingsScreenState
     if (mounted) setState(() => _backups = list);
   }
 
-  Future<void> _run(Future<BackupResult> Function() action) async {
+  /// [method] diisi untuk backup yang dibuat pemilik sendiri. Hanya itu yang
+  /// menggeser pengingat mingguan; restore dan backup harian tidak.
+  Future<void> _run(
+    Future<BackupResult> Function() action, {
+    BackupMethod? method,
+  }) async {
     setState(() => _busy = true);
 
     final messenger = ScaffoldMessenger.of(context);
     final result = await action();
+
+    if (result.success && method != null) {
+      await ref.read(backupReminderProvider).markDone(method);
+      ref.read(backupTickProvider.notifier).state++;
+    }
 
     await _load();
     if (!mounted) return;
@@ -93,6 +105,13 @@ class _BackupSettingsScreenState
     ref.invalidate(servicesProvider);
   }
 
+  Future<void> _openWizard() async {
+    await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const BackupWizardScreen()),
+    );
+    await _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -100,6 +119,11 @@ class _BackupSettingsScreenState
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
+          _StatusCard(
+            status: ref.watch(backupStatusProvider),
+            onWizard: _busy ? null : _openWizard,
+          ),
+          const SizedBox(height: 12),
           Card(
             color: Theme.of(context).colorScheme.errorContainer,
             child: const Padding(
@@ -130,7 +154,10 @@ class _BackupSettingsScreenState
             ),
             onPressed: _busy
                 ? null
-                : () => _run(ref.read(backupServiceProvider).shareLatest),
+                : () => _run(
+                      ref.read(backupServiceProvider).shareLatest,
+                      method: BackupMethod.share,
+                    ),
             icon: const Icon(Icons.share_outlined),
             label: const Text('Buat & bagikan backup'),
           ),
@@ -144,7 +171,10 @@ class _BackupSettingsScreenState
           OutlinedButton.icon(
             onPressed: _busy
                 ? null
-                : () => _run(ref.read(backupServiceProvider).createLocal),
+                : () => _run(
+                      ref.read(backupServiceProvider).createLocal,
+                      method: BackupMethod.device,
+                    ),
             icon: const Icon(Icons.save_outlined),
             label: const Text('Backup ke perangkat saja'),
           ),
@@ -236,6 +266,65 @@ class _BackupSettingsScreenState
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+
+/// Ringkasan backup buatan pemilik, dengan jalan pintas ke wizard.
+class _StatusCard extends StatelessWidget {
+  const _StatusCard({required this.status, required this.onWizard});
+
+  final BackupStatus status;
+  final VoidCallback? onWizard;
+
+  @override
+  Widget build(BuildContext context) {
+    final overdue = status.overdue;
+    final color = overdue
+        ? Theme.of(context).colorScheme.error
+        : context.status.selesai;
+
+    final title = status.neverBackedUp
+        ? 'Belum pernah membuat backup'
+        : 'Backup terakhir ${relativeDays(status.lastAt!, status.now)}';
+
+    final detail = overdue
+        ? 'Sudah waktunya backup lagi. Pengingat dikirim setiap minggu.'
+        : 'Pengingat berikutnya sekitar ${formatDate(status.nextDue)}.';
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  overdue ? Icons.warning_amber_rounded : Icons.verified_outlined,
+                  color: color,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(detail, style: Theme.of(context).textTheme.bodySmall),
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              onPressed: onWizard,
+              icon: const Icon(Icons.auto_fix_high_outlined),
+              label: const Text('Buka wizard backup'),
+            ),
+          ],
+        ),
       ),
     );
   }

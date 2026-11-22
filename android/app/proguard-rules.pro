@@ -17,3 +17,8 @@
 
 # Printer thermal
 -keep class com.example.print_bluetooth_thermal.** { *; }
+
+# Notifikasi lokal (pengingat backup). Plugin menyimpan jadwal sebagai JSON
+# lewat Gson; tanpa aturan ini R8 mengubah nama kelasnya dan jadwal gagal
+# dibaca ulang hanya di APK rilis.
+-keep class com.dexterous.flutterlocalnotifications.** { *; }

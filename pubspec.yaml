@@ -58,7 +58,9 @@ dependencies:
   # Logo usaha pada nota
   image_picker: ^1.1.2
   image: '>=3.3.0 <5.0.0'
-  # Pembelian versi bebas iklan
+  # Pengingat backup mingguan. Seri 22 dipilih, bukan 23: seri 23 mewajibkan
+  # compileSdk 37, sedangkan android/build.gradle memaku semua modul di 36.
+  flutter_local_notifications: ^22.3.3
 
   material_ui: ^0.0.1
 dev_dependencies:

@@ -13,6 +13,7 @@ import '../services/photo/order_photo_service.dart';
 import '../services/ads/ad_service.dart';
 import '../services/auth/pin_recovery.dart';
 import '../services/ads/consent_manager.dart';
+import '../services/backup/backup_reminder.dart';
 import '../services/backup/backup_service.dart';
 import '../services/export/export_service.dart';
 import '../services/notification/message_template.dart';
@@ -159,6 +160,21 @@ final adServiceProvider = Provider<AdService>(
 final backupServiceProvider = Provider<BackupService>(
   (ref) => BackupService(ref.watch(databaseProvider)),
 );
+
+final backupReminderProvider = Provider<BackupReminder>(
+  (ref) => BackupReminder(ref.watch(settingsRepoProvider)),
+);
+
+/// Dinaikkan setiap kali pemilik selesai membuat backup, supaya kartu di
+/// beranda dan layar backup menghitung ulang statusnya. Pengaturan disimpan
+/// di cache biasa, bukan sesuatu yang bisa ditonton Riverpod.
+final backupTickProvider = StateProvider<int>((ref) => 0);
+
+final backupStatusProvider = Provider<BackupStatus>((ref) {
+  ref.watch(backupTickProvider);
+  ref.watch(settingsLoadedProvider);
+  return ref.watch(backupReminderProvider).status();
+});
 
 final exportServiceProvider = Provider<ExportService>(
   (ref) => const ExportService(),

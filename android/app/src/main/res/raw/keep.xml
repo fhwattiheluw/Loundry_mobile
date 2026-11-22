@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ikon notifikasi dirujuk dari Dart lewat nama teks, bukan lewat kode
+     Android, jadi penyusut sumber daya menganggapnya tidak terpakai dan
+     membuangnya di APK rilis. Baris ini melarangnya. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/ic_stat_backup" />

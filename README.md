@@ -73,6 +73,12 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 - Backup otomatis harian ke penyimpanan aplikasi, tujuh salinan terakhir
 - Bagikan backup ke WhatsApp, email, atau Google Drive
 - Restore dari berkas, dengan salinan pengaman sebelum menimpa
+- Wizard backup empat langkah (kenapa, ke mana, buat, selesai), dibuka dari
+  Pengaturan, kartu di Beranda, dan dialog pengingat
+- Pengingat backup mingguan lewat notifikasi lokal, dihitung 7 hari dari
+  backup terakhir yang dibuat pemilik sendiri. Backup harian otomatis tidak
+  dihitung karena ada di HP yang sama. Bila terlambat, Beranda menampilkan
+  kartu peringatan dan aplikasi menampilkan dialog sekali sehari
 
 **Pelanggan**
 - Cari, ubah, dan atur izin notifikasi per pelanggan
@@ -166,6 +172,7 @@ lib/
   services/
     printer/     ESC/POS dan koneksi Bluetooth
     notification/ WhatsApp dan log kirim
+    backup/      backup, restore, dan pengingat mingguan
     ads/         AdMob
     connectivity/ gerbang koneksi internet
   application/   provider Riverpod

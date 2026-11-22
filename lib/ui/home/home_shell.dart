@@ -5,6 +5,7 @@ import '../../application/providers.dart';
 import '../../core/design_system.dart';
 import '../../services/ads/ad_service.dart';
 import '../../services/connectivity/connection_guard.dart';
+import '../backup/backup_wizard_screen.dart';
 import '../orders/new_order_screen.dart';
 import '../orders/order_list_screen.dart';
 import '../reports/report_screen.dart';
@@ -58,12 +59,63 @@ class _HomeShellState extends ConsumerState<HomeShell> {
       // di satu perangkat, jadi salinan harian adalah pengaman paling murah.
       ref.read(backupServiceProvider).autoBackupIfDue();
 
+      // Pengingat backup mingguan lewat notifikasi, dan dialog sekali sehari
+      // bila backup buatan pemilik sudah terlambat.
+      ref.read(backupReminderProvider).ensureScheduled();
+      _maybePromptBackup();
+
       // Pesan yang gagal kirim dan sudah waktunya dicoba lagi (FR-69).
       // Hanya berjalan di mode API; mode manual butuh kasir menekan kirim.
       ref.read(notificationServiceProvider).processQueue().then((sent) {
         if (sent > 0) ref.invalidate(pendingNotificationsProvider);
       });
     });
+  }
+
+  /// Menunggu sebentar supaya tidak bertabrakan dengan iklan layar penuh
+  /// yang tayang di awal sesi, lalu mengingatkan sekali sehari.
+  Future<void> _maybePromptBackup() async {
+    final reminder = ref.read(backupReminderProvider);
+    if (!reminder.shouldPromptNow()) return;
+
+    await Future<void>.delayed(const Duration(seconds: 15));
+    if (!mounted || !(ModalRoute.of(context)?.isCurrent ?? false)) return;
+    if (!reminder.shouldPromptNow()) return;
+
+    await reminder.markPrompted();
+    if (!mounted) return;
+
+    final status = ref.read(backupStatusProvider);
+    final go = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.shield_outlined),
+        title: const Text('Saatnya backup data'),
+        content: Text(
+          status.neverBackedUp
+              ? 'Data Anda belum pernah di-backup. Kalau HP hilang atau '
+                  'rusak, seluruh riwayat dan piutang ikut hilang.'
+              : 'Backup terakhir ${status.daysSince} hari lalu. Kalau HP '
+                  'hilang atau rusak, order sejak saat itu ikut hilang.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Nanti'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Backup sekarang'),
+          ),
+        ],
+      ),
+    );
+
+    if (go == true && mounted) {
+      await Navigator.of(context).push<bool>(
+        MaterialPageRoute(builder: (_) => const BackupWizardScreen()),
+      );
+    }
   }
 
   Future<void> _newOrder() async {
