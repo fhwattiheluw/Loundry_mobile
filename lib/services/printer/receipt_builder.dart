@@ -55,6 +55,14 @@ class ReceiptBuilder {
     if (order.customerPhone.isNotEmpty) {
       bytes.addAll(_kv(g, 'No. HP', prettyPhone(order.customerPhone)));
     }
+    // Dicetak tebal: nota ini yang dipegang pelanggan saat mengambil, dan
+    // raknya yang dicari petugas.
+    if (order.rack != null && order.rack!.isNotEmpty) {
+      bytes.addAll(g.text(
+        'RAK: ${_ascii(order.rack!)}',
+        styles: const PosStyles(bold: true),
+      ));
+    }
     bytes.addAll(g.text(_line()));
 
     for (final item in order.items) {

@@ -237,6 +237,7 @@ class LaundryOrder {
     this.extraFee = 0,
     this.extraFeeNote,
     this.perfume,
+    this.rack,
     this.paid = 0,
     this.note,
     this.pickedUpAt,
@@ -265,6 +266,10 @@ class LaundryOrder {
 
   /// Pewangi yang dipilih pelanggan (FR-12).
   final String? perfume;
+
+  /// Lokasi rak penyimpanan, misalnya "A3". Dicetak di nota supaya petugas
+  /// tidak perlu mengaduk tumpukan saat pelanggan datang mengambil.
+  final String? rack;
 
   final int total;
 
@@ -303,6 +308,7 @@ class LaundryOrder {
         extraFee: extraFee,
         extraFeeNote: extraFeeNote,
         perfume: perfume,
+        rack: rack,
         total: total,
         paid: paid ?? this.paid,
         note: note,
@@ -329,6 +335,7 @@ class LaundryOrder {
         extraFee: (m['extra_fee'] as num?)?.toInt() ?? 0,
         extraFeeNote: m['extra_fee_note'] as String?,
         perfume: m['perfume'] as String?,
+        rack: m['rack'] as String?,
         total: m['total'] as int,
         paid: (m['paid'] as num?)?.toInt() ?? 0,
         note: m['note'] as String?,
@@ -354,6 +361,7 @@ class LaundryOrder {
         'extra_fee': extraFee,
         'extra_fee_note': extraFeeNote,
         'perfume': perfume,
+        'rack': rack,
         'total': total,
         'note': note,
         'picked_up_at': pickedUpAt?.toIso8601String(),

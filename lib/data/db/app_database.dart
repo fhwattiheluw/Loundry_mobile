@@ -16,7 +16,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const _fileName = 'laundry_pos.db';
-  static const _schemaVersion = 3;
+  static const _schemaVersion = 4;
 
   final _key = DatabaseKey();
 
@@ -45,6 +45,7 @@ class AppDatabase {
         await _v1(db);
         await _v2(db);
         await _v3(db);
+        await _v4(db);
         await seedInitialData(db);
       },
       onUpgrade: _migrate,
@@ -73,6 +74,7 @@ class AppDatabase {
         await _v1(db);
         await _v2(db);
         await _v3(db);
+        await _v4(db);
         await seedInitialData(db);
       },
     );
@@ -85,6 +87,16 @@ class AppDatabase {
   Future<void> _migrate(sql.Database db, int from, int to) async {
     if (from < 2) await _v2(db);
     if (from < 3) await _v3(db);
+    if (from < 4) await _v4(db);
+  }
+
+  /// Versi 4: lokasi rak penyimpanan.
+  ///
+  /// Pelanggan datang mengambil, dan petugas mengaduk tumpukan mencari
+  /// kantongnya. Satu kolom teks pendek seperti "A3" menghapus pencarian
+  /// itu, dan ikut tercetak di nota supaya pelanggan pun bisa menunjuk.
+  Future<void> _v4(sql.Database db) async {
+    await db.execute('ALTER TABLE orders ADD COLUMN rack TEXT');
   }
 
   /// Versi 3: tambahan per order yang diminta di lapangan.

@@ -143,6 +143,24 @@ class _Body extends ConsumerWidget {
                 title: const Text('Estimasi selesai'),
                 subtitle: Text(formatDateTime(order.estimatedAt)),
               ),
+              const Divider(height: 1),
+              // Rak bisa diubah kapan saja, bukan hanya saat cucian
+              // selesai: kantong sering dipindah saat rak penuh.
+              ListTile(
+                leading: const Icon(Icons.inventory_2_outlined),
+                title: const Text('Lokasi rak'),
+                subtitle: Text(
+                  order.rack == null || order.rack!.isEmpty
+                      ? 'Belum ditentukan'
+                      : order.rack!,
+                  style: order.rack == null || order.rack!.isEmpty
+                      ? null
+                      : const TextStyle(
+                          fontSize: 17, fontWeight: FontWeight.w700),
+                ),
+                trailing: const Icon(Icons.edit_outlined, size: 18),
+                onTap: () => askRack(context, ref, order),
+              ),
               if (order.perfume != null && order.perfume!.isNotEmpty) ...[
                 const Divider(height: 1),
                 ListTile(
@@ -276,6 +294,56 @@ class _Body extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Menanyakan lokasi rak dan menyimpannya.
+///
+/// Dipakai dari dua tempat: baris rak di detail order, dan tepat setelah
+/// cucian ditandai selesai, karena saat itulah kantongnya benar-benar
+/// diletakkan di rak.
+Future<void> askRack(
+  BuildContext context,
+  WidgetRef ref,
+  LaundryOrder order,
+) async {
+  final controller = TextEditingController(text: order.rack ?? '');
+
+  final value = await showDialog<String>(
+    context: context,
+    builder: (context) => AlertDialog(
+      icon: const Icon(Icons.inventory_2_outlined),
+      title: const Text('Simpan di rak mana?'),
+      content: TextField(
+        controller: controller,
+        autofocus: true,
+        textCapitalization: TextCapitalization.characters,
+        maxLength: 12,
+        decoration: const InputDecoration(
+          labelText: 'Lokasi rak',
+          hintText: 'Contoh: A3',
+          helperText: 'Ikut tercetak di nota',
+          counterText: '',
+        ),
+        onSubmitted: (v) => Navigator.pop(context, v),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Lewati'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, controller.text),
+          child: const Text('Simpan'),
+        ),
+      ],
+    ),
+  );
+
+  if (value == null) return;
+
+  await ref.read(orderRepoProvider).setRack(order.id!, value);
+  ref.invalidate(orderDetailProvider(order.id!));
+  ref.refreshOrderData();
 }
 
 class _PaymentHistory extends ConsumerWidget {
@@ -414,6 +482,16 @@ class _ActionBar extends ConsumerWidget {
     ref.refreshOrderData();
 
     if (!context.mounted) return;
+
+    // Saat inilah kantongnya diletakkan di rak, jadi inilah saat yang
+    // benar untuk menanyakannya. Ditanyakan belakangan berarti tidak
+    // pernah terisi.
+    if (next == LaundryStatus.selesai && context.mounted) {
+      final fresh = await ref.read(orderRepoProvider).byId(order.id!);
+      if (fresh != null && context.mounted) {
+        await askRack(context, ref, fresh);
+      }
+    }
 
     if (next == LaundryStatus.selesai && order.customerPhone.isNotEmpty) {
       final fresh = await ref.read(orderRepoProvider).byId(order.id!);

@@ -286,6 +286,20 @@ class OrderRepository {
     });
   }
 
+  /// Menyimpan lokasi rak. Kosong berarti rak dihapus, bukan diisi
+  /// dengan tanda hubung yang nanti ikut tercetak di nota.
+  Future<void> setRack(int orderId, String rack) async {
+    final db = await _db.database;
+    final trimmed = rack.trim();
+
+    await db.update(
+      'orders',
+      {'rack': trimmed.isEmpty ? null : trimmed},
+      where: 'id = ?',
+      whereArgs: [orderId],
+    );
+  }
+
   Future<void> changeStatusBulk(
     List<int> orderIds,
     LaundryStatus status, {

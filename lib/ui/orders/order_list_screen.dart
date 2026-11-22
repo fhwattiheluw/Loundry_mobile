@@ -403,6 +403,27 @@ class _OrderCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (order.rack != null && order.rack!.isNotEmpty) ...[
+                    // Lokasi rak dibuat menonjol: inilah yang dicari
+                    // petugas saat pelanggan berdiri di depan konter.
+                    Container(
+                      margin: const EdgeInsets.only(right: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: scheme.secondaryContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        'Rak ${order.rack}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: scheme.onSecondaryContainer,
+                        ),
+                      ),
+                    ),
+                  ],
                   Text(
                     formatRupiah(order.total),
                     style: const TextStyle(
