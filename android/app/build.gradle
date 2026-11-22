@@ -27,7 +27,7 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.laundrypos.app"
-    compileSdk = 35
+    compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -37,16 +37,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 
     defaultConfig {
         applicationId = "com.laundrypos.app"
         // Android 8.0. Di bawah ini banyak perangkat tidak mendukung
         // izin Bluetooth runtime yang dipakai aplikasi.
         minSdk = 26
-        targetSdk = 35
+        targetSdk = flutter.targetSdkVersion
         versionCode = flutterVersionCode.toInteger()
         versionName = flutterVersionName
     }
@@ -74,6 +71,13 @@ android {
             shrinkResources = true
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
         }
+    }
+}
+
+// kotlinOptions dihapus di Kotlin Gradle plugin 2.4. Ini bentuk penggantinya.
+kotlin {
+    compilerOptions {
+        jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
     }
 }
 
