@@ -50,7 +50,7 @@
     </queries>
 
     <application
-        android:label="POS Laundry"
+        android:label="Laundry Manise"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="false">

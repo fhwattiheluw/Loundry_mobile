@@ -18,7 +18,7 @@ class LaundryPosApp extends ConsumerWidget {
     final mode = ref.watch(themeModeProvider);
 
     return MaterialApp(
-      title: 'POS Laundry',
+      title: 'Laundry Manise',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),

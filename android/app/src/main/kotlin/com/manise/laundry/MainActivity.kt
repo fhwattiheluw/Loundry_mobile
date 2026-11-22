@@ -1,4 +1,4 @@
-package com.laundrypos.app
+package com.manise.laundry
 
 import io.flutter.embedding.android.FlutterActivity
 

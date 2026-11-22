@@ -1,4 +1,4 @@
-# POS Laundry
+# Laundry Manise
 
 Aplikasi kasir Android untuk UMKM laundry. Cetak nota lewat printer thermal
 Bluetooth, kirim notifikasi WhatsApp, dan lihat laporan pendapatan yang

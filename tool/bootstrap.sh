@@ -38,12 +38,18 @@ cp "$SCAFFOLD/android/gradle/wrapper/gradle-wrapper.jar" \
    "$REPO_ROOT/android/gradle/wrapper/gradle-wrapper.jar"
 chmod +x "$REPO_ROOT/android/gradlew"
 
-echo "==> Menyalin ikon aplikasi bawaan"
-for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-  mkdir -p "$REPO_ROOT/android/app/src/main/res/mipmap-$density"
-  cp "$SCAFFOLD/android/app/src/main/res/mipmap-$density/ic_launcher.png" \
-     "$REPO_ROOT/android/app/src/main/res/mipmap-$density/ic_launcher.png"
-done
+# Ikon Laundry Manise sudah ada di dalam git. Yang disalin dari scaffold
+# hanya ikon bawaan Flutter, jadi penyalinan dilewati bila ikon kita ada.
+if [ -f "$REPO_ROOT/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" ]; then
+  echo "==> Ikon aplikasi sudah ada, dilewati"
+else
+  echo "==> Menyalin ikon aplikasi bawaan"
+  for density in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+    mkdir -p "$REPO_ROOT/android/app/src/main/res/mipmap-$density"
+    cp "$SCAFFOLD/android/app/src/main/res/mipmap-$density/ic_launcher.png" \
+       "$REPO_ROOT/android/app/src/main/res/mipmap-$density/ic_launcher.png"
+  done
+fi
 
 echo "==> Mengambil dependensi"
 cd "$REPO_ROOT"

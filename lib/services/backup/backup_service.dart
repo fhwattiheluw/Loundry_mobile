@@ -200,7 +200,7 @@ class BackupService {
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(result.file!.path)],
-          subject: 'Backup POS Laundry',
+          subject: 'Backup Laundry Manise',
           text: 'Simpan berkas ini di tempat pribadi di luar ponsel. '
               'Isinya memuat data pelanggan dan riwayat transaksi, '
               'jadi jangan dikirim ke grup.',
@@ -225,7 +225,7 @@ class BackupService {
 
       if (!await _looksLikeSqlite(backup)) {
         return const BackupResult.failed(
-          'Berkas itu bukan backup POS Laundry yang sah.',
+          'Berkas itu bukan backup Laundry Manise yang sah.',
         );
       }
 

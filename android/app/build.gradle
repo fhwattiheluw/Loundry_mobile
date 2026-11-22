@@ -26,7 +26,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.laundrypos.app"
+    namespace = "com.manise.laundry"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -39,7 +39,7 @@ android {
 
 
     defaultConfig {
-        applicationId = "com.laundrypos.app"
+        applicationId = "com.manise.laundry"
         // Android 8.0. Di bawah ini banyak perangkat tidak mendukung
         // izin Bluetooth runtime yang dipakai aplikasi.
         minSdk = 26

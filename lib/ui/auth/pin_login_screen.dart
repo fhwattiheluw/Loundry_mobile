@@ -71,7 +71,7 @@ class _PinLoginScreenState extends ConsumerState<PinLoginScreen> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsRepoProvider);
     final businessName =
-        settings.get(SettingsKeys.businessName, fallback: 'POS Laundry');
+        settings.get(SettingsKeys.businessName, fallback: 'Laundry Manise');
 
     return Scaffold(
       body: SafeArea(
