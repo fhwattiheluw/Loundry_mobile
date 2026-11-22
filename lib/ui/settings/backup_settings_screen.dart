@@ -129,9 +129,9 @@ class _BackupSettingsScreenState
             label: const Text('Buat & bagikan backup'),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Kirim ke WhatsApp pribadi, email, atau simpan ke Google Drive.',
-            style: TextStyle(fontSize: 12.5, color: Colors.black54),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
 
           const SizedBox(height: 12),
@@ -156,10 +156,10 @@ class _BackupSettingsScreenState
             style: TextStyle(fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Aplikasi menyimpan tujuh backup terakhir dan membuat satu '
             'otomatis setiap hari saat dibuka.',
-            style: TextStyle(fontSize: 12.5, color: Colors.black54),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 12),
 

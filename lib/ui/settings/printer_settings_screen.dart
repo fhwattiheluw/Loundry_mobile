@@ -116,10 +116,10 @@ class _PrinterSettingsScreenState
             },
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Salah pilih lebar kertas membuat kolom harga terpotong atau '
             'turun baris. Pakai uji cetak untuk memastikan.',
-            style: TextStyle(fontSize: 12.5, color: Colors.black54),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
 
           const SizedBox(height: 20),
@@ -146,9 +146,9 @@ class _PrinterSettingsScreenState
               Text('$copies lembar'),
             ],
           ),
-          const Text(
+          Text(
             'Biasanya 2: satu untuk pelanggan, satu ditempel di cucian.',
-            style: TextStyle(fontSize: 12.5, color: Colors.black54),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
 
           const SizedBox(height: 20),

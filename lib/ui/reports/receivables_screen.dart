@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design_system.dart';
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../core/security.dart';
@@ -89,13 +90,12 @@ class ReceivablesScreen extends ConsumerWidget {
                             formatRupiah(row.remaining),
                             style: TextStyle(
                               fontWeight: FontWeight.w700,
-                              color: old ? const Color(0xFFC62828) : null,
+                              color: old ? context.status.belumLunas : null,
                             ),
                           ),
                           if (row.paid > 0)
                             Text('dari ${formatRupiah(row.total)}',
-                                style: const TextStyle(
-                                    fontSize: 11.5, color: Colors.black54)),
+                                style: Theme.of(context).textTheme.bodySmall),
                         ],
                       ),
                       onTap: () async {

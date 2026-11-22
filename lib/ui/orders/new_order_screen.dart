@@ -4,10 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
+import '../../core/design_system.dart';
 import '../../core/security.dart';
 import '../../data/db/settings_keys.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../widgets/number_pad.dart';
 import 'order_detail_screen.dart';
 
 /// Layar yang paling sering dipakai kasir.
@@ -349,7 +351,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                   child: Center(
                     child: Text(
                       'Ketuk untuk menambah layanan',
-                      style: TextStyle(color: Colors.black54),
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
                 ),
@@ -587,6 +589,65 @@ class _PerfumePicker extends ConsumerWidget {
   }
 }
 
+/// Tombol besar yang membuka papan angka, menggantikan kotak isian biasa.
+///
+/// Berat adalah angka yang paling sering diketik kasir, dan paling sering
+/// salah ketik. Papan angka besar mengurangi keduanya.
+class _QtyField extends StatelessWidget {
+  const _QtyField({
+    required this.service,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final LaundryService service;
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final filled = value.isNotEmpty;
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      onTap: () async {
+        final result = await showNumberPad(
+          context,
+          title: 'Jumlah ${service.name}',
+          initialValue: value,
+          allowDecimal: service.unit.allowsFraction,
+          unit: service.unit.label,
+          submitLabel: 'Pakai jumlah ini',
+          helper: service.minQty > 0
+              ? 'Minimal ${formatQty(service.minQty)} ${service.unit.label}'
+              : null,
+        );
+
+        if (result != null) onChanged(result);
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Jumlah (${service.unit.label})',
+          prefixIcon: const Icon(Icons.scale_outlined),
+          suffixIcon: const Icon(Icons.keyboard_arrow_right),
+          helperText: service.minQty > 0
+              ? 'Minimal ${formatQty(service.minQty)} ${service.unit.label}'
+              : 'Ketuk untuk membuka papan angka',
+        ),
+        child: Text(
+          filled ? '$value ${service.unit.label}' : 'Ketuk untuk mengisi',
+          style: filled
+              ? theme.textTheme.titleMedium
+              : theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+        ),
+      ),
+    );
+  }
+}
+
 class _MethodSelector extends ConsumerWidget {
   const _MethodSelector({required this.value, required this.onChanged});
 
@@ -777,19 +838,12 @@ class _ServicePickerState extends ConsumerState<_ServicePicker> {
               ),
               if (_service != null) ...[
                 const SizedBox(height: 16),
-                TextField(
-                  controller: _qtyController,
-                  autofocus: true,
-                  keyboardType: TextInputType.numberWithOptions(
-                      decimal: _service!.unit.allowsFraction),
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    labelText: 'Jumlah (${_service!.unit.label})',
-                    helperText: _service!.minQty > 0
-                        ? 'Minimal ${formatQty(_service!.minQty)} ${_service!.unit.label}'
-                        : null,
-                    prefixIcon: const Icon(Icons.scale_outlined),
-                  ),
+                _QtyField(
+                  service: _service!,
+                  value: _qtyController.text,
+                  onChanged: (value) => setState(() {
+                    _qtyController.text = value;
+                  }),
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile(
@@ -826,8 +880,7 @@ class _ServicePickerState extends ConsumerState<_ServicePicker> {
                     child: Text(
                       'Ditagih ${formatQty(billable)} ${_service!.unit.label} '
                       'setelah pembulatan dan minimum.',
-                      style: const TextStyle(
-                          fontSize: 12.5, color: Colors.black54),
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
                 Row(

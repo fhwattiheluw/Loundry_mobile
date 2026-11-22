@@ -46,7 +46,7 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
             child: Text(
               'Setiap transaksi menyimpan siapa yang membuatnya. Beri PIN '
               'berbeda untuk tiap kasir supaya selisih kas bisa dilacak.',
-              style: TextStyle(fontSize: 13, color: Colors.black54),
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
           for (final user in _users) ...[

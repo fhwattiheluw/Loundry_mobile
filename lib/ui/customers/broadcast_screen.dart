@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design_system.dart';
 import '../../application/providers.dart';
 import '../../core/security.dart';
 import '../../data/db/settings_keys.dart';
@@ -200,7 +201,7 @@ class _BroadcastScreenState extends ConsumerState<BroadcastScreen> {
                             ),
                             secondary: done
                                 ? const Icon(Icons.check_circle,
-                                    color: Color(0xFF2E7D32))
+                                    color: context.status.lunas)
                                 : IconButton(
                                     tooltip: 'Kirim ke pelanggan ini',
                                     icon: const Icon(Icons.send),

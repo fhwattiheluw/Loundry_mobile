@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design_system.dart';
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../domain/models/enums.dart';
@@ -103,7 +104,7 @@ class _NotificationLogScreenState
                         pending ? Icons.schedule : Icons.error_outline,
                         color: pending
                             ? scheme.primary
-                            : const Color(0xFFC62828),
+                            : context.status.belumLunas,
                       ),
                       title: Text(
                         '${row['order_no']}  ${row['customer_name']}',

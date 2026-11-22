@@ -222,10 +222,10 @@ class _Body extends ConsumerWidget {
                 if (order.remaining > 0)
                   _row(context, 'Sisa tagihan',
                       formatRupiah(order.remaining),
-                      big: true, color: const Color(0xFFC62828))
+                      big: true, color: context.status.belumLunas)
                 else
                   _row(context, 'Status', 'LUNAS',
-                      big: true, color: const Color(0xFF2E7D32)),
+                      big: true, color: context.status.lunas),
               ],
             ),
           ),
@@ -292,8 +292,8 @@ class _PaymentHistory extends ConsumerWidget {
                         ? Icons.undo
                         : Icons.check_circle_outline,
                     color: payment.isRefund
-                        ? const Color(0xFFC62828)
-                        : const Color(0xFF2E7D32),
+                        ? context.status.belumLunas
+                        : context.status.lunas,
                   ),
                   title: Text(formatRupiah(payment.amount)),
                   subtitle: Text(
@@ -339,8 +339,8 @@ class _NotificationHistory extends ConsumerWidget {
                         ? Icons.mark_chat_read_outlined
                         : Icons.error_outline,
                     color: log['status'] == 'terkirim'
-                        ? const Color(0xFF2E7D32)
-                        : const Color(0xFFC62828),
+                        ? context.status.lunas
+                        : context.status.belumLunas,
                   ),
                   title: Text(
                     NotificationTrigger.fromDb(log['trigger_name'] as String).label,
@@ -513,7 +513,7 @@ class _OverflowMenu extends ConsumerWidget {
           const PopupMenuItem(
             value: 'cancel',
             child: ListTile(
-              leading: Icon(Icons.block, color: Color(0xFFC62828)),
+              leading: Icon(Icons.block, color: Theme.of(context).colorScheme.error),
               title: Text('Batalkan order'),
             ),
           ),

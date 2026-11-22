@@ -311,7 +311,7 @@ class _OrderCard extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFFC62828),
+                              color: context.status.belumLunas,
                             ),
                           )
                         else
@@ -320,7 +320,7 @@ class _OrderCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
-                              color: Color(0xFF2E7D32),
+                              color: context.status.lunas,
                             ),
                           ),
                       ],

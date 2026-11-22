@@ -115,10 +115,10 @@ class _LogoSettingsScreenState extends ConsumerState<LogoSettingsScreen> {
                     const Column(
                       children: [
                         Icon(Icons.image_outlined,
-                            size: 56, color: Colors.black26),
+                            size: 56, color: Theme.of(context).colorScheme.onSurfaceVariant),
                         SizedBox(height: 10),
                         Text('Belum ada logo',
-                            style: TextStyle(color: Colors.black54)),
+                            style: Theme.of(context).textTheme.bodySmall),
                       ],
                     ),
                 ],
@@ -149,11 +149,11 @@ class _LogoSettingsScreenState extends ConsumerState<LogoSettingsScreen> {
           ],
 
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'Printer thermal hanya mencetak hitam putih. Logo dengan garis '
             'tebal dan kontras tinggi hasilnya paling baik; logo berwarna '
             'lembut atau bergradasi biasanya tercetak jadi bercak abu-abu.',
-            style: TextStyle(fontSize: 12.5, color: Colors.black54),
+            style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
       ),

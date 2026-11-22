@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design_system.dart';
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../data/repositories/shift_repository.dart';
@@ -76,11 +77,11 @@ class _OpenShiftFormState extends ConsumerState<_OpenShiftForm> {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Hitung uang yang ada di laci sekarang, lalu masukkan jumlahnya. '
           'Angka ini yang dipakai menghitung selisih saat tutup shift.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.black54),
+          style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 28),
         TextField(
@@ -251,9 +252,9 @@ class _OpenShiftView extends ConsumerWidget {
               children: [
                 Text('Kas seharusnya: ${formatRupiah(expected)}'),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Hitung uang fisik di laci, lalu masukkan jumlahnya.',
-                  style: TextStyle(fontSize: 12.5, color: Colors.black54),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -272,9 +273,10 @@ class _OpenShiftView extends ConsumerWidget {
                     width: double.infinity,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: difference == 0
-                          ? const Color(0xFFE8F5E9)
-                          : const Color(0xFFFFF3E0),
+                      color: (difference == 0
+                              ? context.status.lunas
+                              : context.status.diambil)
+                          .withValues(alpha: context.status.onStatusTint),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
@@ -379,8 +381,8 @@ class ShiftHistoryScreen extends ConsumerWidget {
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
                     color: difference == 0
-                        ? const Color(0xFF2E7D32)
-                        : const Color(0xFFC62828),
+                        ? context.status.lunas
+                        : context.status.belumLunas,
                   ),
                 ),
               );

@@ -3,10 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
+import '../../core/design_system.dart';
 import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../widgets/number_pad.dart';
 
 /// Layar pembayaran. Mengembalikan true bila ada pembayaran yang tersimpan.
 Future<bool?> showPaymentSheet(
@@ -142,7 +144,7 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
               const SizedBox(height: 4),
               Text(
                 'Total ${formatRupiah(order.total)} · sudah dibayar ${formatRupiah(order.paid)}',
-                style: const TextStyle(color: Colors.black54),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: 16),
 
@@ -190,14 +192,39 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
 
               if (_method == 'Tunai') ...[
                 const SizedBox(height: 16),
-                TextField(
-                  controller: _cashController,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
-                    labelText: 'Uang diterima (Rp)',
-                    prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+                InkWell(
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  onTap: () async {
+                    final result = await showNumberPad(
+                      context,
+                      title: 'Uang diterima',
+                      initialValue: _cashController.text,
+                      isMoney: true,
+                      // Pecahan yang benar-benar dipegang pelanggan.
+                      quickValues: const [5000, 10000, 20000, 50000, 100000],
+                      submitLabel: 'Hitung kembalian',
+                    );
+                    if (result != null) {
+                      setState(() => _cashController.text = result);
+                    }
+                  },
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Uang diterima (Rp)',
+                      prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+                      suffixIcon: Icon(Icons.keyboard_arrow_right),
+                      helperText: 'Ketuk untuk membuka papan angka',
+                    ),
+                    child: Text(
+                      _cash > 0 ? formatRupiah(_cash) : 'Ketuk untuk mengisi',
+                      style: _cash > 0
+                          ? Theme.of(context).textTheme.titleMedium
+                          : Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ),
+                    ),
                   ),
                 ),
                 if (_cash > 0) ...[
@@ -206,9 +233,10 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: _change >= 0
-                          ? const Color(0xFFE8F5E9)
-                          : const Color(0xFFFFEBEE),
+                      color: (_change >= 0
+                              ? context.status.lunas
+                              : context.status.belumLunas)
+                          .withValues(alpha: context.status.onStatusTint),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(

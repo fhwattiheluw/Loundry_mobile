@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/design_system.dart';
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
@@ -411,8 +412,8 @@ class _CompareRow extends StatelessWidget {
     final color = diff == 0
         ? Theme.of(context).colorScheme.onSurfaceVariant
         : naik
-            ? const Color(0xFF2E7D32)
-            : const Color(0xFFC62828);
+            ? context.status.lunas
+            : context.status.belumLunas;
 
     String show(int value) =>
         isMoney ? formatRupiah(value) : value.toString();
@@ -478,7 +479,7 @@ class _RevenueChart extends ConsumerWidget {
               if (days.every((d) => d.amount == 0)) {
                 return const Center(
                   child: Text('Belum ada pemasukan di periode ini',
-                      style: TextStyle(color: Colors.black54)),
+                      style: Theme.of(context).textTheme.bodySmall),
                 );
               }
 
@@ -614,8 +615,7 @@ class _AmountList extends ConsumerWidget {
                       if (total > 0)
                         Text(
                           '${(rows[i].amount / total * 100).round()}%',
-                          style: const TextStyle(
-                              fontSize: 11.5, color: Colors.black54),
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                     ],
                   ),
@@ -641,7 +641,7 @@ class _CashierNotice extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.lock_outline, size: 48, color: Colors.black26),
+                Icon(Icons.lock_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
                 SizedBox(height: 16),
                 Text(
                   'Laporan pendapatan hanya bisa dibuka Owner.',
@@ -652,7 +652,7 @@ class _CashierNotice extends StatelessWidget {
                 Text(
                   'Rekap shift Anda sendiri ada di menu Pengaturan.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.black54),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
             ),
