@@ -4,8 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../core/design_system.dart';
 import '../../core/formatters.dart';
-import '../../services/license/license_service.dart';
-import '../license/subscription_screen.dart';
 import '../../data/db/settings_keys.dart';
 import '../customers/customer_screen.dart';
 import '../shift/shift_screen.dart';
@@ -320,39 +318,6 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
           ],
-
-          const SizedBox(height: 16),
-          Card(
-            child: Consumer(
-              builder: (context, ref, _) {
-                final status = ref.watch(licenseStatusProvider);
-                final until = status.until;
-
-                final subtitle = switch (status.state) {
-                  LicenseState.active =>
-                    'Aktif. Diperiksa ulang otomatis saat ada internet.',
-                  LicenseState.trial =>
-                    'Masa coba, sisa ${status.daysLeft} hari'
-                        '${until == null ? '' : ' sampai ${formatDate(until)}'}.',
-                  LicenseState.expired => 'Sudah habis.',
-                  LicenseState.clockTampered =>
-                    'Perlu diperiksa ulang lewat internet.',
-                };
-
-                return ListTile(
-                  leading: const Icon(Icons.workspace_premium_outlined),
-                  title: const Text('Langganan'),
-                  subtitle: Text(subtitle),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => SubscriptionScreen(status: status),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
 
           const SizedBox(height: 24),
           Center(

@@ -8,7 +8,6 @@ import 'data/db/settings_keys.dart';
 import 'services/connectivity/connection_guard.dart';
 import 'ui/auth/pin_login_screen.dart';
 import 'ui/home/home_shell.dart';
-import 'ui/license/subscription_screen.dart';
 import 'ui/onboarding/setup_wizard.dart';
 import 'ui/widgets/states.dart';
 
@@ -84,10 +83,9 @@ class _Root extends ConsumerWidget {
         ),
       ),
       data: (_) {
-        // Inisialisasi iklan dan lisensi berjalan di latar, tidak menahan
-        // layar. Keduanya aman dipanggil berulang kali.
+        // Inisialisasi iklan berjalan di latar dan tidak menahan layar.
+        // Aman dipanggil berulang kali.
         ref.read(adServiceProvider).init();
-        ref.read(licenseServiceProvider).init();
 
         if (user == null) return const PinLoginScreen();
 
@@ -100,12 +98,10 @@ class _Root extends ConsumerWidget {
           return const SetupWizard();
         }
 
-        // Gerbang langganan diletakkan setelah masuk, bukan sebelumnya,
-        // supaya pemilik tetap bisa membuka aplikasi dan mengambil
-        // backup-nya walau langganan sudah lewat.
-        final license = ref.watch(licenseStatusProvider);
-        if (!license.canUseApp) return SubscriptionScreen(status: license);
-
+        // Tidak ada gerbang berbayar. Aplikasi ini gratis sepenuhnya dan
+        // hidup dari iklan: tiap toko yang memakainya tiap hari bernilai
+        // lebih sebagai penonton iklan daripada sebagai calon pelanggan
+        // yang membayar dan tidak pernah jadi.
         return const HomeShell();
       },
     );

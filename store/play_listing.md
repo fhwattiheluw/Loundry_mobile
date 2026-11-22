@@ -85,6 +85,16 @@ flutter build appbundle --release \
   --dart-define=ADMOB_NATIVE_ID=ca-app-pub-xxx/555
 ```
 
+## Model pendapatan
+
+Aplikasi gratis sepenuhnya, tanpa langganan dan tanpa masa coba. Seluruh
+pendapatan berasal dari iklan. Satu-satunya pembelian yang ada adalah
+"hilangkan iklan" sekali bayar, dan itu bukan sumber pendapatan utama
+melainkan jalan keluar bagi pemilik yang terganggu iklan di depan
+pelanggan - lebih baik mereka membayar sekali daripada mencopot aplikasi.
+
+Produk langganan tidak perlu dibuat di Play Console.
+
 Tanpa flag ini aplikasi memakai ID uji Google. Itu disengaja: memakai ID
 produksi selama pengembangan adalah penyebab paling umum akun AdMob
 ditutup permanen.

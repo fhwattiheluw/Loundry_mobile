@@ -27,22 +27,9 @@ abstract final class SettingsKeys {
   /// sampai pengguna sempat mengenal aplikasinya lebih dulu.
   static const appOpenCount = 'app_open_count';
 
-  /// Langganan bulanan lewat Google Play.
-  ///
-  /// [licenseActiveUntil] disimpan lokal supaya aplikasi tetap bisa dipakai
-  /// tanpa internet. Ia diperpanjang setiap kali Play Store mengabarkan
-  /// langganan masih aktif.
-  static const licenseActiveUntil = 'license_active_until';
-  static const licenseLastVerified = 'license_last_verified';
-  static const trialStartedAt = 'trial_started_at';
-
   /// Menandai wizard pengaturan awal sudah dilewati, supaya ia hanya
   /// muncul sekali di pemasangan baru.
   static const setupDone = 'setup_done';
-
-  /// Waktu terakhir yang pernah dilihat aplikasi. Dipakai menangkap jam
-  /// perangkat yang dimundurkan untuk memperpanjang masa pakai.
-  static const clockLastSeen = 'clock_last_seen';
 
   /// 'system', 'light', atau 'dark'.
   static const themeMode = 'theme_mode';
