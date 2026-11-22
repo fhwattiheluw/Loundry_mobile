@@ -114,6 +114,21 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
               decoration: InputDecoration(
                 hintText: 'Cari nomor nota, nama, atau nomor HP',
                 prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 2,
+                  ),
+                ),
                 suffixIcon: filter.query.isEmpty
                     ? null
                     : IconButton(
@@ -267,14 +282,23 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
       {required bool selected, required VoidCallback onTap}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-      child: FilterChip(
+      child: ChoiceChip(
         label: Text(label),
         selected: selected,
+        showCheckmark: false,
         onSelected: (_) => onTap(),
       ),
     );
   }
 }
+
+IconData _statusIcon(LaundryStatus status) => switch (status.name) {
+      'diproses' => Icons.local_laundry_service_outlined,
+      'selesai' => Icons.check_circle_outline,
+      'diambil' => Icons.shopping_bag_outlined,
+      'dibatalkan' => Icons.cancel_outlined,
+      _ => Icons.inbox_outlined,
+    };
 
 class _OrderCard extends StatelessWidget {
   const _OrderCard({
@@ -295,166 +319,152 @@ class _OrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
-    final statusColor = context.status.forStatus(order.laundryStatus.name);
+    final palette = context.status;
+    final statusColor = palette.forStatus(order.laundryStatus.name);
 
     // Keterlambatan dihitung dari estimasi selesai. Order yang sudah
     // diambil atau dibatalkan tidak bisa telat lagi.
     final late = order.laundryStatus.isOpen &&
         DateTime.now().isAfter(order.estimatedAt);
     final lateDays = DateTime.now().difference(order.estimatedAt).inDays;
+    final unpaid = order.remaining > 0;
+    final hasRack = order.rack != null && order.rack!.isNotEmpty;
 
-    return Card(
-      color: selected ? scheme.primaryContainer : null,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onTap,
-        onLongPress: onLongPress,
-        child: Container(
-          // Garis warna di tepi kiri. Inilah yang membuat daftar bisa
-          // disapu mata tanpa membaca satu kata pun.
-          decoration: BoxDecoration(
-            border: Border(
-              left: BorderSide(color: statusColor, width: 5),
-            ),
-          ),
-          padding: const EdgeInsets.fromLTRB(12, 14, 14, 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  if (selectionMode)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Icon(
-                        selected
-                            ? Icons.check_circle
-                            : Icons.radio_button_unchecked,
-                        size: 20,
-                        color: scheme.primary,
-                      ),
-                    ),
-                  Expanded(
-                    child: Text(
-                      order.customerName,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  StatusChip(
-                      label: order.laundryStatus.label, color: statusColor),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  // Nomor pendek yang bisa disebut lewat telepon tanpa
-                  // tersendat. Nomor panjangnya tetap ada di nota.
-                  Text(
-                    shortOrderNo(order.orderNo),
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: scheme.onSurfaceVariant,
-                    ),
-                  ),
-                  Text(
-                    '  ·  ${formatDateTime(order.createdAt)}',
-                    style:
-                        TextStyle(fontSize: 13.5, color: scheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-              if (late) ...[
-                const SizedBox(height: 6),
+    final services = order.items.isEmpty
+        ? 'Estimasi ${formatDateTime(order.estimatedAt)}'
+        : order.items.map((i) => i.serviceName).join(', ');
+
+    return Container(
+      decoration: BoxDecoration(
+        color: selected ? scheme.primaryContainer : scheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(
+          color: late
+              ? palette.belumLunas.withValues(alpha: 0.45)
+              : theme.dividerTheme.color ?? Colors.transparent,
+        ),
+        boxShadow: AppShadow.soft(context),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Row(
                   children: [
-                    Icon(Icons.warning_amber_rounded,
-                        size: 16, color: context.status.belumLunas),
-                    const SizedBox(width: 4),
-                    Text(
-                      lateDays < 1
-                          ? 'Lewat estimasi hari ini'
-                          : 'Telat $lateDays hari',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: context.status.belumLunas,
+                    // Lingkaran berwarna status: bisa disapu mata tanpa
+                    // membaca satu kata pun. Saat memilih, berubah jadi
+                    // tanda centang.
+                    Container(
+                      width: 46,
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? scheme.primary
+                            : statusColor.withValues(
+                                alpha: palette.onStatusTint),
+                        shape: BoxShape.circle,
                       ),
+                      child: Icon(
+                        selected
+                            ? Icons.check
+                            : _statusIcon(order.laundryStatus),
+                        color: selected ? scheme.onPrimary : statusColor,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            order.customerName,
+                            style: theme.textTheme.titleMedium,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          // Nomor pendek yang bisa disebut lewat telepon
+                          // tanpa tersendat. Nomor panjangnya ada di nota.
+                          Text(
+                            '${shortOrderNo(order.orderNo)}  ·  '
+                            '${formatDateTime(order.createdAt)}',
+                            style: theme.textTheme.bodySmall,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          formatRupiah(order.total),
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        StatusChip(
+                          label: order.laundryStatus.label,
+                          color: statusColor,
+                          compact: true,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-              const SizedBox(height: 10),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          order.items.isEmpty
-                              ? 'Estimasi ${formatDateTime(order.estimatedAt)}'
-                              : order.items.map((i) => i.serviceName).join(', '),
-                          style: TextStyle(
-                              fontSize: 13.5, color: scheme.onSurfaceVariant),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 6),
-                        if (order.remaining > 0)
-                          Text(
-                            'Sisa ${formatRupiah(order.remaining)}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: context.status.belumLunas,
-                            ),
-                          )
-                        else
-                          Text(
-                            'Lunas',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: context.status.lunas,
-                            ),
-                          ),
-                      ],
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  services,
+                  style: theme.textTheme.bodySmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.xs,
+                  children: [
+                    StatusChip(
+                      label: unpaid
+                          ? 'Sisa ${formatRupiah(order.remaining)}'
+                          : 'Lunas',
+                      color: unpaid ? palette.belumLunas : palette.lunas,
+                      icon: unpaid
+                          ? Icons.schedule_outlined
+                          : Icons.check_circle_outline,
+                      compact: true,
                     ),
-                  ),
-                  if (order.rack != null && order.rack!.isNotEmpty) ...[
+                    if (late)
+                      StatusChip(
+                        label: lateDays < 1
+                            ? 'Lewat estimasi hari ini'
+                            : 'Telat $lateDays hari',
+                        color: palette.belumLunas,
+                        icon: Icons.warning_amber_rounded,
+                        compact: true,
+                      ),
                     // Lokasi rak dibuat menonjol: inilah yang dicari
                     // petugas saat pelanggan berdiri di depan konter.
-                    Container(
-                      margin: const EdgeInsets.only(right: 10),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: scheme.secondaryContainer,
-                        borderRadius: BorderRadius.circular(8),
+                    if (hasRack)
+                      StatusChip(
+                        label: 'Rak ${order.rack}',
+                        color: palette.diproses,
+                        icon: Icons.inventory_2_outlined,
+                        compact: true,
                       ),
-                      child: Text(
-                        'Rak ${order.rack}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: scheme.onSecondaryContainer,
-                        ),
-                      ),
-                    ),
                   ],
-                  Text(
-                    formatRupiah(order.total),
-                    style: const TextStyle(
-                        fontSize: 17, fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

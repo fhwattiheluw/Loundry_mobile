@@ -147,16 +147,61 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.only(bottom: AppSpacing.md, left: AppSpacing.xs),
       child: Row(
         children: [
           Expanded(
-            child: Text(title, style: Theme.of(context).textTheme.titleSmall),
+            child: Text(
+              title,
+              style: theme.textTheme.titleMedium,
+            ),
           ),
           if (action != null) action!,
         ],
       ),
+    );
+  }
+}
+
+/// Ikon di dalam kotak berwarna lembut, untuk menu dan daftar.
+///
+/// Warna dipilih dari [tone] supaya menu yang bersebelahan tidak seragam
+/// abu-abu: mata menemukan "Printer" atau "Backup" lewat warnanya, bukan
+/// dengan membaca setiap baris.
+class IconBadge extends StatelessWidget {
+  const IconBadge(this.icon, {super.key, this.tone = 0, this.color});
+
+  final IconData icon;
+
+  /// Indeks warna dari daftar [tones]. Dipakai bila [color] kosong.
+  final int tone;
+  final Color? color;
+
+  static const tones = [
+    Color(0xFF00897B), // teal
+    Color(0xFF1E88E5), // biru
+    Color(0xFFF57C00), // jingga
+    Color(0xFF8E24AA), // ungu
+    Color(0xFFD81B60), // merah muda
+    Color(0xFF3949AB), // nila
+    Color(0xFF43A047), // hijau
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? tones[tone % tones.length];
+
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.13),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Icon(icon, color: c, size: 22),
     );
   }
 }

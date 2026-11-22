@@ -31,61 +31,87 @@ class StatTile extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
-    final foreground =
-        highlight ? scheme.onPrimaryContainer : scheme.onSurface;
+    final foreground = highlight ? Colors.white : scheme.onSurface;
     final muted = highlight
-        ? scheme.onPrimaryContainer.withValues(alpha: 0.75)
+        ? Colors.white.withValues(alpha: 0.78)
         : scheme.onSurfaceVariant;
 
-    return Card(
-      color: highlight ? scheme.primaryContainer : null,
-      child: InkWell(
-        onTap: onTap,
+    return Container(
+      decoration: BoxDecoration(
+        gradient: highlight ? AppGradient.brand(context) : null,
+        color: highlight ? null : scheme.surface,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, size: 18, color: muted),
-                    const SizedBox(width: 6),
+        border: highlight
+            ? null
+            : Border.all(color: theme.dividerTheme.color ?? Colors.black12),
+        boxShadow: AppShadow.soft(context),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    if (icon != null) ...[
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: highlight
+                              ? Colors.white.withValues(alpha: 0.18)
+                              : scheme.primary.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        child: Icon(
+                          icon,
+                          size: 18,
+                          color: highlight ? Colors.white : scheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                    ],
+                    Expanded(
+                      child: Text(
+                        label,
+                        style:
+                            theme.textTheme.bodySmall?.copyWith(color: muted),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: theme.textTheme.bodySmall?.copyWith(color: muted),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      fontSize: highlight ? 30 : 24,
+                      color: foreground,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  value,
-                  style: theme.textTheme.displaySmall?.copyWith(
-                    fontSize: 24,
-                    color: foreground,
+                ),
+                if (trend != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    trend!,
+                    style: theme.textTheme.bodySmall?.copyWith(color: muted),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ),
-              if (trend != null) ...[
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  trend!,
-                  style: theme.textTheme.bodySmall?.copyWith(color: muted),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

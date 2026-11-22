@@ -6,8 +6,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
+import '../../core/design_system.dart';
 import '../../core/security.dart';
 import '../../domain/models/models.dart';
+import '../widgets/layout.dart';
+import '../widgets/states.dart';
 import 'broadcast_screen.dart';
 
 class CustomerScreen extends ConsumerStatefulWidget {
@@ -247,9 +250,24 @@ class _CustomerScreenState extends ConsumerState<CustomerScreen> {
             child: TextField(
               controller: _searchController,
               onChanged: _load,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Cari nama atau nomor HP',
-                prefixIcon: Icon(Icons.search),
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 2,
+                  ),
+                ),
               ),
             ),
           ),
@@ -257,15 +275,37 @@ class _CustomerScreenState extends ConsumerState<CustomerScreen> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _customers.isEmpty
-                    ? const Center(child: Text('Pelanggan tidak ditemukan'))
+                    ? const EmptyState(
+                        icon: Icons.people_outline,
+                        title: 'Pelanggan tidak ditemukan',
+                        message: 'Pelanggan baru tersimpan otomatis saat '
+                            'kamu membuat order.',
+                      )
                     : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
                         itemCount: _customers.length,
-                        separatorBuilder: (_, __) => const Divider(height: 1),
+                        separatorBuilder: (_, __) =>
+                            const SizedBox(height: AppSpacing.sm),
                         itemBuilder: (context, i) {
                           final customer = _customers[i];
-                          return ListTile(
-                            leading: const CircleAvatar(
-                                child: Icon(Icons.person_outline)),
+                          return Card(
+                              child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: IconBadge.tones[
+                                      customer.name.length %
+                                          IconBadge.tones.length]
+                                  .withValues(alpha: 0.15),
+                              foregroundColor: IconBadge.tones[
+                                  customer.name.length %
+                                      IconBadge.tones.length],
+                              child: Text(
+                                customer.name.isEmpty
+                                    ? '?'
+                                    : customer.name
+                                        .substring(0, 1)
+                                        .toUpperCase(),
+                              ),
+                            ),
                             title: Text(customer.name),
                             subtitle: Text(
                               customer.phone.isEmpty
@@ -277,7 +317,7 @@ class _CustomerScreenState extends ConsumerState<CustomerScreen> {
                                 : const Icon(Icons.notifications_off_outlined,
                                     size: 18),
                             onTap: () => _edit(customer),
-                          );
+                          ));
                         },
                       ),
           ),

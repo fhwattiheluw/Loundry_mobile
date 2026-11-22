@@ -6,6 +6,7 @@ import '../../core/design_system.dart';
 import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
 import '../customers/customer_screen.dart';
+import '../widgets/layout.dart';
 import '../shift/shift_screen.dart';
 import 'backup_settings_screen.dart';
 import 'business_settings_screen.dart';
@@ -27,25 +28,78 @@ class SettingsScreen extends ConsumerWidget {
     final isOwner = user?.isOwner ?? false;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Pengaturan')),
+      appBar: AppBar(
+        title: const Text('Pengaturan'),
+        titleTextStyle: Theme.of(context).textTheme.titleLarge,
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
-          Card(
-            child: ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.person)),
-              title: Text(user?.name ?? '-'),
-              subtitle: Text(user?.role.label ?? ''),
-              trailing: TextButton.icon(
-                onPressed: () =>
-                    ref.read(sessionProvider.notifier).signOut(),
-                icon: const Icon(Icons.logout, size: 18),
-                label: const Text('Keluar'),
-              ),
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              gradient: AppGradient.brand(context),
+              borderRadius: BorderRadius.circular(AppRadius.xl),
+              boxShadow: AppShadow.soft(context),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    (user?.name.isNotEmpty ?? false)
+                        ? user!.name.substring(0, 1).toUpperCase()
+                        : '?',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: const Color(0xFF00574B),
+                        ),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        user?.name ?? '-',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(color: Colors.white),
+                      ),
+                      Text(
+                        user?.role.label ?? '',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.8),
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                FilledButton.tonalIcon(
+                  onPressed: () =>
+                      ref.read(sessionProvider.notifier).signOut(),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, AppTouch.minimum),
+                    backgroundColor: Colors.white.withValues(alpha: 0.18),
+                    foregroundColor: Colors.white,
+                  ),
+                  icon: const Icon(Icons.logout, size: 18),
+                  label: const Text('Keluar'),
+                ),
+              ],
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           const _Heading('Tampilan'),
           Card(
             child: Padding(
@@ -93,7 +147,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           const _Heading('Kas'),
           Card(
             child: Column(
@@ -102,7 +156,7 @@ class SettingsScreen extends ConsumerWidget {
                   builder: (context, ref, _) {
                     final shift = ref.watch(currentShiftProvider);
                     return ListTile(
-                      leading: const Icon(Icons.point_of_sale_outlined),
+                      leading: IconBadge(Icons.point_of_sale_outlined, tone: 1),
                       title: const Text('Shift kasir'),
                       subtitle: Text(
                         shift.maybeWhen(
@@ -118,9 +172,9 @@ class SettingsScreen extends ConsumerWidget {
                   },
                 ),
                 if (isOwner) ...[
-                  const Divider(height: 1),
+                  const Divider(height: 1, indent: 70),
                   ListTile(
-                    leading: const Icon(Icons.history),
+                    leading: IconBadge(Icons.history, tone: 2),
                     title: const Text('Riwayat shift dan selisih kas'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _open(context, const ShiftHistoryScreen()),
@@ -130,13 +184,13 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           const _Heading('Perangkat'),
           Card(
             child: Column(
               children: [
                 ListTile(
-                  leading: const Icon(Icons.print_outlined),
+                  leading: IconBadge(Icons.print_outlined, tone: 3),
                   title: const Text('Printer Bluetooth'),
                   subtitle: Text(
                     settings.get(SettingsKeys.printerName).isEmpty
@@ -152,13 +206,13 @@ class SettingsScreen extends ConsumerWidget {
           ),
 
           if (isOwner) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             const _Heading('Usaha'),
             Card(
               child: Column(
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.storefront_outlined),
+                    leading: IconBadge(Icons.storefront_outlined, tone: 4),
                     title: const Text('Profil usaha dan nota'),
                     subtitle: Text(
                         settings.get(SettingsKeys.businessName, fallback: '-')),
@@ -166,33 +220,33 @@ class SettingsScreen extends ConsumerWidget {
                     onTap: () =>
                         _open(context, const BusinessSettingsScreen()),
                   ),
-                  const Divider(height: 1),
+                  const Divider(height: 1, indent: 70),
                   ListTile(
-                    leading: const Icon(Icons.local_offer_outlined),
+                    leading: IconBadge(Icons.local_offer_outlined, tone: 5),
                     title: const Text('Layanan dan harga'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () =>
                         _open(context, const ServiceSettingsScreen()),
                   ),
-                  const Divider(height: 1),
+                  const Divider(height: 1, indent: 70),
                   ListTile(
-                    leading: const Icon(Icons.people_outline),
+                    leading: IconBadge(Icons.people_outline, tone: 6),
                     title: const Text('Pelanggan'),
                     subtitle: const Text('Ubah data, impor CSV, kirim promo'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _open(context, const CustomerScreen()),
                   ),
-                  const Divider(height: 1),
+                  const Divider(height: 1, indent: 70),
                   ListTile(
-                    leading: const Icon(Icons.chat_outlined),
+                    leading: IconBadge(Icons.chat_outlined, tone: 7),
                     title: const Text('Template WhatsApp'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () =>
                         _open(context, const TemplateSettingsScreen()),
                   ),
-                  const Divider(height: 1),
+                  const Divider(height: 1, indent: 70),
                   ListTile(
-                    leading: const Icon(Icons.send_outlined),
+                    leading: IconBadge(Icons.send_outlined, tone: 8),
                     title: const Text('Mode pengiriman dan jam tenang'),
                     subtitle: Text(
                       settings.get(SettingsKeys.whatsappMode,
@@ -205,7 +259,7 @@ class SettingsScreen extends ConsumerWidget {
                     onTap: () =>
                         _open(context, const WhatsAppSettingsScreen()),
                   ),
-                  const Divider(height: 1),
+                  const Divider(height: 1, indent: 70),
                   Consumer(
                     builder: (context, ref, _) {
                       final pending = ref.watch(pendingNotificationsProvider);
@@ -215,7 +269,7 @@ class SettingsScreen extends ConsumerWidget {
                       );
 
                       return ListTile(
-                        leading: const Icon(Icons.mark_chat_unread_outlined),
+                        leading: IconBadge(Icons.mark_chat_unread_outlined, tone: 9),
                         title: const Text('Pesan belum terkirim'),
                         subtitle: Text(count == 0
                             ? 'Semua pesan sudah terkirim'
@@ -231,16 +285,16 @@ class SettingsScreen extends ConsumerWidget {
                       );
                     },
                   ),
-                  const Divider(height: 1),
+                  const Divider(height: 1, indent: 70),
                   ListTile(
-                    leading: const Icon(Icons.group_outlined),
+                    leading: IconBadge(Icons.group_outlined, tone: 10),
                     title: const Text('Pengguna dan PIN'),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => _open(context, const UserSettingsScreen()),
                   ),
-                  const Divider(height: 1),
+                  const Divider(height: 1, indent: 70),
                   ListTile(
-                    leading: const Icon(Icons.backup_outlined),
+                    leading: IconBadge(Icons.backup_outlined, tone: 11),
                     title: const Text('Backup dan restore'),
                     subtitle: const Text(
                         'Data hanya ada di ponsel ini. Bagikan backup rutin.'),
@@ -251,11 +305,11 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             const _Heading('Nota'),
             Card(
               child: ListTile(
-                leading: const Icon(Icons.image_outlined),
+                leading: IconBadge(Icons.image_outlined, tone: 12),
                 title: const Text('Logo di nota'),
                 subtitle: Text(
                   settings.get(SettingsKeys.receiptLogoPath).isEmpty
@@ -267,13 +321,13 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
             const _Heading('Iklan'),
             Card(
               child: Column(
                 children: [
                   SwitchListTile(
-                    secondary: const Icon(Icons.ads_click),
+                    secondary: IconBadge(Icons.ads_click, tone: 13),
                     title: const Text('Tampilkan iklan'),
                     subtitle: const Text(
                       'Banner di daftar order dan laporan. Tidak pernah '
@@ -287,7 +341,7 @@ class SettingsScreen extends ConsumerWidget {
                       ref.invalidate(settingsLoadedProvider);
                     },
                   ),
-                  const Divider(height: 1),
+                  const Divider(height: 1, indent: 70),
                   const _RemoveAdsTile(),
                   // Hanya muncul di wilayah yang mewajibkannya, misalnya
                   // Uni Eropa. Menyediakannya adalah syarat kepatuhan UMP.
@@ -301,9 +355,9 @@ class SettingsScreen extends ConsumerWidget {
                       }
                       return Column(
                         children: [
-                          const Divider(height: 1),
+                          const Divider(height: 1, indent: 70),
                           ListTile(
-                            leading: const Icon(Icons.privacy_tip_outlined),
+                            leading: IconBadge(Icons.privacy_tip_outlined, tone: 14),
                             title: const Text('Opsi privasi iklan'),
                             trailing: const Icon(Icons.chevron_right),
                             onTap: () => ref
@@ -379,9 +433,9 @@ class _RemoveAdsTileState extends ConsumerState<_RemoveAdsTile> {
 
     if (settings.getBool(SettingsKeys.adsRemoved)) {
       return ListTile(
-        leading: Icon(Icons.verified_outlined, color: context.status.lunas),
-        title: Text('Versi bebas iklan aktif'),
-        subtitle: Text('Terima kasih sudah mendukung aplikasi ini.'),
+        leading: IconBadge(Icons.verified_outlined, color: context.status.lunas),
+        title: const Text('Versi bebas iklan aktif'),
+        subtitle: const Text('Terima kasih sudah mendukung aplikasi ini.'),
       );
     }
 
@@ -390,7 +444,7 @@ class _RemoveAdsTileState extends ConsumerState<_RemoveAdsTile> {
     }
 
     return ListTile(
-      leading: const Icon(Icons.block_outlined),
+      leading: IconBadge(Icons.block_outlined, tone: 15),
       title: const Text('Hilangkan iklan selamanya'),
       subtitle: Text(
         'Sekali bayar ${purchases.priceLabel}. '
@@ -421,9 +475,18 @@ class _Heading extends StatelessWidget {
   final String text;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8, left: 4),
-        child: Text(text,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-      );
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, left: 8),
+      child: Text(
+        text.toUpperCase(),
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
 }
