@@ -104,26 +104,31 @@ class _WhatsAppSettingsScreenState
               style: TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: 10),
 
-          RadioListTile<String>(
-            contentPadding: EdgeInsets.zero,
-            value: 'manual',
+          RadioGroup<String>(
             groupValue: _mode,
-            onChanged: (v) => setState(() => _mode = v!),
-            title: const Text('Manual (disarankan)'),
-            subtitle: const Text(
-              'Aplikasi membuka WhatsApp dengan pesan sudah terisi, kasir '
-              'menekan kirim. Gratis, tanpa server, dan nomor usaha aman.',
-            ),
-          ),
-          RadioListTile<String>(
-            contentPadding: EdgeInsets.zero,
-            value: 'api',
-            groupValue: _mode,
-            onChanged: (v) => setState(() => _mode = v!),
-            title: const Text('Otomatis lewat WhatsApp Cloud API'),
-            subtitle: const Text(
-              'Terkirim sendiri tanpa membuka WhatsApp. Berbayar per '
-              'percakapan dan butuh verifikasi bisnis di Meta.',
+            onChanged: (v) => setState(() => _mode = v ?? _mode),
+            child: const Column(
+              children: [
+                RadioListTile<String>(
+                  contentPadding: EdgeInsets.zero,
+                  value: 'manual',
+                  title: Text('Manual (disarankan)'),
+                  subtitle: Text(
+                    'Aplikasi membuka WhatsApp dengan pesan sudah terisi, '
+                    'kasir menekan kirim. Gratis, tanpa server, dan nomor '
+                    'usaha aman.',
+                  ),
+                ),
+                RadioListTile<String>(
+                  contentPadding: EdgeInsets.zero,
+                  value: 'api',
+                  title: Text('Otomatis lewat WhatsApp Cloud API'),
+                  subtitle: Text(
+                    'Terkirim sendiri tanpa membuka WhatsApp. Berbayar per '
+                    'percakapan dan butuh verifikasi bisnis di Meta.',
+                  ),
+                ),
+              ],
             ),
           ),
 

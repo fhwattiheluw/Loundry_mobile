@@ -195,26 +195,31 @@ class _PrinterSettingsScreenState
             )
           else
             Card(
-              child: Column(
-                children: [
-                  for (var i = 0; i < _devices.length; i++) ...[
-                    if (i > 0) const Divider(height: 1),
-                    RadioListTile<String>(
-                      secondary: IconBadge(Icons.print_outlined, tone: i),
-                      value: _devices[i].address,
-                      groupValue: selected,
-                      title: Text(_devices[i].name),
-                      subtitle: Text(_devices[i].address),
-                      onChanged: (_) async {
-                        await ref
-                            .read(printerProvider)
-                            .saveDefault(_devices[i]);
-                        ref.invalidate(settingsLoadedProvider);
-                        setState(() {});
-                      },
-                    ),
+              child: RadioGroup<String>(
+                groupValue: selected,
+                onChanged: (address) async {
+                  final picked = _devices
+                      .where((d) => d.address == address)
+                      .firstOrNull;
+                  if (picked == null) return;
+
+                  await ref.read(printerProvider).saveDefault(picked);
+                  ref.invalidate(settingsLoadedProvider);
+                  setState(() {});
+                },
+                child: Column(
+                  children: [
+                    for (var i = 0; i < _devices.length; i++) ...[
+                      if (i > 0) const Divider(height: 1),
+                      RadioListTile<String>(
+                        secondary: IconBadge(Icons.print_outlined, tone: i),
+                        value: _devices[i].address,
+                        title: Text(_devices[i].name),
+                        subtitle: Text(_devices[i].address),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
 
