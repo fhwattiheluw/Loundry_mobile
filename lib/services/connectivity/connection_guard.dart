@@ -5,7 +5,13 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum ConnectionState { checking, online, offline }
+/// Keadaan jaringan menurut aplikasi ini.
+///
+/// Namanya sengaja bukan ConnectionState: Flutter sudah punya enum dengan
+/// nama itu di async.dart, yang ikut terbawa setiap kali material.dart
+/// diimpor. Dua enum bernama sama membuat kompilasi berhenti di berkas mana
+/// pun yang memakai keduanya.
+enum NetworkStatus { checking, online, offline }
 
 /// Memeriksa koneksi internet sungguhan, bukan sekadar status antarmuka.
 ///
@@ -13,8 +19,8 @@ enum ConnectionState { checking, online, offline }
 /// Perangkat bisa tersambung ke Wi-Fi hotspot yang sama sekali tidak punya
 /// jalan keluar ke internet, dan kasir akan mengira aplikasi rusak. Karena itu
 /// setiap perubahan status disusul satu pemeriksaan DNS singkat.
-class ConnectionController extends StateNotifier<ConnectionState> {
-  ConnectionController() : super(ConnectionState.checking) {
+class ConnectionController extends StateNotifier<NetworkStatus> {
+  ConnectionController() : super(NetworkStatus.checking) {
     _subscription = Connectivity().onConnectivityChanged.listen((_) {
       check();
     });
@@ -27,7 +33,7 @@ class ConnectionController extends StateNotifier<ConnectionState> {
   static const _probeHosts = ['google.com', 'cloudflare.com'];
 
   Future<void> check() async {
-    state = ConnectionState.checking;
+    state = NetworkStatus.checking;
 
     final results = await Connectivity().checkConnectivity();
     final hasInterface =
@@ -40,14 +46,14 @@ class ConnectionController extends StateNotifier<ConnectionState> {
 
     if (await _canReachInternet()) {
       _retryTimer?.cancel();
-      state = ConnectionState.online;
+      state = NetworkStatus.online;
     } else {
       _goOffline();
     }
   }
 
   void _goOffline() {
-    state = ConnectionState.offline;
+    state = NetworkStatus.offline;
 
     // Coba lagi sendiri tiap 10 detik, supaya kasir tidak perlu menekan
     // tombol berulang kali saat sinyal baru pulih.
@@ -82,7 +88,7 @@ class ConnectionController extends StateNotifier<ConnectionState> {
 }
 
 final connectionProvider =
-    StateNotifierProvider<ConnectionController, ConnectionState>(
+    StateNotifierProvider<ConnectionController, NetworkStatus>(
   (ref) => ConnectionController(),
 );
 
@@ -112,9 +118,9 @@ class ConnectionGate extends ConsumerWidget {
     final status = ref.watch(connectionProvider);
 
     return switch (status) {
-      ConnectionState.online => child,
-      ConnectionState.checking => const _CheckingScreen(),
-      ConnectionState.offline => const OfflineScreen(),
+      NetworkStatus.online => child,
+      NetworkStatus.checking => const _CheckingScreen(),
+      NetworkStatus.offline => const OfflineScreen(),
     };
   }
 }
@@ -223,7 +229,7 @@ class ConnectionBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(connectionProvider);
-    if (status != ConnectionState.offline) return const SizedBox.shrink();
+    if (status != NetworkStatus.offline) return const SizedBox.shrink();
 
     return Material(
       color: Theme.of(context).colorScheme.errorContainer,

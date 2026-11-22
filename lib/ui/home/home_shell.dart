@@ -163,7 +163,7 @@ class _OfflineStrip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(connectionProvider);
-    if (status != ConnectionState.offline) return const SizedBox.shrink();
+    if (status != NetworkStatus.offline) return const SizedBox.shrink();
 
     final scheme = Theme.of(context).colorScheme;
 
