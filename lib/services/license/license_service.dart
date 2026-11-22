@@ -40,7 +40,7 @@ class LicenseService {
   final SettingsRepository _settings;
 
   /// Masa coba gratis sejak aplikasi pertama kali dibuka.
-  static const trialDays = 14;
+  static const trialDays = 30;
 
   /// Berapa lama langganan dianggap masih berlaku sejak terakhir kali Play
   /// Store mengabarkan ia aktif. Lebih panjang dari satu siklus tagihan,

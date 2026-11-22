@@ -16,7 +16,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const _fileName = 'laundry_pos.db';
-  static const _schemaVersion = 4;
+  static const _schemaVersion = 5;
 
   final _key = DatabaseKey();
 
@@ -46,6 +46,7 @@ class AppDatabase {
         await _v2(db);
         await _v3(db);
         await _v4(db);
+        await _v5(db);
         await seedInitialData(db);
       },
       onUpgrade: _migrate,
@@ -75,6 +76,7 @@ class AppDatabase {
         await _v2(db);
         await _v3(db);
         await _v4(db);
+        await _v5(db);
         await seedInitialData(db);
       },
     );
@@ -101,6 +103,27 @@ class AppDatabase {
         conflictAlgorithm: sql.ConflictAlgorithm.replace,
       );
     }
+    if (from < 5) await _v5(db);
+  }
+
+  /// Versi 5: foto cucian saat diterima.
+  ///
+  /// Sengketa "baju saya hilang" dan "ini sudah sobek sebelum dicuci"
+  /// adalah masalah paling mahal di usaha laundry, dan satu-satunya yang
+  /// tidak bisa diselesaikan dengan catatan angka. Foto disimpan sebagai
+  /// berkas di penyimpanan aplikasi; tabel ini hanya menyimpan jalurnya.
+  Future<void> _v5(sql.Database db) async {
+    await db.execute('''
+      CREATE TABLE order_photos (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id   INTEGER NOT NULL,
+        path       TEXT    NOT NULL,
+        created_at TEXT    NOT NULL,
+        FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE
+      )
+    ''');
+    await db.execute(
+        'CREATE INDEX idx_order_photos_order ON order_photos (order_id)');
   }
 
   /// Versi 4: lokasi rak penyimpanan.

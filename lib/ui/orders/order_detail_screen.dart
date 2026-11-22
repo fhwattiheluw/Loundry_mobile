@@ -8,6 +8,7 @@ import '../../core/security.dart';
 import '../../core/design_system.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../../services/photo/order_photo_service.dart';
 import 'payment_sheet.dart';
 import 'status_confirm.dart';
 
@@ -266,6 +267,9 @@ class _Body extends ConsumerWidget {
         ),
 
         const SizedBox(height: 16),
+        _PhotoCard(orderId: order.id!),
+
+        const SizedBox(height: 16),
         _PaymentHistory(orderId: order.id!),
         const SizedBox(height: 16),
         _NotificationHistory(orderId: order.id!),
@@ -344,6 +348,178 @@ Future<void> askRack(
   await ref.read(orderRepoProvider).setRack(order.id!, value);
   ref.invalidate(orderDetailProvider(order.id!));
   ref.refreshOrderData();
+}
+
+
+/// Foto cucian saat diterima.
+///
+/// Diletakkan dekat bagian atas, bukan di dasar layar: foto yang harus
+/// dicari tidak akan pernah diambil, dan bukti yang tidak diambil tidak
+/// menolong siapa pun saat pelanggan datang marah dua hari kemudian.
+class _PhotoCard extends ConsumerWidget {
+  const _PhotoCard({required this.orderId});
+
+  final int orderId;
+
+  Future<void> _capture(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final photo = await ref.read(orderPhotoServiceProvider).capture(orderId);
+      if (photo != null) ref.invalidate(orderPhotosProvider(orderId));
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Gagal mengambil foto: $e')),
+      );
+    }
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    WidgetRef ref,
+    OrderPhoto photo,
+  ) async {
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus foto ini?'),
+        content: const Text(
+            'Foto tidak bisa dikembalikan setelah dihapus.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (yes != true) return;
+    await ref.read(orderPhotoServiceProvider).delete(photo);
+    ref.invalidate(orderPhotosProvider(orderId));
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final photos = ref.watch(orderPhotosProvider(orderId));
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: Text('Foto cucian',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                ),
+                photos.maybeWhen(
+                  data: (list) => list.length >= OrderPhotoService.maxPerOrder
+                      ? Text('${list.length} foto',
+                          style: Theme.of(context).textTheme.bodySmall)
+                      : TextButton.icon(
+                          onPressed: () => _capture(context, ref),
+                          icon: const Icon(Icons.photo_camera_outlined,
+                              size: 18),
+                          label: Text(list.isEmpty ? 'Ambil foto' : 'Tambah'),
+                        ),
+                  orElse: () => const SizedBox.shrink(),
+                ),
+              ],
+            ),
+            photos.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: LinearProgressIndicator(),
+              ),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text('Gagal memuat foto: $e',
+                    style: Theme.of(context).textTheme.bodySmall),
+              ),
+              data: (list) {
+                if (list.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Belum ada foto. Satu jepretan saat menerima cucian '
+                      'menyelesaikan sengketa yang tidak bisa diselesaikan '
+                      'catatan angka.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  );
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: SizedBox(
+                    height: 92,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: list.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 8),
+                      itemBuilder: (context, i) {
+                        final photo = list[i];
+                        return GestureDetector(
+                          onTap: () => _openViewer(context, photo),
+                          onLongPress: () =>
+                              _confirmDelete(context, ref, photo),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(10),
+                            child: Image.file(
+                              photo.file,
+                              width: 92,
+                              height: 92,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, _, __) => Container(
+                                width: 92,
+                                height: 92,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
+                                child: const Icon(Icons.broken_image_outlined),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _openViewer(BuildContext context, OrderPhoto photo) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            InteractiveViewer(child: Image.file(photo.file)),
+            Padding(
+              padding: const EdgeInsets.all(8),
+              child: Text(
+                'Diambil ${formatDateTime(photo.createdAt)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _PaymentHistory extends ConsumerWidget {
