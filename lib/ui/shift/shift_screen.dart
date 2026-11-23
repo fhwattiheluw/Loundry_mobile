@@ -25,15 +25,17 @@ class ShiftScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Shift Kasir')),
-      body: ContentWidth(child: shift.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorState(
-          message: friendlyError(e),
-          onRetry: () => ref.invalidate(currentShiftProvider),
+      body: ContentWidth(
+        child: shift.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => ErrorState(
+            message: friendlyError(e),
+            onRetry: () => ref.invalidate(currentShiftProvider),
+          ),
+          data: (open) =>
+              open == null ? const _OpenShiftForm() : _OpenShiftView(shift: open),
         ),
-        data: (open) =>
-            open == null ? const _OpenShiftForm() : _OpenShiftView(shift: open),
-      )),
+      ),
     );
   }
 }
@@ -379,48 +381,50 @@ class ShiftHistoryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(title: const Text('Riwayat Shift')),
-      body: ContentWidth(child: FutureBuilder<List<Map<String, Object?>>>(
-        future: ref.watch(shiftRepoProvider).history(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: ContentWidth(
+        child: FutureBuilder<List<Map<String, Object?>>>(
+          future: ref.watch(shiftRepoProvider).history(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          final rows = snapshot.data!;
-          if (rows.isEmpty) {
-            return const Center(child: Text('Belum ada shift yang ditutup.'));
-          }
+            final rows = snapshot.data!;
+            if (rows.isEmpty) {
+              return const Center(child: Text('Belum ada shift yang ditutup.'));
+            }
 
-          return ListView.separated(
-            itemCount: rows.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (context, i) {
-              final row = rows[i];
-              final shift = Shift.fromMap(row);
-              final difference = shift.difference ?? 0;
+            return ListView.separated(
+              itemCount: rows.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, i) {
+                final row = rows[i];
+                final shift = Shift.fromMap(row);
+                final difference = shift.difference ?? 0;
 
-              return ListTile(
-                title: Text(row['user_name'] as String),
-                subtitle: Text(
-                  '${formatDateTime(shift.openedAt)}\n'
-                  'Kas seharusnya ${formatRupiah(shift.expectedCash ?? 0)} · '
-                  'fisik ${formatRupiah(shift.closingCash ?? 0)}',
-                ),
-                isThreeLine: true,
-                trailing: Text(
-                  difference == 0 ? 'Cocok' : formatRupiah(difference),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: difference == 0
-                        ? context.status.lunas
-                        : context.status.belumLunas,
+                return ListTile(
+                  title: Text(row['user_name'] as String),
+                  subtitle: Text(
+                    '${formatDateTime(shift.openedAt)}\n'
+                    'Kas seharusnya ${formatRupiah(shift.expectedCash ?? 0)} · '
+                    'fisik ${formatRupiah(shift.closingCash ?? 0)}',
                   ),
-                ),
-              );
-            },
-          );
-        },
-      )),
+                  isThreeLine: true,
+                  trailing: Text(
+                    difference == 0 ? 'Cocok' : formatRupiah(difference),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: difference == 0
+                          ? context.status.lunas
+                          : context.status.belumLunas,
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
     );
   }
 }

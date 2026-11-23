@@ -116,157 +116,159 @@ class _BackupSettingsScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Backup dan Restore')),
-      body: ContentWidth(child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        children: [
-          _StatusCard(
-            status: ref.watch(backupStatusProvider),
-            onWizard: _busy ? null : _openWizard,
-          ),
-          const SizedBox(height: 12),
-          Card(
-            color: Theme.of(context).colorScheme.errorContainer,
-            child: const Padding(
-              padding: EdgeInsets.all(16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  IconBadge(Icons.warning_amber_rounded, tone: 2),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Data aplikasi ini hanya ada di ponsel ini. Kalau ponsel '
-                      'hilang, rusak, atau aplikasi terhapus, seluruh riwayat '
-                      'dan piutang hilang permanen.\n\n'
-                      'Bagikan backup ke luar ponsel minimal seminggu sekali.',
-                      style: TextStyle(fontSize: 13),
-                    ),
-                  ),
-                ],
-              ),
+      body: ContentWidth(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          children: [
+            _StatusCard(
+              status: ref.watch(backupStatusProvider),
+              onWizard: _busy ? null : _openWizard,
             ),
-          ),
-
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(0, AppTouch.comfortable),
-            ),
-            onPressed: _busy
-                ? null
-                : () => _run(
-                      ref.read(backupServiceProvider).shareLatest,
-                      method: BackupMethod.share,
-                    ),
-            icon: const Icon(Icons.share_outlined),
-            label: const Text('Buat & bagikan backup'),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Kirim ke WhatsApp pribadi, email, atau simpan ke Google Drive.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: _busy
-                ? null
-                : () => _run(
-                      ref.read(backupServiceProvider).createLocal,
-                      method: BackupMethod.device,
-                    ),
-            icon: const Icon(Icons.save_outlined),
-            label: const Text('Backup ke perangkat saja'),
-          ),
-
-          const SizedBox(height: 16),
-          // Pemilik yang tahu jalurnya bisa menyalin berkasnya sendiri
-          // lewat Pengelola File, tanpa membuka aplikasi ini.
-          FutureBuilder<String>(
-            future: ref.read(backupServiceProvider).backupFolderPath(),
-            builder: (context, snapshot) {
-              final path = snapshot.data;
-              if (path == null) return const SizedBox.shrink();
-
-              return Card(
-                child: ListTile(
-                  leading: const IconBadge(Icons.folder_outlined, tone: 4),
-                  title: const Text('Folder backup otomatis'),
-                  subtitle: Text(
-                    path,
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  trailing: IconButton(
-                    tooltip: 'Salin jalur',
-                    icon: const Icon(Icons.copy, size: 18),
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: path));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Jalur folder disalin.')),
-                      );
-                    },
-                  ),
-                ),
-              );
-            },
-          ),
-
-          const SizedBox(height: 12),
-          OutlinedButton.icon(
-            onPressed: _busy ? null : _restorePicked,
-            icon: const Icon(Icons.restore),
-            label: const Text('Kembalikan dari berkas backup'),
-          ),
-
-          const SizedBox(height: 28),
-          Text(
-            'Backup tersimpan di perangkat',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Aplikasi menyimpan tujuh backup terakhir dan membuat satu '
-            'otomatis setiap hari saat dibuka.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 12),
-
-          if (_backups.isEmpty)
-            const Card(
-              child: ListTile(
-                leading: Icon(Icons.inbox_outlined),
-                title: Text('Belum ada backup'),
-              ),
-            )
-          else
+            const SizedBox(height: 12),
             Card(
-              child: Column(
-                children: [
-                  for (var i = 0; i < _backups.length; i++) ...[
-                    if (i > 0) const Divider(height: 1),
-                    ListTile(
-                      leading: const IconBadge(Icons.description_outlined, tone: 5),
-                      title: Text(_backups[i].name),
-                      subtitle: Text(
-                        '${formatDateTime(_backups[i].createdAt)} · '
-                        '${_backups[i].sizeLabel}',
-                      ),
-                      trailing: IconButton(
-                        tooltip: 'Kembalikan dari backup ini',
-                        icon: const Icon(Icons.restore),
-                        onPressed: _busy
-                            ? null
-                            : () => _run(() => ref
-                                .read(backupServiceProvider)
-                                .restoreFrom(_backups[i].file)),
+              color: Theme.of(context).colorScheme.errorContainer,
+              child: const Padding(
+                padding: EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    IconBadge(Icons.warning_amber_rounded, tone: 2),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Data aplikasi ini hanya ada di ponsel ini. Kalau ponsel '
+                        'hilang, rusak, atau aplikasi terhapus, seluruh riwayat '
+                        'dan piutang hilang permanen.\n\n'
+                        'Bagikan backup ke luar ponsel minimal seminggu sekali.',
+                        style: TextStyle(fontSize: 13),
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
             ),
-        ],
-      )),
+
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, AppTouch.comfortable),
+              ),
+              onPressed: _busy
+                  ? null
+                  : () => _run(
+                        ref.read(backupServiceProvider).shareLatest,
+                        method: BackupMethod.share,
+                      ),
+              icon: const Icon(Icons.share_outlined),
+              label: const Text('Buat & bagikan backup'),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Kirim ke WhatsApp pribadi, email, atau simpan ke Google Drive.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _busy
+                  ? null
+                  : () => _run(
+                        ref.read(backupServiceProvider).createLocal,
+                        method: BackupMethod.device,
+                      ),
+              icon: const Icon(Icons.save_outlined),
+              label: const Text('Backup ke perangkat saja'),
+            ),
+
+            const SizedBox(height: 16),
+            // Pemilik yang tahu jalurnya bisa menyalin berkasnya sendiri
+            // lewat Pengelola File, tanpa membuka aplikasi ini.
+            FutureBuilder<String>(
+              future: ref.read(backupServiceProvider).backupFolderPath(),
+              builder: (context, snapshot) {
+                final path = snapshot.data;
+                if (path == null) return const SizedBox.shrink();
+
+                return Card(
+                  child: ListTile(
+                    leading: const IconBadge(Icons.folder_outlined, tone: 4),
+                    title: const Text('Folder backup otomatis'),
+                    subtitle: Text(
+                      path,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                    trailing: IconButton(
+                      tooltip: 'Salin jalur',
+                      icon: const Icon(Icons.copy, size: 18),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: path));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Jalur folder disalin.')),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _busy ? null : _restorePicked,
+              icon: const Icon(Icons.restore),
+              label: const Text('Kembalikan dari berkas backup'),
+            ),
+
+            const SizedBox(height: 28),
+            Text(
+              'Backup tersimpan di perangkat',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Aplikasi menyimpan tujuh backup terakhir dan membuat satu '
+              'otomatis setiap hari saat dibuka.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: 12),
+
+            if (_backups.isEmpty)
+              const Card(
+                child: ListTile(
+                  leading: Icon(Icons.inbox_outlined),
+                  title: Text('Belum ada backup'),
+                ),
+              )
+            else
+              Card(
+                child: Column(
+                  children: [
+                    for (var i = 0; i < _backups.length; i++) ...[
+                      if (i > 0) const Divider(height: 1),
+                      ListTile(
+                        leading: const IconBadge(Icons.description_outlined, tone: 5),
+                        title: Text(_backups[i].name),
+                        subtitle: Text(
+                          '${formatDateTime(_backups[i].createdAt)} · '
+                          '${_backups[i].sizeLabel}',
+                        ),
+                        trailing: IconButton(
+                          tooltip: 'Kembalikan dari backup ini',
+                          icon: const Icon(Icons.restore),
+                          onPressed: _busy
+                              ? null
+                              : () => _run(() => ref
+                                  .read(backupServiceProvider)
+                                  .restoreFrom(_backups[i].file)),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

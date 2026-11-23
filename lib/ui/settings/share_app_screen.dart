@@ -160,11 +160,11 @@ class _ShareAppScreenState extends ConsumerState<ShareAppScreen> {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                Card(
+                const Card(
                   child: ListTile(
-                    leading: const IconBadge(Icons.chat_outlined, tone: 3),
-                    title: const Text('Di pesan WhatsApp'),
-                    subtitle: const Text(
+                    leading: IconBadge(Icons.chat_outlined, tone: 3),
+                    title: Text('Di pesan WhatsApp'),
+                    subtitle: Text(
                       'Tambahkan {aplikasi} di Pengaturan, Template pesan, '
                       'bila ingin tautan aplikasi ikut terkirim ke pelanggan. '
                       'Tidak dipasang otomatis, karena pesan itu atas nama '

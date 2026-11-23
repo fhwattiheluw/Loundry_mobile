@@ -366,25 +366,25 @@ class _HeroStat extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 2),
           child: Column(
-        children: [
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(color: Colors.white),
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: Colors.white.withValues(alpha: 0.75),
-              fontSize: 11.5,
-            ),
-          ),
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(color: Colors.white),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.75),
+                  fontSize: 11.5,
+                ),
+              ),
             ],
           ),
         ),

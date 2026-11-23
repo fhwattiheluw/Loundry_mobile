@@ -296,76 +296,78 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: ContentWidth(child: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
-              child: Row(
-                children: [
-                  for (var i = 0; i <= _lastIndex; i++)
-                    Expanded(
-                      child: Container(
-                        height: 5,
-                        margin: const EdgeInsets.symmetric(horizontal: 3),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(3),
-                          color: i <= _index
-                              ? scheme.primary
-                              : scheme.surfaceContainerHighest,
+      body: ContentWidth(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.sm),
+                child: Row(
+                  children: [
+                    for (var i = 0; i <= _lastIndex; i++)
+                      Expanded(
+                        child: Container(
+                          height: 5,
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(3),
+                            color: i <= _index
+                                ? scheme.primary
+                                : scheme.surfaceContainerHighest,
+                          ),
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            Expanded(
-              child: PageView(
-                controller: _page,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  _stepBusiness(),
-                  _stepPrices(),
-                  _stepPrinter(),
-                  _stepBackup(),
-                  _stepPin(),
-                ],
+              Expanded(
+                child: PageView(
+                  controller: _page,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    _stepBusiness(),
+                    _stepPrices(),
+                    _stepPrinter(),
+                    _stepBackup(),
+                    _stepPin(),
+                  ],
+                ),
               ),
-            ),
 
-            Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Row(
-                children: [
-                  if (_index > 0)
-                    TextButton(
-                      onPressed: _saving
-                          ? null
-                          : () {
-                              setState(() => _index--);
-                              _page.animateToPage(
-                                _index,
-                                duration: AppDuration.normal,
-                                curve: Curves.easeOut,
-                              );
-                            },
-                      child: const Text('Kembali'),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Row(
+                  children: [
+                    if (_index > 0)
+                      TextButton(
+                        onPressed: _saving
+                            ? null
+                            : () {
+                                setState(() => _index--);
+                                _page.animateToPage(
+                                  _index,
+                                  duration: AppDuration.normal,
+                                  curve: Curves.easeOut,
+                                );
+                              },
+                        child: const Text('Kembali'),
+                      ),
+                    const Spacer(),
+                    FilledButton.icon(
+                      onPressed: _saving ? null : _next,
+                      icon: Icon(
+                          _index >= _lastIndex ? Icons.check : Icons.arrow_forward),
+                      label: Text(_index >= _lastIndex ? 'Mulai pakai' : 'Lanjut'),
                     ),
-                  const Spacer(),
-                  FilledButton.icon(
-                    onPressed: _saving ? null : _next,
-                    icon: Icon(
-                        _index >= _lastIndex ? Icons.check : Icons.arrow_forward),
-                    label: Text(_index >= _lastIndex ? 'Mulai pakai' : 'Lanjut'),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      )),
+      ),
     );
   }
 

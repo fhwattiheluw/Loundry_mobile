@@ -77,183 +77,185 @@ class ReportScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: ContentWidth(child: RefreshIndicator(
-        onRefresh: () async => ref.refreshOrderData(),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-          children: [
-            SizedBox(
-              height: 48,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  for (final preset in [
-                    ReportRange.today(),
-                    ReportRange.thisWeek(),
-                    ReportRange.thisMonth(),
-                    ReportRange.lastMonth(),
-                  ])
+      body: ContentWidth(
+        child: RefreshIndicator(
+          onRefresh: () async => ref.refreshOrderData(),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+            children: [
+              SizedBox(
+                height: 48,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    for (final preset in [
+                      ReportRange.today(),
+                      ReportRange.thisWeek(),
+                      ReportRange.thisMonth(),
+                      ReportRange.lastMonth(),
+                    ])
+                      Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(preset.label),
+                          selected: range.label == preset.label,
+                          onSelected: (_) => ref
+                              .read(reportRangeProvider.notifier)
+                              .state = preset,
+                        ),
+                      ),
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(preset.label),
-                        selected: range.label == preset.label,
-                        onSelected: (_) => ref
-                            .read(reportRangeProvider.notifier)
-                            .state = preset,
+                      child: ActionChip(
+                        avatar: const Icon(Icons.date_range, size: 18),
+                        label: const Text('Pilih tanggal'),
+                        onPressed: () => _pickRange(context, ref),
                       ),
                     ),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ActionChip(
-                      avatar: const Icon(Icons.date_range, size: 18),
-                      label: const Text('Pilih tanggal'),
-                      onPressed: () => _pickRange(context, ref),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 12),
-            summary.when(
-              loading: () => const SizedBox(
-                height: 120,
-                child: Center(child: CircularProgressIndicator()),
-              ),
-              error: (e, _) => Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Text(
-                  'Laporan belum bisa dimuat. ${friendlyError(e)}',
+                  ],
                 ),
               ),
-              data: (data) => Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: StatTile(
-                          label: 'Pendapatan (uang diterima)',
-                          value: formatRupiah(data.cashIn),
-                          icon: Icons.trending_up,
-                          highlight: true,
-                        ),
-                      ),
-                    ],
+
+              const SizedBox(height: 12),
+              summary.when(
+                loading: () => const SizedBox(
+                  height: 120,
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (e, _) => Padding(
+                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  child: Text(
+                    'Laporan belum bisa dimuat. ${friendlyError(e)}',
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: StatTile(
-                          label: 'Jumlah order',
-                          value: '${data.orderCount}',
-                          icon: Icons.receipt_long_outlined,
+                ),
+                data: (data) => Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: StatTile(
+                            label: 'Pendapatan (uang diterima)',
+                            value: formatRupiah(data.cashIn),
+                            icon: Icons.trending_up,
+                            highlight: true,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: StatTile(
-                          label: 'Rata-rata nota',
-                          value: formatRupiah(data.averageOrderValue),
-                          icon: Icons.calculate_outlined,
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: StatTile(
+                            label: 'Jumlah order',
+                            value: '${data.orderCount}',
+                            icon: Icons.receipt_long_outlined,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _PaymentSplit(data: data),
-                  // Kotak yang isinya nol hanya memakan tempat untuk
-                  // mengatakan tidak ada apa-apa. Baris ini hilang sama
-                  // sekali bila tidak ada diskon maupun refund.
-                  if (data.discountTotal > 0 || data.refundTotal > 0) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      if (data.discountTotal > 0)
-                      Expanded(
-                        child: StatTile(
-                          label: 'Diskon diberikan',
-                          value: formatRupiah(data.discountTotal),
-                          icon: Icons.discount_outlined,
-                        ),
-                      ),
-                      if (data.discountTotal > 0 && data.refundTotal > 0)
                         const SizedBox(width: 12),
-                      if (data.refundTotal > 0)
-                      Expanded(
-                        child: StatTile(
-                          label: 'Refund',
-                          value: formatRupiah(data.refundTotal),
-                          icon: Icons.undo,
+                        Expanded(
+                          child: StatTile(
+                            label: 'Rata-rata nota',
+                            value: formatRupiah(data.averageOrderValue),
+                            icon: Icons.calculate_outlined,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  ],
-                  const SizedBox(height: 8),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Row(
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _PaymentSplit(data: data),
+                    // Kotak yang isinya nol hanya memakan tempat untuk
+                    // mengatakan tidak ada apa-apa. Baris ini hilang sama
+                    // sekali bila tidak ada diskon maupun refund.
+                    if (data.discountTotal > 0 || data.refundTotal > 0) ...[
+                      const SizedBox(height: 12),
+                      Row(
                         children: [
-                          const IconBadge(Icons.info_outline, tone: 1),
-                          const SizedBox(width: 12),
+                          if (data.discountTotal > 0)
                           Expanded(
-                            child: Text(
-                              'Nilai order periode ini ${formatRupiah(data.grossOrderValue)}. '
-                              'Selisihnya dengan pendapatan adalah piutang yang belum masuk.',
-                              style: const TextStyle(fontSize: 12.5),
+                            child: StatTile(
+                              label: 'Diskon diberikan',
+                              value: formatRupiah(data.discountTotal),
+                              icon: Icons.discount_outlined,
+                            ),
+                          ),
+                          if (data.discountTotal > 0 && data.refundTotal > 0)
+                            const SizedBox(width: 12),
+                          if (data.refundTotal > 0)
+                          Expanded(
+                            child: StatTile(
+                              label: 'Refund',
+                              value: formatRupiah(data.refundTotal),
+                              icon: Icons.undo,
                             ),
                           ),
                         ],
                       ),
+                    ],
+                    const SizedBox(height: 8),
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Row(
+                          children: [
+                            const IconBadge(Icons.info_outline, tone: 1),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Nilai order periode ini ${formatRupiah(data.grossOrderValue)}. '
+                                'Selisihnya dengan pendapatan adalah piutang yang belum masuk.',
+                                style: const TextStyle(fontSize: 12.5),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 20),
-            const _Heading('Dibanding periode sebelumnya'),
-            const SizedBox(height: 8),
-            const _ComparisonCard(),
+              const SizedBox(height: 20),
+              const _Heading('Dibanding periode sebelumnya'),
+              const SizedBox(height: 8),
+              const _ComparisonCard(),
 
-            const SizedBox(height: 20),
-            const _Heading('Tren harian'),
-            const SizedBox(height: 8),
-            const _RevenueChart(),
+              const SizedBox(height: 20),
+              const _Heading('Tren harian'),
+              const SizedBox(height: 8),
+              const _RevenueChart(),
 
-            const SizedBox(height: 20),
-            const _Heading('Nilai order per layanan'),
-            Padding(
-              padding: const EdgeInsets.only(left: AppSpacing.xs, top: 2),
-              child: Text(
-                'Harga order sebelum diskon, bukan uang yang diterima.',
-                style: Theme.of(context).textTheme.bodySmall,
+              const SizedBox(height: 20),
+              const _Heading('Nilai order per layanan'),
+              Padding(
+                padding: const EdgeInsets.only(left: AppSpacing.xs, top: 2),
+                child: Text(
+                  'Harga order sebelum diskon, bukan uang yang diterima.',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            _AmountList(provider: revenueByServiceProvider, showQty: true),
+              const SizedBox(height: 8),
+              _AmountList(provider: revenueByServiceProvider, showQty: true),
 
-            const SizedBox(height: 20),
-            const _Heading('Per metode bayar'),
-            const SizedBox(height: 8),
-            _AmountList(provider: revenueByMethodProvider),
+              const SizedBox(height: 20),
+              const _Heading('Per metode bayar'),
+              const SizedBox(height: 8),
+              _AmountList(provider: revenueByMethodProvider),
 
-            const SizedBox(height: 20),
-            const _Heading('Per kasir'),
-            const SizedBox(height: 8),
-            _AmountList(provider: revenueByCashierProvider),
+              const SizedBox(height: 20),
+              const _Heading('Per kasir'),
+              const SizedBox(height: 8),
+              _AmountList(provider: revenueByCashierProvider),
 
-            const SizedBox(height: 20),
-            const _Heading('Pelanggan teratas'),
-            const SizedBox(height: 8),
-            _AmountList(provider: topCustomersProvider),
+              const SizedBox(height: 20),
+              const _Heading('Pelanggan teratas'),
+              const SizedBox(height: 8),
+              _AmountList(provider: topCustomersProvider),
 
-          ],
+            ],
+          ),
         ),
-      )),
+      ),
     );
   }
 
@@ -884,28 +886,30 @@ class _CashierNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('Laporan')),
-        body: ContentWidth(child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.lock_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                const SizedBox(height: 16),
-                const Text(
-                  'Laporan pendapatan hanya bisa dibuka Owner.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 15),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Rekap shift Anda sendiri ada di menu Pengaturan.',
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
+        body: ContentWidth(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.lock_outline, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Laporan pendapatan hanya bisa dibuka Owner.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 15),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Rekap shift Anda sendiri ada di menu Pengaturan.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
             ),
           ),
-        )),
+        ),
       );
 }

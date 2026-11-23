@@ -250,99 +250,102 @@ class _CustomerScreenState extends ConsumerState<CustomerScreen> {
             ),
         ],
       ),
-      body: ContentWidth(child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _load,
-              decoration: InputDecoration(
-                hintText: 'Cari nama atau nomor HP',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
+      body: ContentWidth(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: TextField(
+                controller: _searchController,
+                onChanged: _load,
+                decoration: InputDecoration(
+                  hintText: 'Cari nama atau nomor HP',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    borderSide: BorderSide.none,
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    borderSide: BorderSide(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _customers.isEmpty
-                    ? EmptyState(
-                        icon: _searchController.text.trim().isEmpty
-                            ? Icons.people_outline
-                            : Icons.search_off,
-                        title: _searchController.text.trim().isEmpty
-                            ? 'Belum ada pelanggan'
-                            : 'Pelanggan tidak ditemukan',
-                        message: _searchController.text.trim().isEmpty
-                            ? 'Pelanggan tersimpan otomatis saat Anda '
-                                'membuat order. Anda juga bisa mengimpor '
-                                'daftar dari berkas CSV.'
-                            : 'Coba nama atau nomor HP yang lain. '
-                                'Pelanggan baru tersimpan otomatis saat '
-                                'Anda membuat order.',
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-                        itemCount: _customers.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, i) {
-                          final customer = _customers[i];
-                          return Card(
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _customers.isEmpty
+                      ? EmptyState(
+                          icon: _searchController.text.trim().isEmpty
+                              ? Icons.people_outline
+                              : Icons.search_off,
+                          title: _searchController.text.trim().isEmpty
+                              ? 'Belum ada pelanggan'
+                              : 'Pelanggan tidak ditemukan',
+                          message: _searchController.text.trim().isEmpty
+                              ? 'Pelanggan tersimpan otomatis saat Anda '
+                                  'membuat order. Anda juga bisa mengimpor '
+                                  'daftar dari berkas CSV.'
+                              : 'Coba nama atau nomor HP yang lain. '
+                                  'Pelanggan baru tersimpan otomatis saat '
+                                  'Anda membuat order.',
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
+                          itemCount: _customers.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: AppSpacing.sm),
+                          itemBuilder: (context, i) {
+                            final customer = _customers[i];
+                            return Card(
                               child: ListTile(
-                            leading: CircleAvatar(
-                              backgroundColor: IconBadge.tones[
+                                leading: CircleAvatar(
+                                  backgroundColor: IconBadge.tones[
+                                          customer.name.length %
+                                              IconBadge.tones.length]
+                                      .withValues(alpha: 0.15),
+                                  foregroundColor: IconBadge.tones[
                                       customer.name.length %
-                                          IconBadge.tones.length]
-                                  .withValues(alpha: 0.15),
-                              foregroundColor: IconBadge.tones[
-                                  customer.name.length %
-                                      IconBadge.tones.length],
-                              child: Text(
-                                customer.name.isEmpty
-                                    ? '?'
-                                    : customer.name
-                                        .substring(0, 1)
-                                        .toUpperCase(),
+                                          IconBadge.tones.length],
+                                  child: Text(
+                                    customer.name.isEmpty
+                                        ? '?'
+                                        : customer.name
+                                            .substring(0, 1)
+                                            .toUpperCase(),
+                                  ),
+                                ),
+                                title: Text(customer.name),
+                                subtitle: Text(
+                                  customer.phone.isEmpty
+                                      ? 'Tanpa nomor'
+                                      : prettyPhone(customer.phone),
+                                ),
+                                trailing: customer.notifyEnabled
+                                    ? null
+                                    : const Icon(Icons.notifications_off_outlined,
+                                        size: 18),
+                                onTap: () => showCustomerSheet(
+                                  context,
+                                  customer,
+                                  onEdit: () => _edit(customer),
+                                ),
                               ),
-                            ),
-                            title: Text(customer.name),
-                            subtitle: Text(
-                              customer.phone.isEmpty
-                                  ? 'Tanpa nomor'
-                                  : prettyPhone(customer.phone),
-                            ),
-                            trailing: customer.notifyEnabled
-                                ? null
-                                : const Icon(Icons.notifications_off_outlined,
-                                    size: 18),
-                            onTap: () => showCustomerSheet(
-                              context,
-                              customer,
-                              onEdit: () => _edit(customer),
-                            ),
-                          ));
-                        },
-                      ),
-          ),
-        ],
-      )),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -410,340 +410,342 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
       child: Scaffold(
       appBar: AppBar(title: const Text('Order Baru')),
       bottomNavigationBar: _bottomBar(),
-      body: ContentWidth(child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          const _Label('Pelanggan', step: 1),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _nameController,
-                          textCapitalization: TextCapitalization.words,
-                          textInputAction: TextInputAction.next,
-                          onChanged: (_) {
-                            if (_nameError != null) {
-                              setState(() => _nameError = null);
-                            }
-                          },
-                          decoration: InputDecoration(
-                            labelText: 'Nama',
-                            prefixIcon: const Icon(Icons.person_outline),
-                            errorText: _nameError,
+      body: ContentWidth(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            const _Label('Pelanggan', step: 1),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _nameController,
+                            textCapitalization: TextCapitalization.words,
+                            textInputAction: TextInputAction.next,
+                            onChanged: (_) {
+                              if (_nameError != null) {
+                                setState(() => _nameError = null);
+                              }
+                            },
+                            decoration: InputDecoration(
+                              labelText: 'Nama',
+                              prefixIcon: const Icon(Icons.person_outline),
+                              errorText: _nameError,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton.filledTonal(
-                        tooltip: 'Cari pelanggan lama',
-                        onPressed: _pickCustomer,
-                        icon: const Icon(Icons.search),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    textInputAction: TextInputAction.done,
-                    onChanged: (_) {
-                      if (_phoneError != null) {
-                        setState(() => _phoneError = null);
-                      }
-                    },
-                    decoration: InputDecoration(
-                      labelText: 'Nomor WhatsApp',
-                      hintText: '0812-3456-7890',
-                      prefixIcon: const Icon(Icons.chat_outlined),
-                      helperText:
-                          'Kosongkan bila pelanggan tidak mau dihubungi',
-                      errorText: _phoneError,
+                        const SizedBox(width: 8),
+                        IconButton.filledTonal(
+                          tooltip: 'Cari pelanggan lama',
+                          onPressed: _pickCustomer,
+                          icon: const Icon(Icons.search),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              const Expanded(child: _Label('Layanan', step: 2)),
-              TextButton.icon(
-                onPressed: _addItem,
-                icon: const Icon(Icons.add),
-                label: const Text('Tambah'),
-              ),
-            ],
-          ),
-
-          if (_items.isEmpty)
-            Card(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-                onTap: _addItem,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 28),
-                  child: Column(
-                    children: [
-                      const IconBadge(Icons.add_shopping_cart_outlined),
-                      const SizedBox(height: AppSpacing.sm),
-                      Text(
-                        'Ketuk untuk menambah layanan',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-          else
-            Card(
-              child: Column(
-                children: [
-                  for (var i = 0; i < _items.length; i++) ...[
-                    if (i > 0) const Divider(height: 1),
-                    ListTile(
-                      title: Text(_items[i].serviceName,
-                          style:
-                              const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(
-                        '${formatQty(_items[i].qty)} ${_items[i].unit.label}'
-                        ' × ${formatRupiah(_items[i].unitPrice)}',
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            formatRupiah(_items[i].subtotal),
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          IconButton(
-                            tooltip: 'Hapus layanan ini',
-                            icon: const Icon(Icons.close, size: 18),
-                            onPressed: () {
-                              final removed = _items[i];
-                              final position = i;
-
-                              setState(() {
-                                _items.removeAt(position);
-                                _estimate = null;
-                              });
-
-                              // Salah sentuh ikon kecil ini mudah terjadi,
-                              // dan mengetik ulang berat dan harga memakan
-                              // waktu.
-                              showToast(
-                                context,
-                                '${removed.serviceName} dihapus dari order.',
-                                actionLabel: 'Urungkan',
-                                onAction: () {
-                                  if (!mounted) return;
-                                  setState(() {
-                                    _items.insert(
-                                      position.clamp(0, _items.length),
-                                      removed,
-                                    );
-                                    _estimate = null;
-                                  });
-                                },
-                              );
-                            },
-                          ),
-                        ],
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.done,
+                      onChanged: (_) {
+                        if (_phoneError != null) {
+                          setState(() => _phoneError = null);
+                        }
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'Nomor WhatsApp',
+                        hintText: '0812-3456-7890',
+                        prefixIcon: const Icon(Icons.chat_outlined),
+                        helperText:
+                            'Kosongkan bila pelanggan tidak mau dihubungi',
+                        errorText: _phoneError,
                       ),
                     ),
                   ],
-                ],
+                ),
               ),
             ),
 
-          const SizedBox(height: 20),
-          const _Label('Catatan dan diskon', step: 3),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                children: [
-                  TextField(
-                    controller: _noteController,
-                    decoration: const InputDecoration(
-                      labelText: 'Catatan order',
-                      hintText: 'Contoh: pisahkan baju putih',
-                      prefixIcon: Icon(Icons.sticky_note_2_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _discountController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: rupiahInputFormatters,
-                    onChanged: (_) => setState(() {}),
-                    decoration: const InputDecoration(
-                      labelText: 'Diskon',
-                      prefixText: 'Rp ',
-                      prefixIcon: Icon(Icons.discount_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _extraFeeController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: rupiahInputFormatters,
-                    onChanged: (_) => setState(() {}),
-                    decoration: InputDecoration(
-                      labelText: ref.watch(settingsRepoProvider).get(
-                          SettingsKeys.extraFeeLabel,
-                          fallback: 'Biaya lain'),
-                      prefixText: 'Rp ',
-                      helperText: 'Tidak ikut didiskon',
-                      prefixIcon: const Icon(Icons.local_shipping_outlined),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _PerfumePicker(
-                    value: _perfume,
-                    onChanged: (v) => setState(() => _perfume = v),
-                  ),
-                ],
-              ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                const Expanded(child: _Label('Layanan', step: 2)),
+                TextButton.icon(
+                  onPressed: _addItem,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Tambah'),
+                ),
+              ],
             ),
-          ),
 
-          const SizedBox(height: 20),
-          const _Label('Pembayaran', step: 4),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    child: SegmentedButton<bool>(
-                      showSelectedIcon: false,
-                      style: SegmentedButton.styleFrom(
-                        minimumSize: const Size(0, AppTouch.minimum),
-                      ),
-                      segments: const [
-                        ButtonSegment(
-                          value: false,
-                          label: Text('Bayar sekarang'),
-                        ),
-                        ButtonSegment(
-                          value: true,
-                          label: Text('Bayar nanti'),
+            if (_items.isEmpty)
+              Card(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  onTap: _addItem,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 28),
+                    child: Column(
+                      children: [
+                        const IconBadge(Icons.add_shopping_cart_outlined),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          'Ketuk untuk menambah layanan',
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
-                      selected: {_payLater},
-                      onSelectionChanged: (choice) => setState(() {
-                        _payLater = choice.first;
-                        // Jumlah yang sempat diketik tidak boleh ikut
-                        // tersimpan sebagai pembayaran.
-                        if (_payLater) _payController.clear();
-                      }),
                     ),
                   ),
-                  const SizedBox(height: 14),
+                ),
+              )
+            else
+              Card(
+                child: Column(
+                  children: [
+                    for (var i = 0; i < _items.length; i++) ...[
+                      if (i > 0) const Divider(height: 1),
+                      ListTile(
+                        title: Text(_items[i].serviceName,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w600)),
+                        subtitle: Text(
+                          '${formatQty(_items[i].qty)} ${_items[i].unit.label}'
+                          ' × ${formatRupiah(_items[i].unitPrice)}',
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              formatRupiah(_items[i].subtotal),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w700),
+                            ),
+                            IconButton(
+                              tooltip: 'Hapus layanan ini',
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: () {
+                                final removed = _items[i];
+                                final position = i;
 
-                  if (_payLater)
-                    _payLaterNote()
-                  else ...[
+                                setState(() {
+                                  _items.removeAt(position);
+                                  _estimate = null;
+                                });
+
+                                // Salah sentuh ikon kecil ini mudah terjadi,
+                                // dan mengetik ulang berat dan harga memakan
+                                // waktu.
+                                showToast(
+                                  context,
+                                  '${removed.serviceName} dihapus dari order.',
+                                  actionLabel: 'Urungkan',
+                                  onAction: () {
+                                    if (!mounted) return;
+                                    setState(() {
+                                      _items.insert(
+                                        position.clamp(0, _items.length),
+                                        removed,
+                                      );
+                                      _estimate = null;
+                                    });
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: 20),
+            const _Label('Catatan dan diskon', step: 3),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  children: [
                     TextField(
-                      controller: _payController,
+                      controller: _noteController,
+                      decoration: const InputDecoration(
+                        labelText: 'Catatan order',
+                        hintText: 'Contoh: pisahkan baju putih',
+                        prefixIcon: Icon(Icons.sticky_note_2_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _discountController,
                       keyboardType: TextInputType.number,
                       inputFormatters: rupiahInputFormatters,
                       onChanged: (_) => setState(() {}),
                       decoration: const InputDecoration(
-                        labelText: 'Bayar sekarang',
+                        labelText: 'Diskon',
                         prefixText: 'Rp ',
-                        helperText: 'Jumlah yang diserahkan pelanggan',
-                        prefixIcon: Icon(Icons.payments_outlined),
+                        prefixIcon: Icon(Icons.discount_outlined),
                       ),
                     ),
-                    const SizedBox(height: 10),
-
-                    // Pecahan yang paling sering diserahkan pelanggan, dan
-                    // "Lunasi" untuk pembayaran penuh. Mengetik lima digit di
-                    // konter yang ramai adalah sumber salah ketik.
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        ActionChip(
-                          avatar: const Icon(Icons.done_all, size: 18),
-                          label: const Text('Lunasi'),
-                          onPressed: _total <= 0
-                              ? null
-                              : () => setState(() =>
-                                  _payController.text = formatPlain(_total)),
-                        ),
-                        for (final nominal in const [
-                          25000,
-                          50000,
-                          100000,
-                          150000,
-                          200000,
-                        ])
-                          ActionChip(
-                            label: Text(formatPlain(nominal)),
-                            onPressed: () => setState(() =>
-                                _payController.text = formatPlain(nominal)),
-                          ),
-                      ],
-                    ),
                     const SizedBox(height: 12),
-                    _MethodSelector(
-                      value: _payMethod,
-                      onChanged: (m) => setState(() => _payMethod = m),
+                    TextField(
+                      controller: _extraFeeController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: rupiahInputFormatters,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        labelText: ref.watch(settingsRepoProvider).get(
+                            SettingsKeys.extraFeeLabel,
+                            fallback: 'Biaya lain'),
+                        prefixText: 'Rp ',
+                        helperText: 'Tidak ikut didiskon',
+                        prefixIcon: const Icon(Icons.local_shipping_outlined),
+                      ),
                     ),
+                    const SizedBox(height: 16),
+                    _PerfumePicker(
+                      value: _perfume,
+                      onChanged: (v) => setState(() => _perfume = v),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            const _Label('Pembayaran', step: 4),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: SegmentedButton<bool>(
+                        showSelectedIcon: false,
+                        style: SegmentedButton.styleFrom(
+                          minimumSize: const Size(0, AppTouch.minimum),
+                        ),
+                        segments: const [
+                          ButtonSegment(
+                            value: false,
+                            label: Text('Bayar sekarang'),
+                          ),
+                          ButtonSegment(
+                            value: true,
+                            label: Text('Bayar nanti'),
+                          ),
+                        ],
+                        selected: {_payLater},
+                        onSelectionChanged: (choice) => setState(() {
+                          _payLater = choice.first;
+                          // Jumlah yang sempat diketik tidak boleh ikut
+                          // tersimpan sebagai pembayaran.
+                          if (_payLater) _payController.clear();
+                        }),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    if (_payLater)
+                      _payLaterNote()
+                    else ...[
+                      TextField(
+                        controller: _payController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: rupiahInputFormatters,
+                        onChanged: (_) => setState(() {}),
+                        decoration: const InputDecoration(
+                          labelText: 'Bayar sekarang',
+                          prefixText: 'Rp ',
+                          helperText: 'Jumlah yang diserahkan pelanggan',
+                          prefixIcon: Icon(Icons.payments_outlined),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Pecahan yang paling sering diserahkan pelanggan, dan
+                      // "Lunasi" untuk pembayaran penuh. Mengetik lima digit di
+                      // konter yang ramai adalah sumber salah ketik.
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ActionChip(
+                            avatar: const Icon(Icons.done_all, size: 18),
+                            label: const Text('Lunasi'),
+                            onPressed: _total <= 0
+                                ? null
+                                : () => setState(() =>
+                                    _payController.text = formatPlain(_total)),
+                          ),
+                          for (final nominal in const [
+                            25000,
+                            50000,
+                            100000,
+                            150000,
+                            200000,
+                          ])
+                            ActionChip(
+                              label: Text(formatPlain(nominal)),
+                              onPressed: () => setState(() =>
+                                  _payController.text = formatPlain(nominal)),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _MethodSelector(
+                        value: _payMethod,
+                        onChanged: (m) => setState(() => _payMethod = m),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              decoration: BoxDecoration(
+                gradient: AppGradient.brand(context),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                boxShadow: AppShadow.soft(context),
+              ),
+              child: Column(
+                children: [
+                  _summaryRow('Subtotal', formatRupiah(_subtotal)),
+                  if (_discount > 0)
+                    _summaryRow('Diskon', '- ${formatRupiah(_discount)}'),
+                  if (_extraFee > 0)
+                    _summaryRow(
+                      ref.watch(settingsRepoProvider).get(
+                          SettingsKeys.extraFeeLabel,
+                          fallback: 'Biaya lain'),
+                      formatRupiah(_extraFee),
+                    ),
+                  Divider(color: Colors.white.withValues(alpha: 0.3)),
+                  _summaryRow('Total', formatRupiah(_total), big: true),
+                  if (_payNow > 0) ...[
+                    _summaryRow('Dibayar', formatRupiah(_payNow)),
+                    _summaryRow('Sisa', formatRupiah(_total - _payNow)),
+                  ],
+                  if (_payLater) ...[
+                    _summaryRow('Pembayaran', 'Bayar nanti'),
+                    _summaryRow('Sisa', formatRupiah(_total)),
                   ],
                 ],
               ),
             ),
-          ),
 
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              gradient: AppGradient.brand(context),
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              boxShadow: AppShadow.soft(context),
-            ),
-            child: Column(
-              children: [
-                _summaryRow('Subtotal', formatRupiah(_subtotal)),
-                if (_discount > 0)
-                  _summaryRow('Diskon', '- ${formatRupiah(_discount)}'),
-                if (_extraFee > 0)
-                  _summaryRow(
-                    ref.watch(settingsRepoProvider).get(
-                        SettingsKeys.extraFeeLabel,
-                        fallback: 'Biaya lain'),
-                    formatRupiah(_extraFee),
-                  ),
-                Divider(color: Colors.white.withValues(alpha: 0.3)),
-                _summaryRow('Total', formatRupiah(_total), big: true),
-                if (_payNow > 0) ...[
-                  _summaryRow('Dibayar', formatRupiah(_payNow)),
-                  _summaryRow('Sisa', formatRupiah(_total - _payNow)),
-                ],
-                if (_payLater) ...[
-                  _summaryRow('Pembayaran', 'Bayar nanti'),
-                  _summaryRow('Sisa', formatRupiah(_total)),
-                ],
-              ],
-            ),
-          ),
-
-        ],
-      )),
+          ],
+        ),
+      ),
       ),
     );
   }
@@ -766,57 +768,57 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
               AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.md),
           child: ContentWidth(
             child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      hasItems ? '$qty layanan · Total' : 'Total',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                    Text(
-                      formatRupiah(_total),
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    if (_payLater && hasItems)
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        'Bayar nanti',
+                        hasItems ? '$qty layanan · Total' : 'Total',
                         style: TextStyle(
                           fontSize: 12,
-                          color: scheme.primary,
-                          fontWeight: FontWeight.w600,
+                          color: scheme.onSurfaceVariant,
                         ),
                       ),
-                  ],
+                      Text(
+                        formatRupiah(_total),
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (_payLater && hasItems)
+                        Text(
+                          'Bayar nanti',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: scheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(0, AppTouch.comfortable),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xl),
+                const SizedBox(width: AppSpacing.md),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, AppTouch.comfortable),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.xl),
+                  ),
+                  onPressed: _saving ? null : _save,
+                  icon: _saving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.print),
+                  label: Text(_saving ? 'Menyimpan...' : 'Simpan & Cetak'),
                 ),
-                onPressed: _saving ? null : _save,
-                icon: _saving
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.print),
-                label: Text(_saving ? 'Menyimpan...' : 'Simpan & Cetak'),
-              ),
-            ],
+              ],
             ),
           ),
         ),

@@ -24,62 +24,64 @@ class ServiceSettingsScreen extends ConsumerWidget {
         icon: const Icon(Icons.add),
         label: const Text('Layanan baru'),
       ),
-      body: ContentWidth(child: services.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorState(
-          title: 'Layanan belum bisa dimuat',
-          message: friendlyError(e),
-          onRetry: () => ref.invalidate(servicesProvider),
-        ),
-        data: (list) => list.isEmpty
-            ? EmptyState(
-                icon: Icons.local_laundry_service_outlined,
-                title: 'Belum ada layanan',
-                message: 'Tambahkan layanan seperti Cuci Kiloan atau Setrika '
-                    'beserta harganya. Layanan inilah yang dipilih kasir '
-                    'saat membuat order.',
-                action: FilledButton.icon(
-                  onPressed: () => _edit(context, ref, null),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Tambah layanan pertama'),
-                ),
-              )
-            : ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
-          itemCount: list.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 8),
-          itemBuilder: (context, i) {
-            final service = list[i];
-            return Card(
-                child: ListTile(
-              leading: IconBadge(Icons.local_laundry_service_outlined,
-                  tone: i),
-              title: Text(service.name,
-                  style: Theme.of(context).textTheme.titleMedium),
-              subtitle: Text(
-                '${formatRupiah(service.price)} / ${service.unit.label}'
-                ' · selesai ${service.durationHours} jam'
-                '${service.minQty > 0 ? ' · min ${formatQty(service.minQty)}' : ''}',
-              ),
-              trailing: PopupMenuButton<String>(
-                onSelected: (value) async {
-                  if (value == 'edit') {
-                    _edit(context, ref, service);
-                  } else {
-                    await _deactivate(context, ref, service);
-                  }
+      body: ContentWidth(
+        child: services.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => ErrorState(
+            title: 'Layanan belum bisa dimuat',
+            message: friendlyError(e),
+            onRetry: () => ref.invalidate(servicesProvider),
+          ),
+          data: (list) => list.isEmpty
+              ? EmptyState(
+                  icon: Icons.local_laundry_service_outlined,
+                  title: 'Belum ada layanan',
+                  message: 'Tambahkan layanan seperti Cuci Kiloan atau Setrika '
+                      'beserta harganya. Layanan inilah yang dipilih kasir '
+                      'saat membuat order.',
+                  action: FilledButton.icon(
+                    onPressed: () => _edit(context, ref, null),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Tambah layanan pertama'),
+                  ),
+                )
+              : ListView.separated(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                itemCount: list.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (context, i) {
+                  final service = list[i];
+                  return Card(
+                      child: ListTile(
+                        leading: IconBadge(Icons.local_laundry_service_outlined,
+                            tone: i),
+                        title: Text(service.name,
+                            style: Theme.of(context).textTheme.titleMedium),
+                        subtitle: Text(
+                          '${formatRupiah(service.price)} / ${service.unit.label}'
+                          ' · selesai ${service.durationHours} jam'
+                          '${service.minQty > 0 ? ' · min ${formatQty(service.minQty)}' : ''}',
+                        ),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) async {
+                            if (value == 'edit') {
+                              _edit(context, ref, service);
+                            } else {
+                              await _deactivate(context, ref, service);
+                            }
+                          },
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Ubah')),
+                            PopupMenuItem(
+                                value: 'off', child: Text('Sembunyikan dari kasir')),
+                          ],
+                        ),
+                        onTap: () => _edit(context, ref, service),
+                      ));
                 },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'edit', child: Text('Ubah')),
-                  PopupMenuItem(
-                      value: 'off', child: Text('Sembunyikan dari kasir')),
-                ],
               ),
-              onTap: () => _edit(context, ref, service),
-            ));
-          },
         ),
-      )),
+      ),
     );
   }
 

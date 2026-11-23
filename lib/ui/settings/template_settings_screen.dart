@@ -178,131 +178,133 @@ class _TemplateSettingsScreenState
 
     return Scaffold(
       appBar: AppBar(title: const Text('Template WhatsApp')),
-      body: ContentWidth(child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Cara kerja pengiriman',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 6),
-                  Text(
-                    settings.get(SettingsKeys.whatsappMode,
-                                fallback: 'manual') ==
-                            'api'
-                        ? 'Pesan dikirim otomatis lewat WhatsApp Cloud API, '
-                            'tanpa membuka WhatsApp. Pengiriman diatur di '
-                            'Pengaturan, Pengiriman WhatsApp.'
-                        : 'Aplikasi membuka WhatsApp dengan pesan sudah '
-                            'terisi, kasir tinggal menekan tombol kirim. Cara '
-                            'ini gratis dan tidak berisiko memblokir nomor '
-                            'usaha Anda.',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ],
+      body: ContentWidth(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Cara kerja pengiriman',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    Text(
+                      settings.get(SettingsKeys.whatsappMode,
+                                  fallback: 'manual') ==
+                              'api'
+                          ? 'Pesan dikirim otomatis lewat WhatsApp Cloud API, '
+                              'tanpa membuka WhatsApp. Pengiriman diatur di '
+                              'Pengaturan, Pengiriman WhatsApp.'
+                          : 'Aplikasi membuka WhatsApp dengan pesan sudah '
+                              'terisi, kasir tinggal menekan tombol kirim. Cara '
+                              'ini gratis dan tidak berisiko memblokir nomor '
+                              'usaha Anda.',
+                      style: const TextStyle(fontSize: 13),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-          for (final entry in _toggles.entries)
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(entry.value),
-              value: settings.getBool(
-                entry.key,
-                fallback: entry.key != SettingsKeys.notifyPaymentReceived,
-              ),
-              onChanged: (value) async {
-                await settings.set(entry.key, value ? '1' : '0');
-                ref.invalidate(settingsLoadedProvider);
-                setState(() {});
-              },
             ),
 
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Variabel yang bisa dipakai',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Ketuk di kolom template, lalu ketuk variabel untuk '
-                    'menyisipkannya. {rincian} memuat tiap item dengan '
-                    'jumlah, satuan, harga, dan subtotalnya. {ringkasan} '
-                    'memuat subtotal, diskon, total, sudah dibayar, dan sisa '
-                    'tagihan.',
-                    style: TextStyle(fontSize: 13),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: [
-                      for (final variable in MessageTemplate.variables)
-                        ActionChip(
-                          label: Text(variable,
-                              style: const TextStyle(fontSize: 11.5)),
-                          visualDensity: VisualDensity.compact,
-                          onPressed: () => _insert(variable),
-                        ),
-                    ],
-                  ),
-                ],
+            const SizedBox(height: 16),
+            for (final entry in _toggles.entries)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(entry.value),
+                value: settings.getBool(
+                  entry.key,
+                  fallback: entry.key != SettingsKeys.notifyPaymentReceived,
+                ),
+                onChanged: (value) async {
+                  await settings.set(entry.key, value ? '1' : '0');
+                  ref.invalidate(settingsLoadedProvider);
+                  setState(() {});
+                },
               ),
-            ),
-          ),
 
-          const SizedBox(height: 20),
-          for (final entry in _templates.entries) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: Text(entry.value,
-                      style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Variabel yang bisa dipakai',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Ketuk di kolom template, lalu ketuk variabel untuk '
+                      'menyisipkannya. {rincian} memuat tiap item dengan '
+                      'jumlah, satuan, harga, dan subtotalnya. {ringkasan} '
+                      'memuat subtotal, diskon, total, sudah dibayar, dan sisa '
+                      'tagihan.',
+                      style: TextStyle(fontSize: 13),
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        for (final variable in MessageTemplate.variables)
+                          ActionChip(
+                            label: Text(variable,
+                                style: const TextStyle(fontSize: 11.5)),
+                            visualDensity: VisualDensity.compact,
+                            onPressed: () => _insert(variable),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
-                IconButton(
-                  tooltip: 'Lihat contoh pesan',
-                  icon: const Icon(Icons.visibility_outlined),
-                  onPressed: () => _preview(entry.key),
-                ),
-                TextButton.icon(
-                  onPressed: () => setState(() {
-                    _controllers[entry.key]!.text = _defaults[entry.key]!;
-                  }),
-                  icon: const Icon(Icons.restore, size: 18),
-                  label: const Text('Pulihkan bawaan'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _controllers[entry.key],
-              focusNode: _focusNodes[entry.key],
-              minLines: 8,
-              maxLines: 20,
-              decoration: const InputDecoration(
-                alignLabelWithHint: true,
               ),
             ),
+
             const SizedBox(height: 20),
-          ],
+            for (final entry in _templates.entries) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(entry.value,
+                        style: Theme.of(context).textTheme.titleMedium),
+                  ),
+                  IconButton(
+                    tooltip: 'Lihat contoh pesan',
+                    icon: const Icon(Icons.visibility_outlined),
+                    onPressed: () => _preview(entry.key),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => setState(() {
+                      _controllers[entry.key]!.text = _defaults[entry.key]!;
+                    }),
+                    icon: const Icon(Icons.restore, size: 18),
+                    label: const Text('Pulihkan bawaan'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _controllers[entry.key],
+                focusNode: _focusNodes[entry.key],
+                minLines: 8,
+                maxLines: 20,
+                decoration: const InputDecoration(
+                  alignLabelWithHint: true,
+                ),
+              ),
+              const SizedBox(height: 20),
+            ],
 
-          FilledButton.icon(
-            onPressed: _save,
-            icon: const Icon(Icons.save_outlined),
-            label: const Text('Simpan template'),
-          ),
-        ],
-      )),
+            FilledButton.icon(
+              onPressed: _save,
+              icon: const Icon(Icons.save_outlined),
+              label: const Text('Simpan template'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

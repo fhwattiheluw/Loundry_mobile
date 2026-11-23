@@ -120,63 +120,65 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
         icon: const Icon(Icons.person_add_outlined),
         label: const Text('Tambah kasir'),
       ),
-      body: ContentWidth(child: ListView(
-        padding: const EdgeInsets.fromLTRB(0, 8, 0, 96),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Text(
-              'Setiap transaksi menyimpan siapa yang membuatnya. Beri PIN '
-              'berbeda untuk tiap kasir supaya selisih kas bisa dilacak.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
-          // Kode pemulihan hanya berguna bila pemilik tahu ia ada. Ditaruh
-          // di atas daftar pengguna, bukan terkubur di bawahnya.
-          Card(
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: ListTile(
-              leading: const IconBadge(Icons.key_outlined, tone: 11),
-              title: const Text('Kode pemulihan PIN'),
-              subtitle: Text(
-                ref.read(pinRecoveryProvider).hasRecoveryCode
-                    ? 'Sudah dibuat. Buat baru bila catatannya hilang.'
-                    : 'Belum ada. Buat sekarang dan catat di tempat aman.',
+      body: ContentWidth(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(0, 8, 0, 96),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: Text(
+                'Setiap transaksi menyimpan siapa yang membuatnya. Beri PIN '
+                'berbeda untuk tiap kasir supaya selisih kas bisa dilacak.',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: _regenerateRecoveryCode,
             ),
-          ),
+            // Kode pemulihan hanya berguna bila pemilik tahu ia ada. Ditaruh
+            // di atas daftar pengguna, bukan terkubur di bawahnya.
+            Card(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: ListTile(
+                leading: const IconBadge(Icons.key_outlined, tone: 11),
+                title: const Text('Kode pemulihan PIN'),
+                subtitle: Text(
+                  ref.read(pinRecoveryProvider).hasRecoveryCode
+                      ? 'Sudah dibuat. Buat baru bila catatannya hilang.'
+                      : 'Belum ada. Buat sekarang dan catat di tempat aman.',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _regenerateRecoveryCode,
+              ),
+            ),
 
-          for (final user in _users) ...[
-            ListTile(
-              leading: CircleAvatar(
-                child: Icon(
-                  user.isOwner ? Icons.admin_panel_settings : Icons.person,
+            for (final user in _users) ...[
+              ListTile(
+                leading: CircleAvatar(
+                  child: Icon(
+                    user.isOwner ? Icons.admin_panel_settings : Icons.person,
+                  ),
+                ),
+                title: Text(user.name,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(user.role.label),
+                trailing: PopupMenuButton<String>(
+                  onSelected: (value) async {
+                    if (value == 'pin') {
+                      await _resetPin(user);
+                    } else {
+                      await _deactivate(user);
+                    }
+                  },
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'pin', child: Text('Ganti PIN')),
+                    PopupMenuItem(
+                        value: 'off', child: Text('Nonaktifkan akun')),
+                  ],
                 ),
               ),
-              title: Text(user.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text(user.role.label),
-              trailing: PopupMenuButton<String>(
-                onSelected: (value) async {
-                  if (value == 'pin') {
-                    await _resetPin(user);
-                  } else {
-                    await _deactivate(user);
-                  }
-                },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(value: 'pin', child: Text('Ganti PIN')),
-                  PopupMenuItem(
-                      value: 'off', child: Text('Nonaktifkan akun')),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
+              const Divider(height: 1),
+            ],
           ],
-        ],
-      )),
+        ),
+      ),
     );
   }
 

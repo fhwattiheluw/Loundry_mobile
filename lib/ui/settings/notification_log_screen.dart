@@ -72,54 +72,56 @@ class _NotificationLogScreenState
           ),
         ],
       ),
-      body: ContentWidth(child: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _rows.isEmpty
-              ? const EmptyState(
-                  icon: Icons.mark_chat_read_outlined,
-                  title: 'Semua pesan sudah terkirim',
-                  message: 'Pesan yang gagal akan muncul di sini untuk dicoba lagi.',
-                  tone: EmptyTone.good,
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                  itemCount: _rows.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, i) {
-                    final row = _rows[i];
-                    final pending = row['status'] == 'tertunda';
-                    final attempts = (row['attempts'] as num?)?.toInt() ?? 0;
-                    final nextAt = row['next_attempt_at'] as String?;
+      body: ContentWidth(
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : _rows.isEmpty
+                ? const EmptyState(
+                    icon: Icons.mark_chat_read_outlined,
+                    title: 'Semua pesan sudah terkirim',
+                    message: 'Pesan yang gagal akan muncul di sini untuk dicoba lagi.',
+                    tone: EmptyTone.good,
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                    itemCount: _rows.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, i) {
+                      final row = _rows[i];
+                      final pending = row['status'] == 'tertunda';
+                      final attempts = (row['attempts'] as num?)?.toInt() ?? 0;
+                      final nextAt = row['next_attempt_at'] as String?;
 
-                    return Card(
-                        child: ListTile(
-                      leading: IconBadge(
-                        pending ? Icons.schedule : Icons.error_outline,
-                        color: pending
-                            ? scheme.primary
-                            : context.status.belumLunas,
-                      ),
-                      title: Text(
-                        '${row['order_no']}  ${row['customer_name']}',
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: Text(
-                        '${NotificationTrigger.fromDb(row['trigger_name'] as String).label}'
-                        ' · percobaan $attempts\n'
-                        '${formatDateTime(DateTime.parse(row['sent_at'] as String))}'
-                        '${nextAt != null ? '\nDicoba lagi ${formatDateTime(DateTime.parse(nextAt))}' : ''}'
-                        '${row['error'] != null ? '\n${row['error']}' : ''}',
-                        style: const TextStyle(fontSize: 12.5),
-                      ),
-                      isThreeLine: true,
-                      trailing: IconButton(
-                        tooltip: 'Kirim ulang sekarang',
-                        icon: const Icon(Icons.send),
-                        onPressed: () => _resend(row['id'] as int),
-                      ),
-                    ));
-                  },
-                )),
+                      return Card(
+                          child: ListTile(
+                            leading: IconBadge(
+                              pending ? Icons.schedule : Icons.error_outline,
+                              color: pending
+                                  ? scheme.primary
+                                  : context.status.belumLunas,
+                            ),
+                            title: Text(
+                              '${row['order_no']}  ${row['customer_name']}',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: Text(
+                              '${NotificationTrigger.fromDb(row['trigger_name'] as String).label}'
+                              ' · percobaan $attempts\n'
+                              '${formatDateTime(DateTime.parse(row['sent_at'] as String))}'
+                              '${nextAt != null ? '\nDicoba lagi ${formatDateTime(DateTime.parse(nextAt))}' : ''}'
+                              '${row['error'] != null ? '\n${row['error']}' : ''}',
+                              style: const TextStyle(fontSize: 12.5),
+                            ),
+                            isThreeLine: true,
+                            trailing: IconButton(
+                              tooltip: 'Kirim ulang sekarang',
+                              icon: const Icon(Icons.send),
+                              onPressed: () => _resend(row['id'] as int),
+                            ),
+                          ));
+                    },
+                  ),
+      ),
     );
   }
 }

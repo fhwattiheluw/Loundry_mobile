@@ -99,141 +99,143 @@ class _PrinterSettingsScreenState
           ),
         ],
       ),
-      body: ContentWidth(child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-        children: [
-          const Text('Lebar kertas',
-              style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(value: '58', label: Text('58 mm')),
-              ButtonSegment(value: '80', label: Text('80 mm')),
-            ],
-            selected: {paperWidth},
-            onSelectionChanged: (value) async {
-              await settings.set(SettingsKeys.paperWidth, value.first);
-              ref.invalidate(settingsLoadedProvider);
-              setState(() {});
-            },
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Salah pilih lebar kertas membuat kolom harga terpotong atau '
-            'turun baris. Pakai uji cetak untuk memastikan.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+      body: ContentWidth(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+          children: [
+            const Text('Lebar kertas',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: '58', label: Text('58 mm')),
+                ButtonSegment(value: '80', label: Text('80 mm')),
+              ],
+              selected: {paperWidth},
+              onSelectionChanged: (value) async {
+                await settings.set(SettingsKeys.paperWidth, value.first);
+                ref.invalidate(settingsLoadedProvider);
+                setState(() {});
+              },
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Salah pilih lebar kertas membuat kolom harga terpotong atau '
+              'turun baris. Pakai uji cetak untuk memastikan.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
 
-          const SizedBox(height: 20),
-          Text('Jumlah salinan nota',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Expanded(
-                child: Slider(
-                  value: copies.toDouble().clamp(1, 3),
-                  min: 1,
-                  max: 3,
-                  divisions: 2,
-                  label: '$copies',
-                  onChanged: (value) async {
-                    await settings.set(
-                        SettingsKeys.receiptCopies, value.round().toString());
+            const SizedBox(height: 20),
+            Text('Jumlah salinan nota',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Expanded(
+                  child: Slider(
+                    value: copies.toDouble().clamp(1, 3),
+                    min: 1,
+                    max: 3,
+                    divisions: 2,
+                    label: '$copies',
+                    onChanged: (value) async {
+                      await settings.set(
+                          SettingsKeys.receiptCopies, value.round().toString());
+                      ref.invalidate(settingsLoadedProvider);
+                      setState(() {});
+                    },
+                  ),
+                ),
+                Text('$copies lembar'),
+              ],
+            ),
+            Text(
+              'Biasanya 2: satu untuk pelanggan, satu ditempel di cucian.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+
+            const SizedBox(height: 20),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Cetak QR nomor nota'),
+              subtitle: const Text(
+                'Dipindai saat pengambilan supaya tidak perlu mengetik nomor. '
+                'Matikan bila printer Anda tidak mendukung QR.',
+              ),
+              value: settings.getBool(SettingsKeys.receiptQrEnabled),
+              onChanged: (value) async {
+                await settings.set(
+                    SettingsKeys.receiptQrEnabled, value ? '1' : '0');
+                ref.invalidate(settingsLoadedProvider);
+                setState(() {});
+              },
+            ),
+
+            const SizedBox(height: 24),
+            Text('Pilih printer',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_message != null)
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      const IconBadge(Icons.info_outline, tone: 1),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(_message!)),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Card(
+                child: RadioGroup<String>(
+                  groupValue: selected,
+                  onChanged: (address) async {
+                    final picked = _devices
+                        .where((d) => d.address == address)
+                        .firstOrNull;
+                    if (picked == null) return;
+
+                    await ref.read(printerProvider).saveDefault(picked);
                     ref.invalidate(settingsLoadedProvider);
                     setState(() {});
                   },
-                ),
-              ),
-              Text('$copies lembar'),
-            ],
-          ),
-          Text(
-            'Biasanya 2: satu untuk pelanggan, satu ditempel di cucian.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-
-          const SizedBox(height: 20),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            title: const Text('Cetak QR nomor nota'),
-            subtitle: const Text(
-              'Dipindai saat pengambilan supaya tidak perlu mengetik nomor. '
-              'Matikan bila printer Anda tidak mendukung QR.',
-            ),
-            value: settings.getBool(SettingsKeys.receiptQrEnabled),
-            onChanged: (value) async {
-              await settings.set(
-                  SettingsKeys.receiptQrEnabled, value ? '1' : '0');
-              ref.invalidate(settingsLoadedProvider);
-              setState(() {});
-            },
-          ),
-
-          const SizedBox(height: 24),
-          Text('Pilih printer',
-              style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-
-          if (_loading)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_message != null)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    const IconBadge(Icons.info_outline, tone: 1),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(_message!)),
-                  ],
-                ),
-              ),
-            )
-          else
-            Card(
-              child: RadioGroup<String>(
-                groupValue: selected,
-                onChanged: (address) async {
-                  final picked = _devices
-                      .where((d) => d.address == address)
-                      .firstOrNull;
-                  if (picked == null) return;
-
-                  await ref.read(printerProvider).saveDefault(picked);
-                  ref.invalidate(settingsLoadedProvider);
-                  setState(() {});
-                },
-                child: Column(
-                  children: [
-                    for (var i = 0; i < _devices.length; i++) ...[
-                      if (i > 0) const Divider(height: 1),
-                      RadioListTile<String>(
-                        secondary: IconBadge(Icons.print_outlined, tone: i),
-                        value: _devices[i].address,
-                        title: Text(_devices[i].name),
-                        subtitle: Text(_devices[i].address),
-                      ),
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < _devices.length; i++) ...[
+                        if (i > 0) const Divider(height: 1),
+                        RadioListTile<String>(
+                          secondary: IconBadge(Icons.print_outlined, tone: i),
+                          value: _devices[i].address,
+                          title: Text(_devices[i].name),
+                          subtitle: Text(_devices[i].address),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
 
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(0, AppTouch.comfortable),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size(0, AppTouch.comfortable),
+              ),
+              onPressed: selected.isEmpty ? null : _testPrint,
+              icon: const Icon(Icons.print_outlined),
+              label: const Text('Uji cetak'),
             ),
-            onPressed: selected.isEmpty ? null : _testPrint,
-            icon: const Icon(Icons.print_outlined),
-            label: const Text('Uji cetak'),
-          ),
-        ],
-      )),
+          ],
+        ),
+      ),
     );
   }
 }

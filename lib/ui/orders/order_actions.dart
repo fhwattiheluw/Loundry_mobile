@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
-import '../../services/notification/notification_service.dart';
 
 /// Aksi yang sama dipakai dari baris tombol, menu tiga titik, dan layar
 /// sukses. Dikumpulkan di sini supaya perilakunya tidak berbeda-beda

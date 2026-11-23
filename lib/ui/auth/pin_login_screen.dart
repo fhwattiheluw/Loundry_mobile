@@ -121,113 +121,115 @@ class _PinLoginScreenState extends ConsumerState<PinLoginScreen>
         settings.get(SettingsKeys.businessName, fallback: 'Laundry Manise');
 
     return Scaffold(
-      body: ContentWidth(child: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const AnimatedAppLogo(size: 104),
-                  const SizedBox(height: 14),
+      body: ContentWidth(
+        child: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const AnimatedAppLogo(size: 104),
+                    const SizedBox(height: 14),
 
-                  // Nama usaha dan petunjuk muncul sedikit setelah logo,
-                  // supaya mata berhenti dulu di logo, baru membaca.
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0, end: 1),
-                    duration: const Duration(milliseconds: 650),
-                    curve: const Interval(0.35, 1, curve: Curves.easeOut),
-                    builder: (context, t, child) => Opacity(
-                      opacity: t,
-                      child: Transform.translate(
-                        offset: Offset(0, (1 - t) * 10),
-                        child: child,
+                    // Nama usaha dan petunjuk muncul sedikit setelah logo,
+                    // supaya mata berhenti dulu di logo, baru membaca.
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 650),
+                      curve: const Interval(0.35, 1, curve: Curves.easeOut),
+                      builder: (context, t, child) => Opacity(
+                        opacity: t,
+                        child: Transform.translate(
+                          offset: Offset(0, (1 - t) * 10),
+                          child: child,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(
+                            businessName,
+                            style: const TextStyle(
+                                fontSize: 22, fontWeight: FontWeight.w700),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 4),
+                          const Text('Masukkan PIN Anda, 4 sampai 6 digit'),
+                        ],
                       ),
                     ),
-                    child: Column(
-                      children: [
-                        Text(
-                          businessName,
-                          style: const TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.w700),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 4),
-                        const Text('Masukkan PIN Anda, 4 sampai 6 digit'),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 28),
+                    const SizedBox(height: 28),
 
-                  AnimatedBuilder(
-                    animation: _shake,
-                    builder: (context, child) {
-                      final t = _shake.value;
-                      // Ayunan yang mengecil, bukan getaran tetap: terasa
-                      // seperti kepala menggeleng sekali, lalu berhenti.
-                      final offset =
-                          math.sin(t * math.pi * 4) * 12 * (1 - t);
-                      return Transform.translate(
-                        offset: Offset(offset, 0),
-                        child: child,
-                      );
-                    },
-                    child: _Dots(length: _pin.length, max: _maxLength),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 24,
-                    child: _checking
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(
-                            _error ?? '',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                              fontWeight: FontWeight.w600,
+                    AnimatedBuilder(
+                      animation: _shake,
+                      builder: (context, child) {
+                        final t = _shake.value;
+                        // Ayunan yang mengecil, bukan getaran tetap: terasa
+                        // seperti kepala menggeleng sekali, lalu berhenti.
+                        final offset =
+                            math.sin(t * math.pi * 4) * 12 * (1 - t);
+                        return Transform.translate(
+                          offset: Offset(offset, 0),
+                          child: child,
+                        );
+                      },
+                      child: _Dots(length: _pin.length, max: _maxLength),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 24,
+                      child: _checking
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Text(
+                              _error ?? '',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Hanya pemilik yang punya jalan pemulihan. Kasir yang
-                  // lupa PIN cukup diberi PIN baru oleh pemiliknya.
-                  TextButton(
-                    onPressed: () async {
-                      final changed = await Navigator.of(context).push<bool>(
-                        MaterialPageRoute(
-                          builder: (_) => const ForgotPinScreen(),
-                        ),
-                      );
-                      if (changed == true && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                                'PIN pemilik sudah diganti. Masuk dengan PIN baru.'),
+                    ),
+                    const SizedBox(height: 12),
+                    // Hanya pemilik yang punya jalan pemulihan. Kasir yang
+                    // lupa PIN cukup diberi PIN baru oleh pemiliknya.
+                    TextButton(
+                      onPressed: () async {
+                        final changed = await Navigator.of(context).push<bool>(
+                          MaterialPageRoute(
+                            builder: (_) => const ForgotPinScreen(),
                           ),
                         );
-                      }
-                    },
-                    child: const Text('Lupa PIN pemilik?'),
-                  ),
-                  const SizedBox(height: 4),
+                        if (changed == true && context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'PIN pemilik sudah diganti. Masuk dengan PIN baru.'),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text('Lupa PIN pemilik?'),
+                    ),
+                    const SizedBox(height: 4),
 
-                  _Keypad(
-                    onDigit: _tap,
-                    onBackspace: _backspace,
-                    onSubmit: _submit,
-                    canSubmit: _pin.length >= _minLength && !_checking,
-                  ),
-                ],
+                    _Keypad(
+                      onDigit: _tap,
+                      onBackspace: _backspace,
+                      onSubmit: _submit,
+                      canSubmit: _pin.length >= _minLength && !_checking,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      )),
+      ),
     );
   }
 }

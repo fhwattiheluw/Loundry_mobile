@@ -130,93 +130,95 @@ class _BroadcastScreenState extends ConsumerState<BroadcastScreen> {
           ),
         ],
       ),
-      body: ContentWidth(child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: _messageController,
-                  maxLines: 4,
-                  onChanged: (_) => setState(() {}),
-                  decoration: const InputDecoration(
-                    labelText: 'Isi pesan promo',
-                    hintText:
-                        'Halo {nama}, ada diskon 20% untuk cuci kiloan minggu ini!',
-                    helperText: 'Bisa memakai {nama} dan {nama_usaha}',
-                  ),
-                ),
-                const SizedBox(height: 10),
-                if (!isApiMode)
-                  Text(
-                    'Mode manual: WhatsApp terbuka satu per satu dan Anda '
-                    'menekan kirim sendiri. Cara ini aman untuk nomor usaha.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+      body: ContentWidth(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: _messageController,
+                    maxLines: 4,
+                    onChanged: (_) => setState(() {}),
+                    decoration: const InputDecoration(
+                      labelText: 'Isi pesan promo',
+                      hintText:
+                          'Halo {nama}, ada diskon 20% untuk cuci kiloan minggu ini!',
+                      helperText: 'Bisa memakai {nama} dan {nama_usaha}',
                     ),
                   ),
-              ],
-            ),
-          ),
-          const Divider(height: 1),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _targets.isEmpty
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(32),
-                          child: Text(
-                            'Belum ada pelanggan yang bisa dikirimi pesan. '
-                            'Pelanggan perlu punya nomor WhatsApp dan '
-                            'mengizinkan notifikasi.',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: _targets.length,
-                        itemBuilder: (context, i) {
-                          final customer = _targets[i];
-                          final done = _sent.contains(customer.id);
-
-                          return CheckboxListTile(
-                            value: _selected.contains(customer.id),
-                            onChanged: done
-                                ? null
-                                : (checked) => setState(() {
-                                      if (checked == true) {
-                                        _selected.add(customer.id!);
-                                      } else {
-                                        _selected.remove(customer.id);
-                                      }
-                                    }),
-                            title: Text(customer.name),
-                            subtitle: Text(
-                              done
-                                  ? 'Sudah dikirim'
-                                  : prettyPhone(customer.phone),
-                            ),
-                            secondary: done
-                                ? Icon(Icons.check_circle,
-                                    color: context.status.lunas)
-                                : IconButton(
-                                    tooltip: 'Kirim ke pelanggan ini',
-                                    icon: const Icon(Icons.send),
-                                    onPressed:
-                                        _messageController.text.trim().isEmpty
-                                            ? null
-                                            : () => _sendTo(customer),
-                                  ),
-                          );
-                        },
+                  const SizedBox(height: 10),
+                  if (!isApiMode)
+                    Text(
+                      'Mode manual: WhatsApp terbuka satu per satu dan Anda '
+                      'menekan kirim sendiri. Cara ini aman untuk nomor usaha.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
-          ),
-        ],
-      )),
+                    ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _targets.isEmpty
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(32),
+                            child: Text(
+                              'Belum ada pelanggan yang bisa dikirimi pesan. '
+                              'Pelanggan perlu punya nomor WhatsApp dan '
+                              'mengizinkan notifikasi.',
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: _targets.length,
+                          itemBuilder: (context, i) {
+                            final customer = _targets[i];
+                            final done = _sent.contains(customer.id);
+
+                            return CheckboxListTile(
+                              value: _selected.contains(customer.id),
+                              onChanged: done
+                                  ? null
+                                  : (checked) => setState(() {
+                                        if (checked == true) {
+                                          _selected.add(customer.id!);
+                                        } else {
+                                          _selected.remove(customer.id);
+                                        }
+                                      }),
+                              title: Text(customer.name),
+                              subtitle: Text(
+                                done
+                                    ? 'Sudah dikirim'
+                                    : prettyPhone(customer.phone),
+                              ),
+                              secondary: done
+                                  ? Icon(Icons.check_circle,
+                                      color: context.status.lunas)
+                                  : IconButton(
+                                      tooltip: 'Kirim ke pelanggan ini',
+                                      icon: const Icon(Icons.send),
+                                      onPressed:
+                                          _messageController.text.trim().isEmpty
+                                              ? null
+                                              : () => _sendTo(customer),
+                                    ),
+                            );
+                          },
+                        ),
+            ),
+          ],
+        ),
+      ),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),

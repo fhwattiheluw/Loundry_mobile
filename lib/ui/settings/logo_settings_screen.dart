@@ -91,76 +91,78 @@ class _LogoSettingsScreenState extends ConsumerState<LogoSettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Logo di nota')),
-      body: ContentWidth(child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  if (hasLogo)
-                    // Pratinjau hitam putih, karena begitulah nanti
-                    // tercetak di printer thermal.
-                    ColorFiltered(
-                      colorFilter: const ColorFilter.matrix([
-                        0.2126, 0.7152, 0.0722, 0, 0, //
-                        0.2126, 0.7152, 0.0722, 0, 0, //
-                        0.2126, 0.7152, 0.0722, 0, 0, //
-                        0, 0, 0, 1, 0, //
-                      ]),
-                      child: Image.file(
-                        File(path),
-                        height: 120,
-                        fit: BoxFit.contain,
+      body: ContentWidth(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    if (hasLogo)
+                      // Pratinjau hitam putih, karena begitulah nanti
+                      // tercetak di printer thermal.
+                      ColorFiltered(
+                        colorFilter: const ColorFilter.matrix([
+                          0.2126, 0.7152, 0.0722, 0, 0, //
+                          0.2126, 0.7152, 0.0722, 0, 0, //
+                          0.2126, 0.7152, 0.0722, 0, 0, //
+                          0, 0, 0, 1, 0, //
+                        ]),
+                        child: Image.file(
+                          File(path),
+                          height: 120,
+                          fit: BoxFit.contain,
+                        ),
+                      )
+                    else
+                      Column(
+                        children: [
+                          Icon(Icons.image_outlined,
+                              size: 56, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          const SizedBox(height: 10),
+                          Text('Belum ada logo',
+                              style: Theme.of(context).textTheme.bodySmall),
+                        ],
                       ),
-                    )
-                  else
-                    Column(
-                      children: [
-                        Icon(Icons.image_outlined,
-                            size: 56, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                        const SizedBox(height: 10),
-                        Text('Belum ada logo',
-                            style: Theme.of(context).textTheme.bodySmall),
-                      ],
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
 
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            onPressed: _busy ? null : _pick,
-            icon: const Icon(Icons.photo_library_outlined),
-            label: Text(hasLogo ? 'Ganti logo' : 'Pilih logo dari galeri'),
-          ),
-
-          if (hasLogo) ...[
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: _busy ? null : _testPrint,
-              icon: const Icon(Icons.print_outlined),
-              label: const Text('Uji cetak'),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: _busy ? null : _pick,
+              icon: const Icon(Icons.photo_library_outlined),
+              label: Text(hasLogo ? 'Ganti logo' : 'Pilih logo dari galeri'),
             ),
-            const SizedBox(height: 12),
-            TextButton.icon(
-              onPressed: _busy ? null : _remove,
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Hapus logo'),
+
+            if (hasLogo) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _busy ? null : _testPrint,
+                icon: const Icon(Icons.print_outlined),
+                label: const Text('Uji cetak'),
+              ),
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: _busy ? null : _remove,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Hapus logo'),
+              ),
+            ],
+
+            const SizedBox(height: 24),
+            Text(
+              'Printer thermal hanya mencetak hitam putih. Logo dengan garis '
+              'tebal dan kontras tinggi hasilnya paling baik; logo berwarna '
+              'lembut atau bergradasi biasanya tercetak jadi bercak abu-abu.',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
           ],
-
-          const SizedBox(height: 24),
-          Text(
-            'Printer thermal hanya mencetak hitam putih. Logo dengan garis '
-            'tebal dan kontras tinggi hasilnya paling baik; logo berwarna '
-            'lembut atau bergradasi biasanya tercetak jadi bercak abu-abu.',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      )),
+        ),
+      ),
     );
   }
 }

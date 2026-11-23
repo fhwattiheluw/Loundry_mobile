@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
+import '../../core/security.dart';
 import '../../core/design_system.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
@@ -41,19 +42,21 @@ class OrderDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: ContentWidth(child: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ErrorState(
-          title: 'Order tidak bisa dibuka',
-          message: friendlyError(e),
+      body: ContentWidth(
+        child: async.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => ErrorState(
+            title: 'Order tidak bisa dibuka',
+            message: friendlyError(e),
+          ),
+          data: (order) {
+            if (order == null) {
+              return const Center(child: Text('Order tidak ditemukan.'));
+            }
+            return _Body(order: order);
+          },
         ),
-        data: (order) {
-          if (order == null) {
-            return const Center(child: Text('Order tidak ditemukan.'));
-          }
-          return _Body(order: order);
-        },
-      )),
+      ),
       bottomNavigationBar: async.maybeWhen(
         data: (order) =>
             order == null ? null : _ActionBar(order: order),

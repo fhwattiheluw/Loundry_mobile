@@ -107,221 +107,224 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                 ),
               ],
       ),
-      body: ContentWidth(maxWidth: 900, child: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(context.screenPadding, AppSpacing.sm, context.screenPadding, 0),
-            child: TextField(
-              controller: _searchController,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: 'Cari nomor nota, nama, atau nomor HP',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.pill),
-                  borderSide: BorderSide(
-                    color: Theme.of(context).colorScheme.primary,
-                    width: 2,
+      body: ContentWidth(
+        maxWidth: 900,
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(context.screenPadding, AppSpacing.sm, context.screenPadding, 0),
+              child: TextField(
+                controller: _searchController,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: 'Cari nomor nota, nama, atau nomor HP',
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    borderSide: BorderSide.none,
                   ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                    borderSide: BorderSide(
+                      color: Theme.of(context).colorScheme.primary,
+                      width: 2,
+                    ),
+                  ),
+                  suffixIcon: filter.query.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: 'Hapus pencarian',
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            _setFilter(filter.copyWith(query: ''));
+                          },
+                        ),
                 ),
-                suffixIcon: filter.query.isEmpty
-                    ? null
-                    : IconButton(
-                        tooltip: 'Hapus pencarian',
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          _setFilter(filter.copyWith(query: ''));
-                        },
-                      ),
+                onChanged: (value) => _setFilter(filter.copyWith(query: value)),
               ),
-              onChanged: (value) => _setFilter(filter.copyWith(query: value)),
             ),
-          ),
-          SizedBox(
-            height: 56,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.symmetric(horizontal: context.screenPadding - AppSpacing.xs),
-              children: [
-                _chip(
-                  'Semua',
-                  selected: filter.statuses.isEmpty && !filter.unpaidOnly,
-                  onTap: () => _setFilter(const OrderFilter()),
-                ),
-                for (final status in [
-                  LaundryStatus.diterima,
-                  LaundryStatus.diproses,
-                  LaundryStatus.selesai,
-                  LaundryStatus.diambil,
-                ])
+            SizedBox(
+              height: 56,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: context.screenPadding - AppSpacing.xs),
+                children: [
                   _chip(
-                    status.label,
-                    selected: filter.statuses.contains(status),
+                    'Semua',
+                    selected: filter.statuses.isEmpty && !filter.unpaidOnly,
+                    onTap: () => _setFilter(const OrderFilter()),
+                  ),
+                  for (final status in [
+                    LaundryStatus.diterima,
+                    LaundryStatus.diproses,
+                    LaundryStatus.selesai,
+                    LaundryStatus.diambil,
+                  ])
+                    _chip(
+                      status.label,
+                      selected: filter.statuses.contains(status),
+                      onTap: () => _setFilter(OrderFilter(
+                        statuses: [status],
+                        query: filter.query,
+                      )),
+                    ),
+                  _chip(
+                    'Belum lunas',
+                    selected: filter.unpaidOnly,
                     onTap: () => _setFilter(OrderFilter(
-                      statuses: [status],
+                      unpaidOnly: true,
                       query: filter.query,
                     )),
                   ),
-                _chip(
-                  'Belum lunas',
-                  selected: filter.unpaidOnly,
-                  onTap: () => _setFilter(OrderFilter(
-                    unpaidOnly: true,
-                    query: filter.query,
-                  )),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          Expanded(
-            child: orders.when(
-              loading: () => ListView.separated(
-                padding: screenPadding(context, bottom: 96),
-                itemCount: 4,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: AppSpacing.md),
-                itemBuilder: (_, __) => const OrderCardSkeleton(),
-              ),
-              error: (e, _) => ErrorState(
-                message: friendlyError(e),
-                onRetry: () => ref.refreshOrderData(),
-              ),
-              data: (raw) {
-                final now = DateTime.now();
-                final list = raw;
+            Expanded(
+              child: orders.when(
+                loading: () => ListView.separated(
+                  padding: screenPadding(context, bottom: 96),
+                  itemCount: 4,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: AppSpacing.md),
+                  itemBuilder: (_, __) => const OrderCardSkeleton(),
+                ),
+                error: (e, _) => ErrorState(
+                  message: friendlyError(e),
+                  onRetry: () => ref.refreshOrderData(),
+                ),
+                data: (raw) {
+                  final now = DateTime.now();
+                  final list = raw;
 
-                if (list.isEmpty) {
-                  final searching = filter.query.trim().isNotEmpty;
-                  final filtering =
-                      filter.statuses.isNotEmpty || filter.unpaidOnly;
+                  if (list.isEmpty) {
+                    final searching = filter.query.trim().isNotEmpty;
+                    final filtering =
+                        filter.statuses.isNotEmpty || filter.unpaidOnly;
 
-                  // Tiga keadaan kosong yang berbeda butuh tiga jalan keluar
-                  // yang berbeda: belum pernah ada order, pencarian tidak
-                  // menemukan apa pun, atau filter terlalu sempit.
-                  if (searching) {
+                    // Tiga keadaan kosong yang berbeda butuh tiga jalan keluar
+                    // yang berbeda: belum pernah ada order, pencarian tidak
+                    // menemukan apa pun, atau filter terlalu sempit.
+                    if (searching) {
+                      return EmptyState(
+                        icon: Icons.search_off,
+                        title: 'Tidak ada yang cocok',
+                        message: 'Tidak ada order untuk "${filter.query.trim()}". '
+                            'Coba nama, nomor HP, atau nomor nota yang lain.',
+                        action: OutlinedButton(
+                          onPressed: () {
+                            _searchController.clear();
+                            _setFilter(filter.copyWith(query: ''));
+                          },
+                          child: const Text('Hapus pencarian'),
+                        ),
+                      );
+                    }
+
+                    if (filtering) {
+                      return EmptyState(
+                        icon: Icons.filter_alt_off_outlined,
+                        title: 'Tidak ada order di filter ini',
+                        message: 'Coba filter lain, atau tampilkan semua order.',
+                        action: OutlinedButton(
+                          onPressed: () => _setFilter(const OrderFilter()),
+                          child: const Text('Tampilkan semua'),
+                        ),
+                      );
+                    }
+
                     return EmptyState(
-                      icon: Icons.search_off,
-                      title: 'Tidak ada yang cocok',
-                      message: 'Tidak ada order untuk "${filter.query.trim()}". '
-                          'Coba nama, nomor HP, atau nomor nota yang lain.',
-                      action: OutlinedButton(
-                        onPressed: () {
-                          _searchController.clear();
-                          _setFilter(filter.copyWith(query: ''));
+                      icon: Icons.inbox_outlined,
+                      title: 'Belum ada order',
+                      message: 'Order pertama Anda akan muncul di sini. '
+                          'Pelanggan dan nomor nota dibuat otomatis.',
+                      action: FilledButton.icon(
+                        onPressed: () async {
+                          final created = await Navigator.of(context).push<bool>(
+                            MaterialPageRoute(
+                                builder: (_) => const NewOrderScreen()),
+                          );
+                          if (created == true) ref.refreshOrderData();
                         },
-                        child: const Text('Hapus pencarian'),
+                        icon: const Icon(Icons.add),
+                        label: const Text('Buat order pertama'),
                       ),
                     );
                   }
 
-                  if (filtering) {
-                    return EmptyState(
-                      icon: Icons.filter_alt_off_outlined,
-                      title: 'Tidak ada order di filter ini',
-                      message: 'Coba filter lain, atau tampilkan semua order.',
-                      action: OutlinedButton(
-                        onPressed: () => _setFilter(const OrderFilter()),
-                        child: const Text('Tampilkan semua'),
-                      ),
-                    );
+                  // Iklan native disisipkan setelah kartu ketiga, bukan di
+                  // puncak daftar: tiga order teratas adalah yang paling
+                  // sering dicari kasir, dan mendorongnya turun akan
+                  // memperlambat pekerjaan setiap hari.
+                  //
+                  // Tidak disisipkan sama sekali bila order sedang dipilih
+                  // untuk aksi massal, supaya nomor urut yang dilihat kasir
+                  // tidak bergeser di tengah pemilihan.
+                  //
+                  // Dengan kurang dari tiga order, iklan ditaruh setelah
+                  // order terakhir, jadi toko yang masih sepi pun tetap
+                  // menayangkan iklan.
+                  final groups = groupOrders(list, now);
+                  final summary = summarizeOrders(list, now);
+
+                  // Iklan ditaruh setelah kartu ketiga (atau yang terakhir bila
+                  // order kurang dari tiga), di dalam kelompok tempat kartu itu
+                  // berada, supaya tetap muncul di awal daftar walau satu hari
+                  // berisi puluhan order.
+                  final adTarget = ads.enabled && _selected.isEmpty
+                      ? (list.length >= 3 ? 3 : list.length)
+                      : -1;
+                  var seen = 0;
+
+                  final sections = <Widget>[];
+
+                  for (final group in groups) {
+                    final cards = <Widget>[];
+                    var adPlaced = false;
+
+                    for (var i = 0; i < group.orders.length; i++) {
+                      final order = group.orders[i];
+                      cards.add(_card(order));
+                      seen++;
+
+                      if (!adPlaced && adTarget >= 0 && seen == adTarget) {
+                        cards.add(const SafeNativeAd(enabled: true));
+                        adPlaced = true;
+                      }
+                    }
+
+                    sections.add(_GroupSection(group: group, cards: cards));
                   }
 
-                  return EmptyState(
-                    icon: Icons.inbox_outlined,
-                    title: 'Belum ada order',
-                    message: 'Order pertama Anda akan muncul di sini. '
-                        'Pelanggan dan nomor nota dibuat otomatis.',
-                    action: FilledButton.icon(
-                      onPressed: () async {
-                        final created = await Navigator.of(context).push<bool>(
-                          MaterialPageRoute(
-                              builder: (_) => const NewOrderScreen()),
-                        );
-                        if (created == true) ref.refreshOrderData();
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Buat order pertama'),
+                  return RefreshIndicator(
+                    onRefresh: () async => ref.refreshOrderData(),
+                    child: ListView(
+                      padding: screenPadding(context, bottom: 96),
+                      children: [
+                        _SummaryStrip(
+                          summary: summary,
+                          onTapOutstanding: summary.outstanding > 0
+                              ? () => _setFilter(OrderFilter(
+                                    unpaidOnly: true,
+                                    query: filter.query,
+                                  ))
+                              : null,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        ...sections,
+                      ],
                     ),
                   );
-                }
-
-                // Iklan native disisipkan setelah kartu ketiga, bukan di
-                // puncak daftar: tiga order teratas adalah yang paling
-                // sering dicari kasir, dan mendorongnya turun akan
-                // memperlambat pekerjaan setiap hari.
-                //
-                // Tidak disisipkan sama sekali bila order sedang dipilih
-                // untuk aksi massal, supaya nomor urut yang dilihat kasir
-                // tidak bergeser di tengah pemilihan.
-                //
-                // Dengan kurang dari tiga order, iklan ditaruh setelah
-                // order terakhir, jadi toko yang masih sepi pun tetap
-                // menayangkan iklan.
-                final groups = groupOrders(list, now);
-                final summary = summarizeOrders(list, now);
-
-                // Iklan ditaruh setelah kartu ketiga (atau yang terakhir bila
-                // order kurang dari tiga), di dalam kelompok tempat kartu itu
-                // berada, supaya tetap muncul di awal daftar walau satu hari
-                // berisi puluhan order.
-                final adTarget = ads.enabled && _selected.isEmpty
-                    ? (list.length >= 3 ? 3 : list.length)
-                    : -1;
-                var seen = 0;
-
-                final sections = <Widget>[];
-
-                for (final group in groups) {
-                  final cards = <Widget>[];
-                  var adPlaced = false;
-
-                  for (var i = 0; i < group.orders.length; i++) {
-                    final order = group.orders[i];
-                    cards.add(_card(order));
-                    seen++;
-
-                    if (!adPlaced && adTarget >= 0 && seen == adTarget) {
-                      cards.add(const SafeNativeAd(enabled: true));
-                      adPlaced = true;
-                    }
-                  }
-
-                  sections.add(_GroupSection(group: group, cards: cards));
-                }
-
-                return RefreshIndicator(
-                  onRefresh: () async => ref.refreshOrderData(),
-                  child: ListView(
-                    padding: screenPadding(context, bottom: 96),
-                    children: [
-                      _SummaryStrip(
-                        summary: summary,
-                        onTapOutstanding: summary.outstanding > 0
-                            ? () => _setFilter(OrderFilter(
-                                  unpaidOnly: true,
-                                  query: filter.query,
-                                ))
-                            : null,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      ...sections,
-                    ],
-                  ),
-                );
-              },
+                },
+              ),
             ),
-          ),
-        ],
-      )),
+          ],
+        ),
+      ),
     );
   }
 

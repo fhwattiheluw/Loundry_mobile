@@ -114,24 +114,26 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Lupa PIN pemilik')),
-      body: ContentWidth(child: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          if (_info != null) ...[
-            _Banner(text: _info!, error: false),
-            const SizedBox(height: AppSpacing.md),
+      body: ContentWidth(
+        child: ListView(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          children: [
+            if (_info != null) ...[
+              _Banner(text: _info!, error: false),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            if (_error != null) ...[
+              _Banner(text: _error!, error: true),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            switch (_step) {
+              _Step.choose => _chooseStep(recovery),
+              _Step.enterCode => _codeStep(),
+              _Step.newPin => _pinStep(),
+            },
           ],
-          if (_error != null) ...[
-            _Banner(text: _error!, error: true),
-            const SizedBox(height: AppSpacing.md),
-          ],
-          switch (_step) {
-            _Step.choose => _chooseStep(recovery),
-            _Step.enterCode => _codeStep(),
-            _Step.newPin => _pinStep(),
-          },
-        ],
-      )),
+        ),
+      ),
     );
   }
 

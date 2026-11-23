@@ -148,46 +148,48 @@ class _BusinessSettingsScreenState
       hasChanges: () => _dirty && !_saving,
       child: Scaffold(
       appBar: AppBar(title: const Text('Profil usaha dan nota')),
-      body: ContentWidth(child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-        children: [
-          for (final entry in _fields.entries) ...[
-            TextField(
-              controller: _controllers[entry.key],
-              maxLines: entry.key == SettingsKeys.receiptFooter ? 4 : 1,
-              // Kolom catatan kaki berbaris banyak, jadi wajib memakai
-              // keyboard multiline. Dengan keyboard teks biasa, tombol
-              // Enter berbaris baru memicu assertion dan layar jadi merah.
-              keyboardType: _isNumeric(entry.key)
-                  ? TextInputType.number
-                  : entry.key == SettingsKeys.receiptFooter
-                      ? TextInputType.multiline
-                      : TextInputType.text,
-              textInputAction: entry.key == SettingsKeys.receiptFooter
-                  ? TextInputAction.newline
-                  : TextInputAction.next,
-              onChanged: (_) {
-                if (_errors.containsKey(entry.key)) {
-                  setState(() => _errors.remove(entry.key));
-                }
-              },
-              decoration: InputDecoration(
-                labelText: entry.value.$1,
-                helperText: entry.value.$2,
-                helperMaxLines: 2,
-                errorText: _errors[entry.key],
-                errorMaxLines: 2,
+      body: ContentWidth(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          children: [
+            for (final entry in _fields.entries) ...[
+              TextField(
+                controller: _controllers[entry.key],
+                maxLines: entry.key == SettingsKeys.receiptFooter ? 4 : 1,
+                // Kolom catatan kaki berbaris banyak, jadi wajib memakai
+                // keyboard multiline. Dengan keyboard teks biasa, tombol
+                // Enter berbaris baru memicu assertion dan layar jadi merah.
+                keyboardType: _isNumeric(entry.key)
+                    ? TextInputType.number
+                    : entry.key == SettingsKeys.receiptFooter
+                        ? TextInputType.multiline
+                        : TextInputType.text,
+                textInputAction: entry.key == SettingsKeys.receiptFooter
+                    ? TextInputAction.newline
+                    : TextInputAction.next,
+                onChanged: (_) {
+                  if (_errors.containsKey(entry.key)) {
+                    setState(() => _errors.remove(entry.key));
+                  }
+                },
+                decoration: InputDecoration(
+                  labelText: entry.value.$1,
+                  helperText: entry.value.$2,
+                  helperMaxLines: 2,
+                  errorText: _errors[entry.key],
+                  errorMaxLines: 2,
+                ),
               ),
+              const SizedBox(height: 18),
+            ],
+            FilledButton.icon(
+              onPressed: _saving ? null : _save,
+              icon: const Icon(Icons.save_outlined),
+              label: Text(_saving ? 'Menyimpan...' : 'Simpan'),
             ),
-            const SizedBox(height: 18),
           ],
-          FilledButton.icon(
-            onPressed: _saving ? null : _save,
-            icon: const Icon(Icons.save_outlined),
-            label: Text(_saving ? 'Menyimpan...' : 'Simpan'),
-          ),
-        ],
-      )),
+        ),
+      ),
       ),
     );
   }
