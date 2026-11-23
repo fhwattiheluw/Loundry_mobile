@@ -154,9 +154,14 @@ class _BusinessSettingsScreenState
             TextField(
               controller: _controllers[entry.key],
               maxLines: entry.key == SettingsKeys.receiptFooter ? 4 : 1,
+              // Kolom catatan kaki berbaris banyak, jadi wajib memakai
+              // keyboard multiline. Dengan keyboard teks biasa, tombol
+              // Enter berbaris baru memicu assertion dan layar jadi merah.
               keyboardType: _isNumeric(entry.key)
                   ? TextInputType.number
-                  : TextInputType.text,
+                  : entry.key == SettingsKeys.receiptFooter
+                      ? TextInputType.multiline
+                      : TextInputType.text,
               textInputAction: entry.key == SettingsKeys.receiptFooter
                   ? TextInputAction.newline
                   : TextInputAction.next,
