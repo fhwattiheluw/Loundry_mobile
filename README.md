@@ -45,6 +45,9 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
   menyaring yang belum lunas
 
 **Pembayaran**
+- Order lunas dinyatakan jelas: di nota dicetak **LUNAS** dobel ukuran dan
+  dibingkai, di kwitansi pelunasan, di layar Order berhasil, dan di kepala
+  detail order. Order yang masih punya tagihan dicetak **BELUM LUNAS**
 - Lunas, DP bertahap, atau bayar saat ambil
 - Di Order Baru, pilihan **Bayar sekarang / Bayar nanti** dibuat eksplisit:
   Bayar nanti menyimpan order sebagai belum bayar dan langsung masuk Piutang;

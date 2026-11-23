@@ -10,6 +10,7 @@ import '../../core/security.dart';
 import '../../core/design_system.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../../domain/payment_banner.dart';
 import '../../services/photo/order_photo_service.dart';
 import '../widgets/layout.dart';
 import '../widgets/stat_tile.dart';
@@ -111,9 +112,24 @@ class _Body extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  StatusChip(
-                    label: order.laundryStatus.label,
-                    color: Colors.white,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      StatusChip(
+                        label: order.laundryStatus.label,
+                        color: Colors.white,
+                      ),
+                      // Lunas dinyatakan di kepala halaman, bukan hanya di
+                      // baris angka yang harus digulir untuk ditemukan.
+                      if (paymentBannerOf(order) == PaymentBanner.lunas) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        const StatusChip(
+                          label: 'LUNAS',
+                          color: Colors.white,
+                          icon: Icons.check_circle,
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),

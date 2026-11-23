@@ -6,6 +6,7 @@ import '../../core/design_system.dart';
 import '../../core/formatters.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../../domain/payment_banner.dart';
 import '../widgets/layout.dart';
 import '../widgets/stat_tile.dart';
 import 'new_order_screen.dart';
@@ -105,11 +106,6 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
     final scheme = Theme.of(context).colorScheme;
     final palette = context.status;
     final hasPhone = _order.customerPhone.isNotEmpty;
-
-    final paid = _order.paymentStatus;
-    final payColor = paid == PaymentStatus.lunas
-        ? palette.lunas
-        : palette.belumLunas;
 
     return PopScope(
       canPop: false,
@@ -217,18 +213,8 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
                           _row('Sisa tagihan',
                               formatRupiah(_order.remaining)),
                         const SizedBox(height: AppSpacing.sm),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: StatusChip(
-                            label: paid == PaymentStatus.belumBayar
-                                ? 'Bayar nanti · masuk Piutang'
-                                : paid.label,
-                            color: payColor,
-                            icon: paid == PaymentStatus.lunas
-                                ? Icons.check_circle_outline
-                                : Icons.schedule_outlined,
-                          ),
-                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        _paymentBanner(palette),
                       ],
                     ),
                   ),
@@ -280,6 +266,53 @@ class _OrderSuccessScreenState extends ConsumerState<OrderSuccessScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// Status bayar sebagai papan lebar. Lunas hijau dan tegas; selain itu
+  /// merah dengan penjelasan, supaya kasir tidak salah mengira.
+  Widget _paymentBanner(StatusPalette palette) {
+    final lunas = paymentBannerOf(_order) == PaymentBanner.lunas;
+    final color = lunas ? palette.lunas : palette.belumLunas;
+
+    final text = lunas
+        ? 'LUNAS'
+        : _order.paid > 0
+            ? 'BELUM LUNAS · DP ${formatRupiah(_order.paid)}'
+            : 'BELUM LUNAS · bayar nanti, masuk Piutang';
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.md, horizontal: AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: color, width: lunas ? 2 : 1),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            lunas ? Icons.verified_outlined : Icons.schedule_outlined,
+            color: color,
+            size: lunas ? 28 : 20,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Flexible(
+            child: Text(
+              text,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: color,
+                fontSize: lunas ? 24 : 14,
+                fontWeight: FontWeight.w800,
+                letterSpacing: lunas ? 2 : 0,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -10,6 +10,7 @@ import '../../data/repositories/settings_repository.dart';
 import '../../data/repositories/report_repository.dart';
 import '../../data/repositories/shift_repository.dart';
 import '../../domain/models/models.dart';
+import '../../domain/payment_banner.dart';
 
 /// Menyusun perintah ESC/POS untuk nota.
 ///
@@ -106,10 +107,9 @@ class ReceiptBuilder {
     if (order.remaining > 0) {
       bytes.addAll(
           _row(g, 'SISA TAGIHAN', formatPlain(order.remaining), bold: true));
-    } else {
-      bytes.addAll(g.text('-- LUNAS --',
-          styles: const PosStyles(align: PosAlign.center, bold: true)));
     }
+
+    bytes.addAll(_paymentStamp(g, order));
 
     if (order.perfume != null && order.perfume!.trim().isNotEmpty) {
       bytes.addAll(g.text(_line()));
@@ -169,6 +169,7 @@ class ReceiptBuilder {
     bytes.addAll(_row(g, 'Diterima', formatPlain(payment.amount), bold: true));
     bytes.addAll(_kv(g, 'Metode', payment.method));
     bytes.addAll(_row(g, 'Sisa tagihan', formatPlain(order.remaining)));
+    bytes.addAll(_paymentStamp(g, order));
 
     bytes.addAll(g.text(_line()));
     bytes.addAll(g.text('Kasir: ${_ascii(cashierName)}',
@@ -433,6 +434,49 @@ class ReceiptBuilder {
 
   /// Dua kolom kiri dan kanan. Lebar kolom diatur dalam satuan 1/12 baris
   /// sesuai aturan esc_pos_utils.
+  /// Status bayar yang tidak mungkin terlewat. LUNAS dicetak dobel ukuran
+  /// dan dibingkai garis, karena nota ini yang ditunjukkan pelanggan saat
+  /// mengambil cucian. Order yang masih punya tagihan dicetak BELUM LUNAS
+  /// supaya tidak ada yang mengira sudah beres.
+  List<int> _paymentStamp(Generator g, LaundryOrder order) {
+    final banner = paymentBannerOf(order);
+    final bytes = <int>[];
+
+    switch (banner) {
+      case PaymentBanner.lunas:
+        bytes.addAll(g.text(_line()));
+        bytes.addAll(g.text(
+          banner.text,
+          styles: const PosStyles(
+            align: PosAlign.center,
+            bold: true,
+            height: PosTextSize.size2,
+            width: PosTextSize.size2,
+          ),
+        ));
+        bytes.addAll(g.text(_line()));
+      case PaymentBanner.belumLunas:
+        bytes.addAll(g.text(_line()));
+        bytes.addAll(g.text(
+          banner.text,
+          styles: const PosStyles(align: PosAlign.center, bold: true),
+        ));
+      case PaymentBanner.dibatalkan:
+        bytes.addAll(g.text(_line()));
+        bytes.addAll(g.text(
+          banner.text,
+          styles: const PosStyles(
+            align: PosAlign.center,
+            bold: true,
+            height: PosTextSize.size2,
+            width: PosTextSize.size2,
+          ),
+        ));
+    }
+
+    return bytes;
+  }
+
   List<int> _row(Generator g, String left, String right,
       {bool bold = false}) {
     return g.row([
