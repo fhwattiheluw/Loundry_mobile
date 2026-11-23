@@ -39,8 +39,8 @@ void main() {
     });
 
     test('penyimpanan penuh dikenali', () {
-      final error = FileSystemException(
-          'write failed', '/x', const OSError('No space left on device', 28));
+      const error = FileSystemException(
+          'write failed', '/x', OSError('No space left on device', 28));
       expect(friendlyError(error), contains('penuh'));
     });
 
