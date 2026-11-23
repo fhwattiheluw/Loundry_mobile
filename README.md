@@ -33,6 +33,15 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 - Status cucian: Diterima, Diproses, Selesai, Diambil, Dibatalkan
 - Status bayar terpisah: Belum bayar, DP, Lunas
 
+**Promosi aplikasi**
+- Kaki nota dan kwitansi memuat dua baris huruf kecil: "Dicatat dengan Laundry
+  Manise" dan ajakan mencarinya di Play Store. Bisa dimatikan di Pengaturan →
+  Bagikan aplikasi. Tidak ikut tercetak di laporan shift dan laporan pendapatan
+- Pengaturan → **Bagikan aplikasi**: teks siap kirim ke sesama pemilik laundry
+  dan tombol salin tautan Play Store
+- Variabel `{aplikasi}` bisa disisipkan sendiri ke template WhatsApp bila
+  pemilik ingin tautan aplikasi ikut terkirim ke pelanggan
+
 **Alur order dan daftar**
 - Order Baru berlangkah bernomor (Pelanggan, Layanan, Catatan, Pembayaran) dengan
   bar total dan tombol Simpan & Cetak yang selalu terlihat di bawah

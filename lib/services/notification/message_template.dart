@@ -1,3 +1,4 @@
+import '../../core/app_identity.dart';
 import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
 import '../../data/repositories/settings_repository.dart';
@@ -9,7 +10,7 @@ import '../../domain/models/models.dart';
 /// Variabel yang dikenali:
 /// {nama} {no_order} {layanan} {rincian} {ringkasan} {subtotal} {diskon}
 /// {biaya_lain} {total} {dibayar} {sisa} {status_bayar} {rak} {parfum}
-/// {catatan} {estimasi} {tanggal} {nama_usaha} {jam_buka}
+/// {catatan} {estimasi} {tanggal} {nama_usaha} {jam_buka} {aplikasi}
 class MessageTemplate {
   const MessageTemplate(this._settings);
 
@@ -38,6 +39,7 @@ class MessageTemplate {
     '{tanggal}',
     '{nama_usaha}',
     '{jam_buka}',
+    '{aplikasi}',
   ];
 
   /// Isian berkurung kurawal di [template] yang BUKAN variabel. Dibiarkan,
@@ -134,6 +136,7 @@ class MessageTemplate {
       '{tanggal}': formatDate(order.createdAt),
       '{nama_usaha}': _settings.get(SettingsKeys.businessName),
       '{jam_buka}': _settings.get(SettingsKeys.openHours),
+      '{aplikasi}': AppIdentity.whatsappLine,
     };
 
     // Satu kali lewat, bukan replaceAll berantai: nama pelanggan atau

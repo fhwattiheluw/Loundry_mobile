@@ -18,6 +18,7 @@ import 'logo_settings_screen.dart';
 import 'notification_log_screen.dart';
 import 'printer_settings_screen.dart';
 import 'service_settings_screen.dart';
+import 'share_app_screen.dart';
 import 'template_settings_screen.dart';
 import 'user_settings_screen.dart';
 import 'whatsapp_settings_screen.dart';
@@ -335,6 +336,22 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _open(context, const LogoSettingsScreen()),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+            const _Heading('Aplikasi'),
+            Card(
+              child: ListTile(
+                leading: const IconBadge(Icons.share_outlined, tone: 4),
+                title: const Text('Bagikan aplikasi'),
+                subtitle: Text(
+                  settings.getBool(SettingsKeys.receiptPromo, fallback: true)
+                      ? 'Nama aplikasi tercetak di kaki nota'
+                      : 'Baris di kaki nota sedang dimatikan',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => _open(context, const ShareAppScreen()),
               ),
             ),
 

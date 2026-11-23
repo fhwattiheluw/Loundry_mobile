@@ -20,6 +20,11 @@ abstract final class SettingsKeys {
   static const receiptQrEnabled = 'receipt_qr_enabled';
   static const receiptLogoPath = 'receipt_logo_path';
 
+  /// Baris kecil "Dicatat dengan Laundry Manise" di kaki nota. Menyala
+  /// secara bawaan: aplikasi ini gratis, dan nota yang dipegang pelanggan
+  /// adalah satu-satunya tempat orang lain melihat namanya.
+  static const receiptPromo = 'receipt_promo';
+
 
   /// Berapa kali aplikasi pernah dibuka. Dipakai menahan iklan pembuka
   /// sampai pengguna sempat mengenal aplikasinya lebih dulu.

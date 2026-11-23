@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:image/image.dart' as img;
 
+import '../../core/app_identity.dart';
 import '../../core/formatters.dart';
 import '../../core/security.dart';
 import '../../data/db/settings_keys.dart';
@@ -423,6 +424,11 @@ class ReceiptBuilder {
     bytes.addAll(g.text('Terima kasih',
         styles: const PosStyles(align: PosAlign.center, bold: true)));
 
+    // Hanya di cetakan yang dibawa pulang pelanggan. Laporan shift dan
+    // laporan pendapatan dibaca sendiri oleh pemilik, jadi promosi di sana
+    // hanya memboroskan kertas.
+    if (withPolicy) bytes.addAll(_appPromo(g));
+
     // Banyak printer thermal murah tidak punya pemotong kertas.
     // Feed lebih aman daripada memanggil cut dan membuat printer menggantung.
     bytes.addAll(g.feed(3));
@@ -472,6 +478,27 @@ class ReceiptBuilder {
             width: PosTextSize.size2,
           ),
         ));
+    }
+
+    return bytes;
+  }
+
+  /// Nama aplikasi di kaki nota, huruf kecil dan di tengah. Sengaja
+  /// ditaruh setelah "Terima kasih" supaya tidak pernah mendahului
+  /// identitas toko yang punya nota ini.
+  List<int> _appPromo(Generator g) {
+    if (!_settings.getBool(SettingsKeys.receiptPromo, fallback: true)) {
+      return const [];
+    }
+
+    final bytes = <int>[];
+
+    for (final line in AppIdentity.receiptLines(cols: _cols)) {
+      bytes.addAll(g.text(
+        line,
+        styles: const PosStyles(
+            align: PosAlign.center, fontType: PosFontType.fontB),
+      ));
     }
 
     return bytes;
