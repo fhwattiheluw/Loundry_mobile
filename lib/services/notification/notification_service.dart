@@ -135,7 +135,11 @@ class NotificationService {
 
     // Jam tenang: pesan tidak dikirim tengah malam, tapi juga tidak dibuang.
     // Pesan masuk antrean dan dikirim saat jam buka berikutnya.
-    final quietUntil = _quietUntil();
+    //
+    // Hanya untuk mode API. Di mode manual yang mengirim adalah kasir yang
+    // sedang memegang HP, dan antrean tidak pernah diproses sendiri, jadi
+    // pesan yang "ditunda" di sana tidak akan pernah terkirim.
+    final quietUntil = isApiMode ? _quietUntil() : null;
     if (quietUntil != null && !force) {
       await _record(
         orderId: order.id!,
@@ -148,7 +152,8 @@ class NotificationService {
       );
 
       return const NotificationResult.skipped(
-        'Di luar jam operasional. Pesan masuk antrean dan dikirim saat jam buka.',
+        'Di luar jam operasional. Pesan masuk antrean dan dikirim otomatis '
+        'saat jam buka.',
       );
     }
 
@@ -190,7 +195,8 @@ class NotificationService {
     final now = DateTime.now().toIso8601String();
 
     final due = await db.rawQuery('''
-      SELECT n.id, n.attempts, n.message, c.phone AS customer_phone
+      SELECT n.id, n.order_id, n.trigger_name, n.attempts, n.message,
+             c.phone AS customer_phone, o.laundry_status
       FROM notification_logs n
       JOIN orders o ON o.id = n.order_id
       JOIN customers c ON c.id = o.customer_id
@@ -207,9 +213,25 @@ class NotificationService {
 
     for (final row in due) {
       final id = row['id'] as int;
+      final orderId = row['order_id'] as int;
+      final trigger = row['trigger_name'] as String;
       final attempts = (row['attempts'] as num?)?.toInt() ?? 0;
       final phone = row['customer_phone'] as String? ?? '';
       final message = row['message'] as String? ?? '';
+
+      // Pesan yang sama sudah sampai lewat jalur lain, misalnya kasir
+      // mengirim ulang sendiri atau percobaan berikutnya berhasil. Baris ini
+      // tinggal sisa; mengirimnya lagi membuat pelanggan menerima dua pesan
+      // yang sama, dan menandainya terkirim melanggar indeks unik.
+      if (await _alreadySentByName(orderId, trigger)) {
+        await db.delete('notification_logs', where: 'id = ?', whereArgs: [id]);
+        continue;
+      }
+
+      if (row['laundry_status'] == 'dibatalkan') {
+        await _abandon(id, 'Order sudah dibatalkan.');
+        continue;
+      }
 
       if (phone.isEmpty || message.isEmpty) {
         await _abandon(id, 'Nomor atau isi pesan tidak lengkap.');
@@ -221,18 +243,7 @@ class NotificationService {
 
       if (result.sent) {
         delivered++;
-        await db.update(
-          'notification_logs',
-          {
-            'status': NotificationState.terkirim.name,
-            'sent_at': DateTime.now().toIso8601String(),
-            'attempts': nextAttempts,
-            'next_attempt_at': null,
-            'error': null,
-          },
-          where: 'id = ?',
-          whereArgs: [id],
-        );
+        await _markDelivered(id, orderId, trigger, attempts: nextAttempts);
         continue;
       }
 
@@ -332,15 +343,66 @@ class NotificationService {
 
   // ------------------------------------------------------------------ log
 
-  Future<bool> alreadySent(int orderId, NotificationTrigger trigger) async {
+  Future<bool> alreadySent(int orderId, NotificationTrigger trigger) =>
+      _alreadySentByName(orderId, trigger.name);
+
+  Future<bool> _alreadySentByName(int orderId, String triggerName) async {
     final db = await _db.database;
     final rows = await db.query(
       'notification_logs',
       where: "order_id = ? AND trigger_name = ? AND status = 'terkirim'",
-      whereArgs: [orderId, trigger.name],
+      whereArgs: [orderId, triggerName],
       limit: 1,
     );
     return rows.isNotEmpty;
+  }
+
+  /// Menandai satu baris antrean sebagai terkirim tanpa melanggar indeks
+  /// unik, dan membersihkan baris sisa untuk pemicu yang sama.
+  ///
+  /// Indeks unik hanya mengizinkan SATU baris terkirim per order dan pemicu.
+  /// Kalau sudah ada, baris ini cukup dihapus: pesannya memang sudah sampai.
+  Future<void> _markDelivered(
+    int id,
+    int orderId,
+    String trigger, {
+    required int attempts,
+  }) async {
+    final db = await _db.database;
+
+    await db.transaction((txn) async {
+      await txn.delete(
+        'notification_logs',
+        where: "order_id = ? AND trigger_name = ? AND id != ? "
+            "AND status IN ('gagal', 'tertunda')",
+        whereArgs: [orderId, trigger, id],
+      );
+
+      final already = Sqflite.firstIntValue(await txn.rawQuery(
+            "SELECT COUNT(*) FROM notification_logs "
+            "WHERE order_id = ? AND trigger_name = ? AND status = 'terkirim'",
+            [orderId, trigger],
+          )) ??
+          0;
+
+      if (already > 0) {
+        await txn.delete('notification_logs', where: 'id = ?', whereArgs: [id]);
+        return;
+      }
+
+      await txn.update(
+        'notification_logs',
+        {
+          'status': NotificationState.terkirim.name,
+          'sent_at': DateTime.now().toIso8601String(),
+          'attempts': attempts,
+          'next_attempt_at': null,
+          'error': null,
+        },
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
   }
 
   Future<void> _record({
@@ -355,23 +417,62 @@ class NotificationService {
   }) async {
     final db = await _db.database;
 
-    await db.insert(
+    final values = {
+      'order_id': orderId,
+      'trigger_name': trigger.name,
+      'target': target,
+      'sent_at': DateTime.now().toIso8601String(),
+      'status': state.name,
+      'error': error,
+      'message': message,
+      'attempts': attempts,
+      'next_attempt_at': nextAttemptAt?.toIso8601String(),
+    };
+
+    if (state == NotificationState.terkirim) {
+      await db.insert(
+        'notification_logs',
+        values,
+        // Indeks unik: hanya satu baris terkirim per order dan pemicu. Kirim
+        // ulang paksa (pengingat berulang) tidak menambah baris.
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+
+      // Pesan sudah sampai, jadi baris gagal atau tertunda yang lebih lama
+      // untuk pemicu yang sama tidak lagi perlu dicoba atau ditampilkan.
+      await db.delete(
+        'notification_logs',
+        where: "order_id = ? AND trigger_name = ? "
+            "AND status IN ('gagal', 'tertunda')",
+        whereArgs: [orderId, trigger.name],
+      );
+      return;
+    }
+
+    // Satu pemicu per order hanya punya SATU baris yang masih menunggu.
+    // Tanpa ini, mengetuk kirim tiga kali di luar jam buka membuat tiga baris
+    // antrean, dan pelanggan menerima tiga pesan yang sama saat jam buka.
+    final pending = await db.query(
       'notification_logs',
-      {
-        'order_id': orderId,
-        'trigger_name': trigger.name,
-        'target': target,
-        'sent_at': DateTime.now().toIso8601String(),
-        'status': state.name,
-        'error': error,
-        'message': message,
-        'attempts': attempts,
-        'next_attempt_at': nextAttemptAt?.toIso8601String(),
-      },
-      // Indeks unik hanya berlaku untuk status terkirim. Percobaan gagal
-      // boleh tercatat berkali-kali supaya pemilik tahu ada masalah.
-      conflictAlgorithm: ConflictAlgorithm.ignore,
+      columns: ['id'],
+      where: "order_id = ? AND trigger_name = ? "
+          "AND status IN ('gagal', 'tertunda')",
+      whereArgs: [orderId, trigger.name],
+      orderBy: 'id DESC',
+      limit: 1,
     );
+
+    if (pending.isNotEmpty) {
+      await db.update(
+        'notification_logs',
+        values,
+        where: 'id = ?',
+        whereArgs: [pending.first['id']],
+      );
+      return;
+    }
+
+    await db.insert('notification_logs', values);
   }
 
   /// Riwayat kirim untuk satu order, dipakai di layar detail.
@@ -400,7 +501,8 @@ class NotificationService {
     final db = await _db.database;
 
     final rows = await db.rawQuery('''
-      SELECT n.message, c.phone AS customer_phone
+      SELECT n.order_id, n.trigger_name, n.attempts, n.message,
+             c.phone AS customer_phone
       FROM notification_logs n
       JOIN orders o ON o.id = n.order_id
       JOIN customers c ON c.id = o.customer_id
@@ -421,14 +523,27 @@ class NotificationService {
 
     final result = await _sender.send(phone: phone, message: message);
 
+    if (result.sent) {
+      // Lewat _markDelivered, bukan UPDATE langsung: pesan yang sama mungkin
+      // sudah tercatat terkirim dari jalur lain, dan UPDATE langsung akan
+      // melanggar indeks unik lalu memunculkan galat di layar pemilik.
+      final attempts = (rows.first['attempts'] as num?)?.toInt() ?? 0;
+
+      await _markDelivered(
+        logId,
+        rows.first['order_id'] as int,
+        rows.first['trigger_name'] as String,
+        attempts: attempts + 1,
+      );
+      return result;
+    }
+
     await db.update(
       'notification_logs',
       {
-        'status': result.sent
-            ? NotificationState.terkirim.name
-            : NotificationState.gagal.name,
+        'status': NotificationState.gagal.name,
         'sent_at': DateTime.now().toIso8601String(),
-        'error': result.sent ? null : result.message,
+        'error': result.message,
         'next_attempt_at': null,
       },
       where: 'id = ?',

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../data/db/default_templates.dart';
 import '../../data/db/settings_keys.dart';
+import '../../services/notification/message_template.dart';
 
 /// Template pesan WhatsApp yang bisa diubah pemilik (FR-65).
 class TemplateSettingsScreen extends ConsumerStatefulWidget {
@@ -17,6 +18,11 @@ class TemplateSettingsScreen extends ConsumerStatefulWidget {
 class _TemplateSettingsScreenState
     extends ConsumerState<TemplateSettingsScreen> {
   late final Map<String, TextEditingController> _controllers;
+  late final Map<String, FocusNode> _focusNodes;
+
+  /// Kolom template yang terakhir disentuh. Tombol variabel menyisipkan ke
+  /// sini; ingatannya bertahan walau fokus berpindah ke tombol itu sendiri.
+  String? _activeKey;
 
   static const _templates = <String, String>{
     SettingsKeys.templateOrderCreated: 'Saat order diterima',
@@ -40,28 +46,6 @@ class _TemplateSettingsScreenState
     SettingsKeys.notifyPaymentReceived: 'Kirim saat pembayaran diterima',
   };
 
-  static const _variables = [
-    '{nama}',
-    '{no_order}',
-    '{layanan}',
-    '{rincian}',
-    '{ringkasan}',
-    '{subtotal}',
-    '{diskon}',
-    '{biaya_lain}',
-    '{total}',
-    '{dibayar}',
-    '{sisa}',
-    '{status_bayar}',
-    '{rak}',
-    '{parfum}',
-    '{catatan}',
-    '{estimasi}',
-    '{tanggal}',
-    '{nama_usaha}',
-    '{jam_buka}',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -70,6 +54,13 @@ class _TemplateSettingsScreenState
       for (final key in _templates.keys)
         key: TextEditingController(text: settings.get(key)),
     };
+    _focusNodes = {
+      for (final key in _templates.keys)
+        key: FocusNode()
+          ..addListener(() {
+            if (_focusNodes[key]?.hasFocus ?? false) _activeKey = key;
+          }),
+    };
   }
 
   @override
@@ -77,10 +68,96 @@ class _TemplateSettingsScreenState
     for (final controller in _controllers.values) {
       controller.dispose();
     }
+    for (final node in _focusNodes.values) {
+      node.dispose();
+    }
     super.dispose();
   }
 
+  void _warn(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  /// Menyisipkan variabel di posisi kursor kolom yang terakhir disentuh.
+  /// Mengetik kurung kurawal dan ejaan variabel dengan benar di keyboard HP
+  /// itu lambat dan gampang salah.
+  void _insert(String variable) {
+    final key = _activeKey;
+    if (key == null) {
+      _warn('Ketuk dulu di dalam kolom template, baru pilih variabelnya.');
+      return;
+    }
+
+    final controller = _controllers[key]!;
+    final text = controller.text;
+    final selection = controller.selection;
+
+    final start = selection.isValid ? selection.start : text.length;
+    final end = selection.isValid ? selection.end : text.length;
+
+    controller.value = TextEditingValue(
+      text: text.replaceRange(start, end, variable),
+      selection: TextSelection.collapsed(offset: start + variable.length),
+    );
+    _focusNodes[key]!.requestFocus();
+  }
+
+  /// Menampilkan pesan yang akan diterima pelanggan, dengan order rekaan.
+  void _preview(String key) {
+    final message = MessageTemplate(ref.read(settingsRepoProvider))
+        .render(_controllers[key]!.text, MessageTemplate.sampleOrder());
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Contoh: ${_templates[key]}'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Nama, layanan, dan harga di bawah ini rekaan.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 12),
+              SelectableText(message),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tutup'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _save() async {
+    // Template kosong terkirim sebagai pesan kosong, dan variabel yang salah
+    // ketik terkirim apa adanya ("Halo {nama_pelanggan}"). Keduanya baru
+    // ketahuan setelah pelanggan menerimanya, jadi ditolak di sini.
+    for (final entry in _controllers.entries) {
+      final label = _templates[entry.key]!;
+      final text = entry.value.text.trim();
+
+      if (text.isEmpty) {
+        _warn('Template "$label" masih kosong. Isi, atau ketuk Pulihkan '
+            'bawaan.');
+        return;
+      }
+
+      final unknown = MessageTemplate.unknownVariables(text);
+      if (unknown.isNotEmpty) {
+        _warn('Template "$label" memuat ${unknown.join(', ')} yang tidak '
+            'dikenal. Periksa ejaannya, atau pilih dari daftar variabel.');
+        return;
+      }
+    }
+
     await ref.read(settingsRepoProvider).setAll({
       for (final entry in _controllers.entries) entry.key: entry.value.text,
     });
@@ -103,20 +180,27 @@ class _TemplateSettingsScreenState
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
-          const Card(
+          Card(
             child: Padding(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Cara kerja pengiriman',
+                  const Text('Cara kerja pengiriman',
                       style: TextStyle(fontWeight: FontWeight.w700)),
-                  SizedBox(height: 6),
+                  const SizedBox(height: 6),
                   Text(
-                    'Aplikasi membuka WhatsApp dengan pesan sudah terisi, '
-                    'kasir tinggal menekan tombol kirim. Cara ini gratis dan '
-                    'tidak berisiko memblokir nomor usaha Anda.',
-                    style: TextStyle(fontSize: 13),
+                    settings.get(SettingsKeys.whatsappMode,
+                                fallback: 'manual') ==
+                            'api'
+                        ? 'Pesan dikirim otomatis lewat WhatsApp Cloud API, '
+                            'tanpa membuka WhatsApp. Pengiriman diatur di '
+                            'Pengaturan, Pengiriman WhatsApp.'
+                        : 'Aplikasi membuka WhatsApp dengan pesan sudah '
+                            'terisi, kasir tinggal menekan tombol kirim. Cara '
+                            'ini gratis dan tidak berisiko memblokir nomor '
+                            'usaha Anda.',
+                    style: const TextStyle(fontSize: 13),
                   ),
                 ],
               ),
@@ -150,9 +234,11 @@ class _TemplateSettingsScreenState
                       style: TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 6),
                   const Text(
-                    '{rincian} memuat tiap item dengan jumlah, satuan, harga, '
-                    'dan subtotalnya. {ringkasan} memuat subtotal, diskon, '
-                    'total, sudah dibayar, dan sisa tagihan.',
+                    'Ketuk di kolom template, lalu ketuk variabel untuk '
+                    'menyisipkannya. {rincian} memuat tiap item dengan '
+                    'jumlah, satuan, harga, dan subtotalnya. {ringkasan} '
+                    'memuat subtotal, diskon, total, sudah dibayar, dan sisa '
+                    'tagihan.',
                     style: TextStyle(fontSize: 13),
                   ),
                   const SizedBox(height: 10),
@@ -160,11 +246,12 @@ class _TemplateSettingsScreenState
                     spacing: 6,
                     runSpacing: 6,
                     children: [
-                      for (final variable in _variables)
-                        Chip(
+                      for (final variable in MessageTemplate.variables)
+                        ActionChip(
                           label: Text(variable,
                               style: const TextStyle(fontSize: 11.5)),
                           visualDensity: VisualDensity.compact,
+                          onPressed: () => _insert(variable),
                         ),
                     ],
                   ),
@@ -181,6 +268,11 @@ class _TemplateSettingsScreenState
                   child: Text(entry.value,
                       style: Theme.of(context).textTheme.titleMedium),
                 ),
+                IconButton(
+                  tooltip: 'Lihat contoh pesan',
+                  icon: const Icon(Icons.visibility_outlined),
+                  onPressed: () => _preview(entry.key),
+                ),
                 TextButton.icon(
                   onPressed: () => setState(() {
                     _controllers[entry.key]!.text = _defaults[entry.key]!;
@@ -193,6 +285,7 @@ class _TemplateSettingsScreenState
             const SizedBox(height: 8),
             TextField(
               controller: _controllers[entry.key],
+              focusNode: _focusNodes[entry.key],
               minLines: 8,
               maxLines: 20,
               decoration: const InputDecoration(

@@ -1,8 +1,10 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../application/providers.dart';
+import '../../core/friendly_error.dart';
 import 'order_detail_screen.dart';
 
 /// Memindai QR nomor nota saat pelanggan datang mengambil cucian (FR-33).
@@ -30,33 +32,66 @@ class _ScanOrderScreenState extends ConsumerState<ScanOrderScreen> {
     super.dispose();
   }
 
-  Future<void> _open(String code) async {
+  Future<void> _open(String scanned) async {
     if (_handling) return;
+
+    // Hasil pindai kadang membawa spasi atau baris baru di ujung.
+    final code = scanned.trim();
+    if (code.isEmpty) return;
+
     setState(() {
       _handling = true;
       _error = null;
     });
 
-    final order = await ref.read(orderRepoProvider).byOrderNo(code);
+    try {
+      final order = await ref.read(orderRepoProvider).byOrderNo(code);
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (order == null) {
+      if (order == null) {
+        setState(() {
+          _handling = false;
+          _error = 'Nota $code tidak ditemukan. Pastikan ini nota dari '
+              'toko Anda, atau ketik nomornya.';
+        });
+        return;
+      }
+
+      // Getaran singkat: kasir yang menatap pelanggan tahu pindaian berhasil
+      // tanpa harus melirik layar.
+      HapticFeedback.mediumImpact();
+      await _controller.stop();
+
+      if (!mounted) return;
+      await Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => OrderDetailScreen(orderId: order.id!),
+        ),
+      );
+    } catch (e) {
+      // Tanpa ini, galat database membuat layar macet: _handling tetap true
+      // dan pindaian berikutnya diabaikan diam-diam.
+      if (!mounted) return;
       setState(() {
         _handling = false;
-        _error = 'Nota $code tidak ditemukan.';
+        _error = 'Nota belum bisa dibuka. ${friendlyError(e)}';
       });
-      return;
     }
+  }
 
-    await _controller.stop();
-
-    if (!mounted) return;
-    await Navigator.of(context).pushReplacement(
-      MaterialPageRoute(
-        builder: (_) => OrderDetailScreen(orderId: order.id!),
-      ),
-    );
+  /// Teks kamera yang bisa dipahami kasir, bukan nama kode galatnya.
+  String _cameraMessage(MobileScannerException error) {
+    switch (error.errorCode) {
+      case MobileScannerErrorCode.permissionDenied:
+        return 'Aplikasi belum diizinkan memakai kamera. Buka Pengaturan HP, '
+            'pilih Aplikasi, lalu aplikasi ini, Izin, dan aktifkan Kamera.';
+      case MobileScannerErrorCode.unsupported:
+        return 'HP ini tidak mendukung pemindaian lewat kamera.';
+      default:
+        return 'Kamera sedang tidak bisa dipakai. Tutup aplikasi lain yang '
+            'memakai kamera, lalu buka layar ini lagi.';
+    }
   }
 
   Future<void> _typeManually() async {
@@ -126,7 +161,7 @@ class _ScanOrderScreenState extends ConsumerState<ScanOrderScreen> {
                       style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
-                    Text('${error.errorCode}', textAlign: TextAlign.center),
+                    Text(_cameraMessage(error), textAlign: TextAlign.center),
                     const SizedBox(height: 20),
                     FilledButton.icon(
                       onPressed: _typeManually,

@@ -223,7 +223,14 @@ class ReportScreen extends ConsumerWidget {
             const _RevenueChart(),
 
             const SizedBox(height: 20),
-            const _Heading('Per layanan'),
+            const _Heading('Nilai order per layanan'),
+            Padding(
+              padding: const EdgeInsets.only(left: AppSpacing.xs, top: 2),
+              child: Text(
+                'Harga order sebelum diskon, bukan uang yang diterima.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
             const SizedBox(height: 8),
             _AmountList(provider: revenueByServiceProvider, showQty: true),
 

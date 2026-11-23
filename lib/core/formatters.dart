@@ -29,8 +29,12 @@ String formatLongDate(DateTime value) => _longDate.format(value);
 
 /// 3.0 -> "3", 3.5 -> "3,5". Berat ditulis tanpa nol ekor yang tidak berguna.
 String formatQty(double qty) {
-  if (qty == qty.roundToDouble()) return qty.toInt().toString();
-  return qty.toString().replaceAll('.', ',');
+  // Penjumlahan desimal meninggalkan ekor (0.1 + 0.2 = 0.30000000000000004,
+  // dan SUM() di laporan sama saja). Dibulatkan ke tiga angka, jauh di atas
+  // ketelitian timbangan, lalu nol di belakang dibuang.
+  final fixed = qty.toStringAsFixed(3);
+  final trimmed = fixed.replaceFirst(RegExp(r'\.?0+$'), '');
+  return trimmed.replaceAll('.', ',');
 }
 
 /// Mengubah teks yang diketik kasir menjadi angka rupiah.

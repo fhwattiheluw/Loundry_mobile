@@ -15,6 +15,84 @@ class MessageTemplate {
 
   final SettingsRepository _settings;
 
+  /// Semua variabel yang dikenali [render]. Layar template memakai daftar
+  /// yang sama untuk tombol sisip dan untuk memeriksa salah ketik, jadi
+  /// menambah variabel cukup di sini dan di [render].
+  static const variables = [
+    '{nama}',
+    '{no_order}',
+    '{layanan}',
+    '{rincian}',
+    '{ringkasan}',
+    '{subtotal}',
+    '{diskon}',
+    '{biaya_lain}',
+    '{total}',
+    '{dibayar}',
+    '{sisa}',
+    '{status_bayar}',
+    '{rak}',
+    '{parfum}',
+    '{catatan}',
+    '{estimasi}',
+    '{tanggal}',
+    '{nama_usaha}',
+    '{jam_buka}',
+  ];
+
+  /// Isian berkurung kurawal di [template] yang BUKAN variabel. Dibiarkan,
+  /// ia terkirim ke pelanggan apa adanya ("Halo {nama_pelanggan}"), jadi
+  /// layar template menolak simpan selama daftar ini tidak kosong.
+  static List<String> unknownVariables(String template) {
+    final found = RegExp(r'\{[^{}\n]*\}')
+        .allMatches(template)
+        .map((m) => m[0]!)
+        .where((v) => !variables.contains(v));
+    return found.toSet().toList();
+  }
+
+  /// Order rekaan untuk pratinjau template, supaya pemilik melihat pesan
+  /// seperti yang diterima pelanggan tanpa harus membuat order sungguhan.
+  static LaundryOrder sampleOrder() {
+    final now = DateTime.now();
+    return LaundryOrder(
+      orderNo: 'LD-CONTOH-0001',
+      customerId: 0,
+      createdBy: 0,
+      createdAt: now,
+      estimatedAt: now.add(const Duration(days: 2)),
+      laundryStatus: LaundryStatus.diproses,
+      paymentStatus: PaymentStatus.dp,
+      subtotal: 74500,
+      discount: 0,
+      total: 74500,
+      paid: 30000,
+      rack: 'A3',
+      perfume: 'Lavender',
+      customerName: 'Budi',
+      customerPhone: '6281234567890',
+      items: const [
+        OrderItem(
+          serviceId: 0,
+          serviceName: 'Cuci Kiloan',
+          unit: ServiceUnit.kg,
+          qty: 3.5,
+          unitPrice: 7000,
+          subtotal: 24500,
+          itemDetails: '3 kemeja, 2 celana',
+        ),
+        OrderItem(
+          serviceId: 0,
+          serviceName: 'Sepatu',
+          unit: ServiceUnit.pcs,
+          qty: 2,
+          unitPrice: 25000,
+          subtotal: 50000,
+        ),
+      ],
+    );
+  }
+
   String forTrigger(NotificationTrigger trigger, LaundryOrder order) {
     final template = switch (trigger) {
       NotificationTrigger.orderDiterima =>

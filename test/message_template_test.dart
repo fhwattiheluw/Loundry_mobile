@@ -214,4 +214,62 @@ void main() {
     expect(
         DefaultTemplates.legacyPayment, isNot(DefaultTemplates.payment));
   });
+
+  group('daftar variabel', () {
+    test('setiap variabel yang didaftarkan benar-benar diisi oleh render', () {
+      final settings = SettingsRepository(AppDatabase.instance);
+      final text = MessageTemplate.variables.join(' ');
+      final out = MessageTemplate(settings).render(text, _order());
+
+      // Variabel yang terdaftar tapi tidak diisi render akan lolos validasi
+      // lalu terkirim ke pelanggan sebagai teks mentah.
+      expect(out.contains('{'), isFalse, reason: out);
+    });
+
+    test('template bawaan hanya memakai variabel yang dikenal', () {
+      for (final template in [
+        DefaultTemplates.orderCreated,
+        DefaultTemplates.orderDone,
+        DefaultTemplates.reminder,
+        DefaultTemplates.payment,
+      ]) {
+        expect(MessageTemplate.unknownVariables(template), isEmpty);
+      }
+    });
+  });
+
+  group('variabel yang salah ketik', () {
+    test('variabel yang dikenal tidak dilaporkan', () {
+      expect(MessageTemplate.unknownVariables('Halo {nama}, total {total}'),
+          isEmpty);
+    });
+
+    test('ejaan salah dilaporkan sekali saja', () {
+      expect(
+        MessageTemplate.unknownVariables(
+            'Halo {nama_pelanggan}, {nama_pelanggan} dan {Total}'),
+        unorderedEquals(['{nama_pelanggan}', '{Total}']),
+      );
+    });
+
+    test('kurung kosong dan berspasi ikut dilaporkan', () {
+      expect(MessageTemplate.unknownVariables('a {} b {no order} c'),
+          unorderedEquals(['{}', '{no order}']));
+    });
+
+    test('teks tanpa kurung kurawal aman', () {
+      expect(MessageTemplate.unknownVariables('Terima kasih!'), isEmpty);
+    });
+  });
+
+  group('order contoh untuk pratinjau', () {
+    test('menghasilkan pesan lengkap tanpa variabel tersisa', () {
+      final settings = SettingsRepository(AppDatabase.instance);
+      final out = MessageTemplate(settings)
+          .render(DefaultTemplates.orderCreated, MessageTemplate.sampleOrder());
+
+      expect(out.contains('{'), isFalse, reason: out);
+      expect(out, contains('Budi'));
+    });
+  });
 }

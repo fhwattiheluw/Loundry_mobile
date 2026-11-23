@@ -180,10 +180,37 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
     );
   }
 
+  void _snack(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  /// Alasan sebuah PIN tidak boleh dipakai, atau null bila boleh.
+  ///
+  /// Login hanya memakai PIN, tanpa nama pengguna. Dua orang dengan PIN yang
+  /// sama membuat aplikasi menebak salah satunya, dan kasir bisa masuk
+  /// sebagai Owner. Karena itu PIN harus unik, juga saat PIN diganti.
+  Future<String?> _pinProblem(String pin, {int? exceptUserId}) async {
+    if (pin.length < 4) return 'PIN minimal 4 digit.';
+
+    final holder = await ref.read(userRepoProvider).authenticate(pin);
+    if (holder != null && holder.id != exceptUserId) {
+      return 'PIN itu sudah dipakai pengguna lain. Pilih PIN yang berbeda.';
+    }
+    return null;
+  }
+
   Future<void> _addUser() async {
     final nameController = TextEditingController();
     final pinController = TextEditingController();
     var role = UserRole.kasir;
+
+    // Galat tampil di dalam dialog, di samping kolomnya. Kalau dialog
+    // ditutup dulu baru diperiksa, nama dan PIN yang sudah diketik hilang.
+    String? nameError;
+    String? pinError;
 
     final ok = await showDialog<bool>(
       context: context,
@@ -196,7 +223,10 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
               TextField(
                 controller: nameController,
                 textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'Nama'),
+                decoration: InputDecoration(
+                  labelText: 'Nama',
+                  errorText: nameError,
+                ),
               ),
               const SizedBox(height: 14),
               TextField(
@@ -204,9 +234,10 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
                 keyboardType: TextInputType.number,
                 maxLength: 6,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'PIN (4-6 digit)',
                   counterText: '',
+                  errorText: pinError,
                 ),
               ),
               const SizedBox(height: 10),
@@ -229,7 +260,23 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
               child: const Text('Batal'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () async {
+                final nameProblem = nameController.text.trim().isEmpty
+                    ? 'Nama wajib diisi.'
+                    : null;
+                final pinProblem =
+                    await _pinProblem(pinController.text.trim());
+
+                if (nameProblem != null || pinProblem != null) {
+                  setDialogState(() {
+                    nameError = nameProblem;
+                    pinError = pinProblem;
+                  });
+                  return;
+                }
+
+                if (context.mounted) Navigator.pop(context, true);
+              },
               child: const Text('Simpan'),
             ),
           ],
@@ -242,49 +289,93 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
     final name = nameController.text.trim();
     final pin = pinController.text.trim();
 
-    if (name.isEmpty || pin.length < 4) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Nama dan PIN minimal 4 digit wajib diisi.')),
-        );
-      }
-      return;
-    }
-
-    // PIN harus unik, karena login hanya memakai PIN tanpa nama pengguna.
-    final existing = await ref.read(userRepoProvider).authenticate(pin);
-    if (existing != null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('PIN itu sudah dipakai pengguna lain.')),
-        );
-      }
-      return;
-    }
-
     await ref.read(userRepoProvider).insert(
           AppUser(name: name, pinHash: hashPin(pin), role: role),
         );
 
     await _load();
+    _snack('$name ditambahkan.');
   }
 
   Future<void> _resetPin(AppUser user) async {
     final controller = TextEditingController();
+    String? pinError;
 
     final ok = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Ganti PIN ${user.name}'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          maxLength: 6,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-          decoration: const InputDecoration(
-            labelText: 'PIN baru',
-            counterText: '',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('Ganti PIN ${user.name}'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            maxLength: 6,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: InputDecoration(
+              labelText: 'PIN baru (4-6 digit)',
+              counterText: '',
+              errorText: pinError,
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: () async {
+                // PIN lama pengguna ini sendiri boleh dipakai lagi; yang
+                // ditolak hanya PIN milik orang lain.
+                final problem = await _pinProblem(
+                  controller.text.trim(),
+                  exceptUserId: user.id,
+                );
+
+                if (problem != null) {
+                  setDialogState(() => pinError = problem);
+                  return;
+                }
+
+                if (context.mounted) Navigator.pop(context, true);
+              },
+              child: const Text('Simpan'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (ok != true) return;
+
+    await ref.read(userRepoProvider).setPin(user.id!, controller.text.trim());
+    await _load();
+    _snack('PIN ${user.name} diganti.');
+  }
+
+  Future<void> _deactivate(AppUser user) async {
+    final repo = ref.read(userRepoProvider);
+
+    if (user.id == ref.read(currentUserProvider).id) {
+      _snack('Anda sedang masuk dengan akun ini. Masuk sebagai Owner lain '
+          'untuk menonaktifkannya.');
+      return;
+    }
+
+    if (user.isOwner && await repo.isLastOwner(user.id!)) {
+      _snack('Ini satu-satunya Owner. Buat Owner lain dulu sebelum '
+          'menonaktifkan.');
+      return;
+    }
+
+    if (!mounted) return;
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Nonaktifkan ${user.name}?'),
+        content: const Text(
+          'Akun ini tidak bisa masuk lagi. Riwayat transaksinya tetap '
+          'tersimpan di laporan.',
         ),
         actions: [
           TextButton(
@@ -293,40 +384,15 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Simpan'),
+            child: const Text('Nonaktifkan'),
           ),
         ],
       ),
     );
-
-    if (ok != true || controller.text.length < 4) return;
-
-    await ref.read(userRepoProvider).setPin(user.id!, controller.text);
-    await _load();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('PIN diganti.')),
-      );
-    }
-  }
-
-  Future<void> _deactivate(AppUser user) async {
-    final repo = ref.read(userRepoProvider);
-
-    if (user.isOwner && await repo.isLastOwner(user.id!)) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Ini satu-satunya Owner. Buat Owner lain dulu sebelum menonaktifkan.'),
-          ),
-        );
-      }
-      return;
-    }
+    if (yes != true) return;
 
     await repo.deactivate(user.id!);
     await _load();
+    _snack('${user.name} dinonaktifkan.');
   }
 }

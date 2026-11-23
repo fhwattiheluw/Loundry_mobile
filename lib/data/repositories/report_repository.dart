@@ -165,10 +165,12 @@ class ReportRepository {
     return result;
   }
 
-  /// Pendapatan per layanan.
+  /// Nilai order per layanan: jumlah harga baris order yang dibuat dalam
+  /// periode, sebelum diskon dan biaya tambahan, tanpa order batal.
   ///
-  /// Nilai order dibagi proporsional ke pembayaran yang sudah masuk, supaya
-  /// order yang baru dibayar separuh tidak dihitung penuh.
+  /// Ini ukuran seberapa laku tiap layanan, BUKAN uang yang diterima. Order
+  /// yang belum dibayar tetap terhitung, jadi jumlahnya tidak harus sama
+  /// dengan pendapatan (uang masuk) pada laporan yang sama.
   Future<List<NamedAmount>> byService(DateTime from, DateTime to) async {
     final db = await _db.database;
 

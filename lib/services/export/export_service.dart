@@ -61,9 +61,13 @@ class ExportService {
         ['Tanggal', 'Uang diterima'],
         ...daily.map((d) => [formatDate(d.date), d.amount]),
         [],
-        ['PER LAYANAN'],
-        ['Layanan', 'Jumlah order', 'Kuantitas', 'Nilai'],
-        ...byService.map((s) => [s.name, s.count, s.qty, s.amount]),
+        // Nilai per layanan adalah jumlah harga baris order sebelum diskon,
+        // BUKAN uang yang diterima, jadi totalnya tidak sama dengan
+        // "Pendapatan" di atas. Kuantitas ditulis dengan koma desimal supaya
+        // Excel versi Indonesia membacanya sebagai angka, bukan teks.
+        ['NILAI ORDER PER LAYANAN (sebelum diskon, bukan uang diterima)'],
+        ['Layanan', 'Jumlah order', 'Kuantitas', 'Nilai order'],
+        ...byService.map((s) => [s.name, s.count, formatQty(s.qty), s.amount]),
         [],
         ['PER METODE BAYAR'],
         ['Metode', 'Jumlah transaksi', 'Nilai'],
@@ -119,9 +123,9 @@ class ExportService {
             _pdfSummary(summary),
             pw.SizedBox(height: 20),
             if (byService.isNotEmpty) ...[
-              _pdfSectionTitle('Pendapatan per layanan'),
+              _pdfSectionTitle('Nilai order per layanan'),
               _pdfTable(
-                ['Layanan', 'Order', 'Kuantitas', 'Nilai'],
+                ['Layanan', 'Order', 'Kuantitas', 'Nilai order'],
                 byService
                     .map((s) => [
                           s.name,
@@ -147,7 +151,9 @@ class ExportService {
               'Pendapatan dihitung dari pembayaran yang benar-benar diterima '
               'pada periode ini, bukan dari nilai order. Order dengan DP di '
               'satu periode dan pelunasan di periode lain terbagi ke dua '
-              'periode tersebut.',
+              'periode tersebut. Nilai order per layanan adalah harga baris '
+              'order sebelum diskon, sehingga jumlahnya tidak harus sama '
+              'dengan pendapatan.',
               style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700),
             ),
           ],

@@ -24,12 +24,24 @@ void main() {
       expect(normalizePhone('81234567890'), '6281234567890');
     });
 
+    test('nol sesudah +62 dibuang, salah ketik yang sangat umum', () {
+      expect(normalizePhone('+62 0812 3456 7890'), '6281234567890');
+      expect(normalizePhone('620812-3456-7890'), '6281234567890');
+      expect(isValidPhone('+62 0812 3456 7890'), isTrue);
+    });
+
+    test('awalan internasional 00 diperlakukan seperti plus', () {
+      expect(normalizePhone('0062 812 3456 7890'), '6281234567890');
+    });
+
     test('semua bentuk nomor yang sama menghasilkan nilai identik', () {
       final bentuk = [
         '081234567890',
         '+6281234567890',
         '0812-3456-7890',
         '62 812 3456 7890',
+        '+62 0812 3456 7890',
+        '0062 812 3456 7890',
       ];
 
       final hasil = bentuk.map(normalizePhone).toSet();
@@ -95,6 +107,20 @@ void main() {
     test('berat bulat ditulis tanpa nol ekor', () {
       expect(formatQty(3.0), '3');
       expect(formatQty(3.5), '3,5');
+      expect(formatQty(100.0), '100');
+    });
+
+    test('ekor desimal hasil penjumlahan tidak ikut tampil', () {
+      // SUM() di laporan menjumlahkan berat 0,1 kg berkali-kali, dan hasilnya
+      // bisa 3.5999999999999996. Pemilik tidak boleh melihat angka itu.
+      expect(formatQty(0.1 + 0.2), '0,3');
+      expect(formatQty(3.5999999999999996), '3,6');
+      expect(formatQty(0.1 * 3), '0,3');
+    });
+
+    test('tiga angka desimal tetap tampil utuh', () {
+      expect(formatQty(0.125), '0,125');
+      expect(formatQty(12.25), '12,25');
     });
   });
 }

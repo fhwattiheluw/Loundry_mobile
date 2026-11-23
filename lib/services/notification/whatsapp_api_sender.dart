@@ -32,6 +32,31 @@ class WhatsAppApiSender implements NotificationSender {
       _settings.get(SettingsKeys.whatsappPhoneNumberId).isNotEmpty &&
       _settings.get(SettingsKeys.whatsappToken).isNotEmpty;
 
+  /// "21.0" dan "V21.0" dibetulkan menjadi "v21.0". Kosong memakai bawaan.
+  /// Null berarti bentuknya tidak bisa dipakai sebagai versi API.
+  static String? normalizeApiVersion(String raw) {
+    final text = raw.trim().toLowerCase();
+    if (text.isEmpty) return 'v21.0';
+
+    final withV = text.startsWith('v') ? text : 'v$text';
+    return RegExp(r'^v\d+\.\d+$').hasMatch(withV) ? withV : null;
+  }
+
+  /// Meta menolak parameter template yang berisi baris baru, tab, atau lebih
+  /// dari empat spasi berturut-turut (galat 100 "Param text cannot have
+  /// new-line/tab characters or more than 4 consecutive spaces").
+  ///
+  /// Pesan nota berbaris-baris, jadi tanpa ini setiap pengiriman lewat
+  /// template pasti ditolak. Baris disambung dengan " | " supaya rincian
+  /// tetap terbaca sebagai satu kalimat panjang.
+  static String templateParam(String message) {
+    return message
+        .trim()
+        .replaceAll(RegExp(r'\s*[\r\n]+\s*'), ' | ')
+        .replaceAll('\t', ' ')
+        .replaceAll(RegExp(r' {2,}'), ' ');
+  }
+
   @override
   Future<NotificationResult> send({
     required String phone,
@@ -73,7 +98,7 @@ class WhatsAppApiSender implements NotificationSender {
                 {
                   'type': 'body',
                   'parameters': [
-                    {'type': 'text', 'text': message},
+                    {'type': 'text', 'text': templateParam(message)},
                   ],
                 },
               ],

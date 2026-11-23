@@ -50,10 +50,16 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 **WhatsApp**
 - Dua mode: manual lewat `wa.me` (gratis) atau otomatis lewat Cloud API resmi
 - Pemicu: order diterima, cucian selesai, pengingat belum diambil, pembayaran
-- Template bisa diedit dengan variabel seperti `{nama}` dan `{no_order}`
+- Template bisa diedit dengan variabel seperti `{nama}` dan `{no_order}`:
+  ketuk variabel untuk menyisipkannya, lihat contoh pesan sebelum menyimpan,
+  dan template kosong atau berisi variabel salah ketik ditolak
 - Log kirim lengkap, dan satu pemicu tidak terkirim dua kali
 - Kirim ulang otomatis tiga kali dengan jeda membesar bila gagal
-- Jam tenang: pesan di luar jam operasional ditunda, bukan dibuang
+- Jam tenang (mode otomatis saja): pesan di luar jam operasional ditunda,
+  bukan dibuang. Di mode manual kasir sendiri yang menekan kirim, jadi tidak
+  ada yang ditahan
+- Mode otomatis dengan template Meta menyatukan pesan menjadi satu baris,
+  karena Meta menolak baris baru di dalam parameter template
 - Kirim promo ke pelanggan terpilih
 
 **Shift kasir**
@@ -103,6 +109,8 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 - Layar login dikunci bertahap setelah PIN salah berulang (tiap kelima kali:
   30 detik, 5 menit, 15 menit), juga pada persetujuan diskon oleh Owner
 - Kasir tidak bisa mengubah harga atau membuka laporan keseluruhan
+- PIN harus unik (login hanya memakai PIN), juga saat PIN diganti;
+  menonaktifkan akun meminta konfirmasi
 - Setiap transaksi menyimpan siapa yang membuatnya
 
 ---
@@ -224,7 +232,10 @@ Yang diuji:
 | `test/backup_reminder_test.dart` | Aturan pengingat backup mingguan |
 | `test/friendly_error_test.dart` | Terjemahan galat teknis menjadi kalimat yang bisa dipahami |
 | `test/setup_checklist_test.dart` | Aturan daftar langkah awal: selesai, tersembunyi, hilang sendiri |
-| `test/security_test.dart` | Normalisasi dan validasi nomor HP, hash PIN, format rupiah |
+| `test/security_test.dart` | Normalisasi dan validasi nomor HP (termasuk `+62 0812` dan `0062`), hash PIN, format angka |
+| `test/notification_service_test.dart` | Mode kirim, anti kirim ganda, jam tenang, antrean tanpa pesan ganda, kirim ulang |
+| `test/message_template_test.dart` | Isi pesan, daftar variabel, deteksi variabel salah ketik, order contoh |
+| `test/whatsapp_api_sender_test.dart` | Parameter template Meta tanpa baris baru, versi API, permintaan dan penolakan |
 
 Uji laporan memakai SQLite sungguhan lewat `sqflite_common_ffi`, bukan tiruan,
 sehingga kueri SQL diuji apa adanya.

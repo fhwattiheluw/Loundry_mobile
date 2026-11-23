@@ -20,12 +20,19 @@ bool verifyPin(String pin, String hash) => hashPin(pin) == hash;
 ///
 /// 0812-3456-7890 -> 6281234567890
 /// +62 812 3456 7890 -> 6281234567890
+/// +62 0812 3456 7890 -> 6281234567890 (salah ketik yang sangat umum)
+/// 0062 812 3456 7890 -> 6281234567890 (awalan internasional lama)
 /// 62812... -> tetap
 String normalizePhone(String raw) {
-  var digits = raw.replaceAll(RegExp(r'[^0-9+]'), '');
+  // Tanda plus hanya berarti "awalan internasional"; setelah angka 62
+  // dikenali, ia tidak membawa informasi apa pun.
+  var digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
 
-  if (digits.startsWith('+')) digits = digits.substring(1);
+  if (digits.startsWith('00')) digits = digits.substring(2);
   if (digits.startsWith('0')) return '62${digits.substring(1)}';
+  // Nomor Indonesia tidak pernah memakai nol setelah 62. Yang mengetiknya
+  // hampir pasti menulis "+62" lalu nomor lokalnya apa adanya.
+  if (digits.startsWith('620')) return '62${digits.substring(3)}';
   if (digits.startsWith('62')) return digits;
   if (digits.startsWith('8')) return '62$digits';
 

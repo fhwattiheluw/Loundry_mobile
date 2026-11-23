@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../data/db/settings_keys.dart';
+import '../../services/notification/whatsapp_api_sender.dart';
 
 /// Pilihan mode pengiriman WhatsApp dan jam tenang (FR-66, FR-67, FR-72).
 class WhatsAppSettingsScreen extends ConsumerStatefulWidget {
@@ -62,14 +63,55 @@ class _WhatsAppSettingsScreenState
     super.dispose();
   }
 
+  void _warn(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  /// Membuka pemilih jam. Mengetik "9" atau "21.00" dulu membuat jam tenang
+  /// mati diam-diam karena formatnya tidak dikenali; pemilih jam tidak bisa
+  /// menghasilkan format yang salah.
+  Future<void> _pickTime(TextEditingController controller, String help) async {
+    final parts = controller.text.split(':');
+    final initial = TimeOfDay(
+      hour: int.tryParse(parts.first) ?? 8,
+      minute: parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0,
+    );
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+      helpText: help,
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() {
+      controller.text = '${picked.hour.toString().padLeft(2, '0')}:'
+          '${picked.minute.toString().padLeft(2, '0')}';
+    });
+  }
+
   Future<void> _save() async {
     if (_mode == 'api' &&
         (_phoneId.text.trim().isEmpty || _token.text.trim().isEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Mode API butuh Phone Number ID dan token.'),
-        ),
-      );
+      _warn('Mode API butuh Phone Number ID dan token.');
+      return;
+    }
+
+    final version = WhatsAppApiSender.normalizeApiVersion(_apiVersion.text);
+    if (version == null) {
+      _warn('Versi API harus berbentuk seperti v21.0.');
+      return;
+    }
+
+    // Meta hanya menerima huruf kecil, angka, dan garis bawah pada nama
+    // template. Salah huruf di sini baru ketahuan saat pesan pertama ditolak.
+    final templateName = _templateName.text.trim();
+    if (templateName.isNotEmpty &&
+        !RegExp(r'^[a-z0-9_]+$').hasMatch(templateName)) {
+      _warn('Nama template hanya boleh huruf kecil, angka, dan garis bawah, '
+          'misalnya nota_laundry.');
       return;
     }
 
@@ -77,8 +119,8 @@ class _WhatsAppSettingsScreenState
       SettingsKeys.whatsappMode: _mode,
       SettingsKeys.whatsappPhoneNumberId: _phoneId.text.trim(),
       SettingsKeys.whatsappToken: _token.text.trim(),
-      SettingsKeys.whatsappTemplateName: _templateName.text.trim(),
-      SettingsKeys.whatsappApiVersion: _apiVersion.text.trim(),
+      SettingsKeys.whatsappTemplateName: templateName,
+      SettingsKeys.whatsappApiVersion: version,
       SettingsKeys.quietHoursEnabled: _quietEnabled ? '1' : '0',
       SettingsKeys.quietHoursStart: _quietStart.text.trim(),
       SettingsKeys.quietHoursEnd: _quietEnd.text.trim(),
@@ -87,9 +129,7 @@ class _WhatsAppSettingsScreenState
     ref.invalidate(settingsLoadedProvider);
 
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pengaturan WhatsApp disimpan.')),
-    );
+    _warn('Pengaturan WhatsApp disimpan.');
     Navigator.of(context).pop();
   }
 
@@ -180,8 +220,10 @@ class _WhatsAppSettingsScreenState
               decoration: const InputDecoration(
                 labelText: 'Nama template (opsional)',
                 helperText: 'Kosongkan untuk teks biasa, hanya berhasil dalam '
-                    '24 jam setelah pelanggan membalas',
-                helperMaxLines: 3,
+                    '24 jam setelah pelanggan membalas. Dengan template, '
+                    'isi pesan disatukan menjadi satu baris karena Meta '
+                    'melarang baris baru di dalam template.',
+                helperMaxLines: 5,
               ),
             ),
             const SizedBox(height: 14),
@@ -200,9 +242,13 @@ class _WhatsAppSettingsScreenState
             value: _quietEnabled,
             onChanged: (v) => setState(() => _quietEnabled = v),
             title: const Text('Jam tenang'),
-            subtitle: const Text(
-              'Pesan di luar jam operasional ditunda, bukan dibuang, dan '
-              'dikirim saat jam buka berikutnya.',
+            subtitle: Text(
+              _mode == 'api'
+                  ? 'Pesan otomatis di luar jam operasional ditunda, bukan '
+                      'dibuang, dan dikirim saat jam buka berikutnya.'
+                  : 'Hanya berlaku di mode otomatis. Di mode manual kasir '
+                      'sendiri yang menekan kirim, jadi tidak ada pesan yang '
+                      'ditahan.',
             ),
           ),
 
@@ -213,9 +259,11 @@ class _WhatsAppSettingsScreenState
                 Expanded(
                   child: TextField(
                     controller: _quietStart,
+                    readOnly: true,
+                    onTap: () => _pickTime(_quietStart, 'Mulai jam tenang'),
                     decoration: const InputDecoration(
                       labelText: 'Mulai tenang',
-                      hintText: '21:00',
+                      suffixIcon: Icon(Icons.schedule),
                     ),
                   ),
                 ),
@@ -223,9 +271,11 @@ class _WhatsAppSettingsScreenState
                 Expanded(
                   child: TextField(
                     controller: _quietEnd,
+                    readOnly: true,
+                    onTap: () => _pickTime(_quietEnd, 'Selesai jam tenang'),
                     decoration: const InputDecoration(
                       labelText: 'Selesai tenang',
-                      hintText: '08:00',
+                      suffixIcon: Icon(Icons.schedule),
                     ),
                   ),
                 ),

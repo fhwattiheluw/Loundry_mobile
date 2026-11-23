@@ -208,10 +208,12 @@ void main() {
       expect(manual.sent.length, 1);
     });
 
-    test('rentang yang mencakup seluruh hari menunda pesan', () async {
+    test('rentang yang mencakup seluruh hari menunda pesan di mode api',
+        () async {
       // 00:00 sampai 23:59 memastikan pengujian tidak bergantung jam berapa
       // berkas ini dijalankan.
       await settings.setAll({
+        SettingsKeys.whatsappMode: 'api',
         SettingsKeys.quietHoursEnabled: '1',
         SettingsKeys.quietHoursStart: '00:00',
         SettingsKeys.quietHoursEnd: '23:59',
@@ -222,7 +224,45 @@ void main() {
           await service.notify(order, NotificationTrigger.orderDiterima);
 
       expect(result.skipped, isTrue);
-      expect(manual.sent, isEmpty);
+      expect(api.sent, isEmpty);
+      expect(await service.pendingCount(), 1);
+    });
+
+    test('mode manual tidak pernah menahan pesan', () async {
+      // Di mode manual yang menekan kirim adalah kasir, dan antrean tidak
+      // pernah diproses sendiri. Pesan yang ditahan di sana tidak akan
+      // pernah terkirim, dan lencana antrean tidak akan pernah hilang.
+      await settings.setAll({
+        SettingsKeys.quietHoursEnabled: '1',
+        SettingsKeys.quietHoursStart: '00:00',
+        SettingsKeys.quietHoursEnd: '23:59',
+      });
+      await build();
+
+      final result =
+          await service.notify(order, NotificationTrigger.orderDiterima);
+
+      expect(result.sent, isTrue);
+      expect(manual.sent.length, 1);
+      expect(await service.pendingCount(), 0);
+    });
+
+    test('mengetuk kirim berkali-kali di luar jam buka hanya satu antrean',
+        () async {
+      await settings.setAll({
+        SettingsKeys.whatsappMode: 'api',
+        SettingsKeys.quietHoursEnabled: '1',
+        SettingsKeys.quietHoursStart: '00:00',
+        SettingsKeys.quietHoursEnd: '23:59',
+      });
+      await build();
+
+      for (var i = 0; i < 3; i++) {
+        await service.notify(order, NotificationTrigger.orderDiterima);
+      }
+
+      final raw = await db.database;
+      expect((await raw.query('notification_logs')).length, 1);
       expect(await service.pendingCount(), 1);
     });
 
@@ -332,6 +372,101 @@ void main() {
     });
   });
 
+  group('antrean tidak membuat pesan ganda', () {
+    Future<void> advance() async {
+      final raw = await db.database;
+      await raw.update(
+        'notification_logs',
+        {
+          'next_attempt_at': DateTime.now()
+              .subtract(const Duration(minutes: 1))
+              .toIso8601String(),
+        },
+        where: 'next_attempt_at IS NOT NULL',
+      );
+    }
+
+    Future<void> useApi() async {
+      await settings.set(SettingsKeys.whatsappMode, 'api');
+      await build();
+    }
+
+    test('pesan yang sudah sampai lewat jalur lain tidak dikirim lagi',
+        () async {
+      await useApi();
+
+      api.succeed = false;
+      await service.notify(order, NotificationTrigger.orderDiterima);
+
+      // Kasir mengirim ulang sendiri dan berhasil.
+      api.succeed = true;
+      await service.notify(order, NotificationTrigger.orderDiterima,
+          force: true);
+      expect(api.sent.length, 2);
+
+      await advance();
+      final delivered = await service.processQueue();
+
+      expect(delivered, 0);
+      expect(api.sent.length, 2, reason: 'tidak ada kiriman ketiga');
+
+      final raw = await db.database;
+      final rows = await raw.query('notification_logs');
+      expect(rows.length, 1);
+      expect(rows.single['status'], 'terkirim');
+    });
+
+    test('baris antrean ganda dari data lama tidak membuat galat', () async {
+      await useApi();
+
+      // Meniru data yang dibuat sebelum perbaikan: dua baris tertunda untuk
+      // pesan yang sama. Menandai keduanya terkirim dulu melanggar indeks
+      // unik dan menghentikan seluruh antrean setiap aplikasi dibuka.
+      final raw = await db.database;
+      final past = DateTime.now()
+          .subtract(const Duration(minutes: 1))
+          .toIso8601String();
+      for (var i = 0; i < 2; i++) {
+        await raw.insert('notification_logs', {
+          'order_id': order.id,
+          'trigger_name': NotificationTrigger.orderDiterima.name,
+          'target': order.customerPhone,
+          'sent_at': past,
+          'status': 'tertunda',
+          'message': 'Halo',
+          'attempts': 0,
+          'next_attempt_at': past,
+        });
+      }
+
+      final delivered = await service.processQueue();
+
+      expect(delivered, 1);
+      expect(api.sent.length, 1, reason: 'pelanggan hanya menerima satu pesan');
+
+      final rows = await raw.query('notification_logs');
+      expect(rows.length, 1);
+      expect(rows.single['status'], 'terkirim');
+    });
+
+    test('order yang dibatalkan tidak lagi dikirimi pesan', () async {
+      await useApi();
+      api.succeed = false;
+      await service.notify(order, NotificationTrigger.orderDiterima);
+
+      await orders.cancel(order.id!, user: owner, reason: 'Salah input');
+
+      api.succeed = true;
+      api.sent.clear();
+      await advance();
+
+      expect(await service.processQueue(), 0);
+      expect(api.sent, isEmpty);
+      expect(await service.pendingCount(), 0,
+          reason: 'sudah menyerah, bukan menunggu');
+    });
+  });
+
   group('kirim ulang manual', () {
     test('mengubah status menjadi terkirim', () async {
       manual.succeed = false;
@@ -345,6 +480,44 @@ void main() {
 
       expect(result.sent, isTrue);
       expect(await service.pendingCount(), 0);
+    });
+
+    test('tidak galat bila pesan yang sama sudah tercatat terkirim', () async {
+      await service.notify(order, NotificationTrigger.orderDiterima);
+
+      // Baris gagal sisa untuk pesan yang sama, seperti yang tertinggal di
+      // data lama. Mengubahnya jadi terkirim melanggar indeks unik.
+      final raw = await db.database;
+      final id = await raw.insert('notification_logs', {
+        'order_id': order.id,
+        'trigger_name': NotificationTrigger.orderDiterima.name,
+        'target': order.customerPhone,
+        'sent_at': DateTime.now().toIso8601String(),
+        'status': 'gagal',
+        'message': 'Halo',
+        'attempts': 1,
+      });
+
+      final result = await service.resend(id);
+
+      expect(result.sent, isTrue);
+      final rows = await raw.query('notification_logs');
+      expect(rows.length, 1);
+      expect(rows.single['status'], 'terkirim');
+    });
+
+    test('kirim sukses membersihkan baris gagal lama untuk pemicu yang sama',
+        () async {
+      manual.succeed = false;
+      await service.notify(order, NotificationTrigger.orderDiterima);
+      expect(await service.pendingCount(), 1);
+
+      manual.succeed = true;
+      await service.notify(order, NotificationTrigger.orderDiterima,
+          force: true);
+
+      expect(await service.pendingCount(), 0);
+      expect((await service.failures()), isEmpty);
     });
   });
 
