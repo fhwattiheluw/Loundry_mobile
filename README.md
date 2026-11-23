@@ -15,6 +15,7 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 - [Struktur kode](#struktur-kode)
 - [Pengujian](#pengujian)
 - [Konfigurasi AdMob](#konfigurasi-admob)
+- [Daftar akun Play Console](#daftar-akun-play-console)
 - [Deploy ke Google Play](#deploy-ke-google-play)
 - [Keputusan desain penting](#keputusan-desain-penting)
 
@@ -320,6 +321,47 @@ akun baru.
 
 Sebelum rilis, Play Console wajib mendeklarasikan penggunaan Advertising ID,
 dan aplikasi wajib punya kebijakan privasi yang bisa diakses publik.
+
+---
+
+## Daftar akun Play Console
+
+Dilakukan sekali, sebelum semua langkah deploy di bawah. Sediakan waktu
+kira-kira tiga minggu sampai aplikasi bisa terbit untuk umum.
+
+### Yang perlu disiapkan
+
+- Akun Google yang akan dipakai selamanya untuk aplikasi ini, dengan
+  verifikasi dua langkah menyala
+- KTP dan bukti alamat (rekening listrik, mutasi bank, atau surat resmi lain
+  yang memuat nama dan alamat yang sama dengan KTP)
+- Kartu kredit atau debit berlogo Visa/Mastercard untuk biaya 25 dolar AS,
+  dibayar sekali seumur akun dan tidak dikembalikan bila verifikasi gagal
+- Nama developer yang akan tampil di Play Store, nama legal sesuai KTP,
+  alamat legal, dan email kontak
+- Usia minimal 18 tahun
+
+### Langkah
+
+1. Buka `play.google.com/console`, masuk dengan akun Google tadi
+2. Pilih jenis akun **Pribadi**. Akun Organisasi bebas dari syarat 12
+   penguji, tetapi butuh nomor D-U-N-S yang pengurusannya bisa sampai 30 hari
+3. Isi nama developer, nama legal, alamat legal, dan email kontak. Nomor HP
+   dan email diverifikasi dengan kode sekali pakai
+4. Setujui Developer Distribution Agreement, bayar 25 dolar AS
+5. Unggah KTP dan bukti alamat. Verifikasi identitas memakan waktu sekitar
+   tiga hari kerja, dan sampai selesai tidak ada rilis yang bisa diterbitkan
+6. Buat aplikasi baru di Play Console: nama, bahasa, jenis aplikasi, dan
+   pernyataan gratis atau berbayar
+7. Isi Dasbor, Konten aplikasi: kebijakan privasi, Data Safety, pernyataan
+   Advertising ID, rating konten, dan target audiens
+8. Unggah AAB ke jalur **Closed testing**, lalu kumpulkan minimal 12 penguji
+   dan jaga mereka tetap ikut selama 14 hari berturut-turut
+9. Setelah 14 hari, ajukan akses produksi dari Play Console
+
+Akun pribadi yang dibuat setelah 13 November 2023 wajib melalui langkah 8.
+Hitungan 14 harinya diukur saat tombol ajukan ditekan, jadi jumlah penguji
+tidak boleh turun di bawah 12 di tengah jalan.
 
 ---
 
