@@ -8,6 +8,7 @@ import '../../core/formatters.dart';
 import '../../data/repositories/order_repository.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../../domain/order_grouping.dart';
 import '../../services/ads/ad_service.dart';
 import '../widgets/layout.dart';
 import '../widgets/states.dart';
@@ -195,21 +196,8 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                 onRetry: () => ref.refreshOrderData(),
               ),
               data: (raw) {
-                // Yang telat naik ke atas, yang paling lama telat paling
-                // dulu. Di konter, tumpukan yang terlupakan itulah yang
-                // harus terlihat pertama, bukan order yang baru saja masuk.
-                final list = [...raw]..sort((a, b) {
-                    final now = DateTime.now();
-                    final aLate =
-                        a.laundryStatus.isOpen && now.isAfter(a.estimatedAt);
-                    final bLate =
-                        b.laundryStatus.isOpen && now.isAfter(b.estimatedAt);
-                    if (aLate != bLate) return aLate ? -1 : 1;
-                    if (aLate && bLate) {
-                      return a.estimatedAt.compareTo(b.estimatedAt);
-                    }
-                    return 0;
-                  });
+                final now = DateTime.now();
+                final list = raw;
 
                 if (list.isEmpty) {
                   final searching = filter.query.trim().isNotEmpty;
@@ -278,43 +266,55 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                 // Dengan kurang dari tiga order, iklan ditaruh setelah
                 // order terakhir, jadi toko yang masih sepi pun tetap
                 // menayangkan iklan.
-                final adAt = ads.enabled && _selected.isEmpty
+                final groups = groupOrders(list, now);
+                final summary = summarizeOrders(list, now);
+
+                // Iklan ditaruh setelah kartu ketiga (atau yang terakhir bila
+                // order kurang dari tiga), di dalam kelompok tempat kartu itu
+                // berada, supaya tetap muncul di awal daftar walau satu hari
+                // berisi puluhan order.
+                final adTarget = ads.enabled && _selected.isEmpty
                     ? (list.length >= 3 ? 3 : list.length)
                     : -1;
+                var seen = 0;
+
+                final sections = <Widget>[];
+
+                for (final group in groups) {
+                  final cards = <Widget>[];
+                  var adPlaced = false;
+
+                  for (var i = 0; i < group.orders.length; i++) {
+                    final order = group.orders[i];
+                    cards.add(_card(order));
+                    seen++;
+
+                    if (!adPlaced && adTarget >= 0 && seen == adTarget) {
+                      cards.add(const SafeNativeAd(enabled: true));
+                      adPlaced = true;
+                    }
+                  }
+
+                  sections.add(_GroupSection(group: group, cards: cards));
+                }
 
                 return RefreshIndicator(
                   onRefresh: () async => ref.refreshOrderData(),
-                  child: ResponsiveCardGrid(
+                  child: ListView(
                     padding: screenPadding(context, bottom: 96),
-                    itemCount: list.length + (adAt >= 0 ? 1 : 0),
-                    spacing: AppSpacing.md,
-                    itemBuilder: (context, i) {
-                      if (adAt >= 0 && i == adAt) {
-                        return const SafeNativeAd(enabled: true);
-                      }
-
-                      final order = list[adAt >= 0 && i > adAt ? i - 1 : i];
-
-                      return _OrderCard(
-                        order: order,
-                        selected: _selected.contains(order.id),
-                        selectionMode: _selected.isNotEmpty,
-                        onTap: () async {
-                          if (_selected.isNotEmpty) {
-                            setState(() => _toggle(order.id!));
-                            return;
-                          }
-                          await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  OrderDetailScreen(orderId: order.id!),
-                            ),
-                          );
-                          ref.refreshOrderData();
-                        },
-                        onLongPress: () => setState(() => _toggle(order.id!)),
-                      );
-                    },
+                    children: [
+                      _SummaryStrip(
+                        summary: summary,
+                        onTapOutstanding: summary.outstanding > 0
+                            ? () => _setFilter(OrderFilter(
+                                  unpaidOnly: true,
+                                  query: filter.query,
+                                ))
+                            : null,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      ...sections,
+                    ],
                   ),
                 );
               },
@@ -329,6 +329,27 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
     if (!_selected.add(id)) _selected.remove(id);
   }
 
+  Widget _card(LaundryOrder order) {
+    return _OrderCard(
+      order: order,
+      selected: _selected.contains(order.id),
+      selectionMode: _selected.isNotEmpty,
+      onTap: () async {
+        if (_selected.isNotEmpty) {
+          setState(() => _toggle(order.id!));
+          return;
+        }
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => OrderDetailScreen(orderId: order.id!),
+          ),
+        );
+        ref.refreshOrderData();
+      },
+      onLongPress: () => setState(() => _toggle(order.id!)),
+    );
+  }
+
   Widget _chip(String label,
       {required bool selected, required VoidCallback onTap}) {
     return Padding(
@@ -339,6 +360,185 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
         showCheckmark: false,
         onSelected: (_) => onTap(),
       ),
+    );
+  }
+}
+
+/// Empat angka ringkas untuk order yang sedang tampil. Mengikuti filter dan
+/// pencarian, jadi "Belum lunas" langsung menunjukkan total tagihannya.
+class _SummaryStrip extends StatelessWidget {
+  const _SummaryStrip({required this.summary, this.onTapOutstanding});
+
+  final OrderListSummary summary;
+  final VoidCallback? onTapOutstanding;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final palette = context.status;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.md, horizontal: AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: scheme.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          children: [
+            _cell(context, 'Order', '${summary.count}'),
+            _divider(scheme),
+            _cell(context, 'Nilai', formatRupiah(summary.totalValue)),
+            _divider(scheme),
+            _cell(
+              context,
+              'Sisa tagihan',
+              formatRupiah(summary.outstanding),
+              color: summary.outstanding > 0 ? palette.belumLunas : null,
+              onTap: onTapOutstanding,
+            ),
+            _divider(scheme),
+            _cell(
+              context,
+              'Telat',
+              '${summary.lateCount}',
+              color: summary.lateCount > 0 ? palette.belumLunas : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _divider(ColorScheme scheme) =>
+      VerticalDivider(width: 1, color: scheme.outlineVariant);
+
+  Widget _cell(BuildContext context, String label, String value,
+      {Color? color, VoidCallback? onTap}) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: color,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Satu kelompok order dengan judulnya. Di HP kartu berderet ke bawah, di
+/// layar lebar jadi dua atau tiga kolom.
+class _GroupSection extends StatelessWidget {
+  const _GroupSection({required this.group, required this.cards});
+
+  final OrderGroup group;
+  final List<Widget> cards;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final palette = context.status;
+    final color =
+        group.needsAttention ? palette.belumLunas : theme.colorScheme.onSurface;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.xs, AppSpacing.lg, AppSpacing.xs, AppSpacing.sm),
+          child: Row(
+            children: [
+              if (group.needsAttention) ...[
+                Icon(Icons.warning_amber_rounded, size: 18, color: color),
+                const SizedBox(width: AppSpacing.xs),
+              ],
+              Text(
+                group.label,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                '${group.orders.length}',
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ),
+        ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = (constraints.maxWidth / 320).floor().clamp(1, 3);
+
+            if (columns == 1) {
+              return Column(
+                children: [
+                  for (var i = 0; i < cards.length; i++) ...[
+                    if (i > 0) const SizedBox(height: AppSpacing.md),
+                    cards[i],
+                  ],
+                ],
+              );
+            }
+
+            final rows = (cards.length / columns).ceil();
+
+            return Column(
+              children: [
+                for (var r = 0; r < rows; r++) ...[
+                  if (r > 0) const SizedBox(height: AppSpacing.md),
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        for (var c = 0; c < columns; c++) ...[
+                          if (c > 0) const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: r * columns + c < cards.length
+                                ? cards[r * columns + c]
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }

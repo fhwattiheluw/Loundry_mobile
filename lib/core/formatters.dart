@@ -12,6 +12,8 @@ final _dateTime = DateFormat('dd/MM/yyyy HH:mm', 'id_ID');
 final _dateOnly = DateFormat('dd/MM/yyyy', 'id_ID');
 final _dayMonth = DateFormat('d MMM', 'id_ID');
 final _longDate = DateFormat('EEEE, d MMMM yyyy', 'id_ID');
+final _dayLabel = DateFormat('EEE, d MMM', 'id_ID');
+final _dayLabelYear = DateFormat('EEE, d MMM yyyy', 'id_ID');
 
 String formatRupiah(int value) => _rupiah.format(value);
 
@@ -26,6 +28,13 @@ String formatDate(DateTime value) => _dateOnly.format(value);
 String formatDayMonth(DateTime value) => _dayMonth.format(value);
 
 String formatLongDate(DateTime value) => _longDate.format(value);
+
+/// "Sen, 17 Nov" untuk judul kelompok di daftar. Tahun ikut ditulis bila
+/// bukan tahun [now], supaya order tahun lalu tidak tertukar.
+String formatDayLabel(DateTime value, {required DateTime now}) =>
+    value.year == now.year
+        ? _dayLabel.format(value)
+        : _dayLabelYear.format(value);
 
 /// 3.0 -> "3", 3.5 -> "3,5". Berat ditulis tanpa nol ekor yang tidak berguna.
 String formatQty(double qty) {

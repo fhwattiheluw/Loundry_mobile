@@ -11,7 +11,7 @@ import '../../domain/models/models.dart';
 import '../../services/auth/pin_guard.dart';
 import '../widgets/layout.dart';
 import '../widgets/number_pad.dart';
-import 'order_detail_screen.dart';
+import 'order_success_screen.dart';
 import '../../core/friendly_error.dart';
 import '../widgets/feedback.dart';
 
@@ -238,14 +238,21 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
 
       // Order sudah tersimpan. Cetak dan notifikasi di bawah ini boleh gagal
       // tanpa membatalkan apa pun (FR-87).
-      await _printAndNotify(order);
+      final outcome = await _printAndNotify(order);
 
       if (!mounted) return;
-      Navigator.of(context).pop(true);
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => OrderDetailScreen(orderId: order.id!),
+
+      // Layar sukses menggantikan layar ini, jadi pemanggil tetap menerima
+      // `true` dan tombol kembali tidak membawa kasir ke formulir kosong.
+      Navigator.of(context).pushReplacement<bool, bool>(
+        MaterialPageRoute<bool>(
+          builder: (_) => OrderSuccessScreen(
+            order: order,
+            printError: outcome.printError,
+            whatsappNote: outcome.whatsappNote,
+          ),
         ),
+        result: true,
       );
     } catch (e) {
       if (!mounted) return;
@@ -261,31 +268,42 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
     }
   }
 
-  Future<void> _printAndNotify(LaundryOrder order) async {
-    final messenger = ScaffoldMessenger.of(context);
+  /// Mencetak nota lalu memberi tahu pelanggan. Tidak pernah melempar:
+  /// order sudah tersimpan, jadi kegagalan di sini hanya dilaporkan ke layar
+  /// sukses supaya kasir bisa mencoba lagi dari sana.
+  Future<({String? printError, String? whatsappNote})> _printAndNotify(
+      LaundryOrder order) async {
     final user = ref.read(currentUserProvider);
+    String? printError;
+    String? whatsappNote;
 
-    final bytes = await ref
-        .read(receiptBuilderProvider)
-        .buildOrderReceipt(order, cashierName: user.name);
+    try {
+      final bytes = await ref
+          .read(receiptBuilderProvider)
+          .buildOrderReceipt(order, cashierName: user.name);
 
-    final result = await ref.read(printerProvider).printBytes(bytes);
-
-    if (!result.success) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text('Order tersimpan, tapi nota gagal dicetak. '
-              '${result.message}'),
-          duration: const Duration(seconds: 5),
-        ),
-      );
+      final result = await ref.read(printerProvider).printBytes(bytes);
+      if (!result.success) printError = result.message;
+    } catch (_) {
+      printError = 'Printer tidak bisa dihubungi.';
     }
 
     if (order.customerPhone.isNotEmpty) {
-      await ref
-          .read(notificationServiceProvider)
-          .notify(order, NotificationTrigger.orderDiterima);
+      try {
+        final result = await ref
+            .read(notificationServiceProvider)
+            .notify(order, NotificationTrigger.orderDiterima);
+
+        if (!result.sent && !result.skipped && result.message.isNotEmpty) {
+          whatsappNote = result.message;
+        }
+      } catch (_) {
+        whatsappNote = 'Pesan WhatsApp belum terkirim. '
+            'Kirim ulang dari tombol di bawah.';
+      }
     }
+
+    return (printError: printError, whatsappNote: whatsappNote);
   }
 
   /// Diskon di atas batas butuh persetujuan Owner (FR-44).
@@ -374,10 +392,11 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
           'diisi akan hilang.',
       child: Scaffold(
       appBar: AppBar(title: const Text('Order Baru')),
+      bottomNavigationBar: _bottomBar(),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          const _Label('Pelanggan'),
+          const _Label('Pelanggan', step: 1),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -437,7 +456,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
           const SizedBox(height: 20),
           Row(
             children: [
-              const Expanded(child: _Label('Layanan')),
+              const Expanded(child: _Label('Layanan', step: 2)),
               TextButton.icon(
                 onPressed: _addItem,
                 icon: const Icon(Icons.add),
@@ -529,7 +548,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
             ),
 
           const SizedBox(height: 20),
-          const _Label('Catatan dan diskon'),
+          const _Label('Catatan dan diskon', step: 3),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -581,7 +600,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
           ),
 
           const SizedBox(height: 20),
-          const _Label('Pembayaran'),
+          const _Label('Pembayaran', step: 4),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(14),
@@ -706,24 +725,82 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
             ),
           ),
 
-          const SizedBox(height: 20),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(0, AppTouch.primary),
-            ),
-            onPressed: _saving ? null : _save,
-            icon: _saving
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
-                  )
-                : const Icon(Icons.print),
-            label: Text(_saving ? 'Menyimpan...' : 'Simpan & Cetak Nota'),
-          ),
         ],
       ),
+      ),
+    );
+  }
+
+  /// Bar yang selalu terlihat di bawah: total berjalan dan tombol simpan.
+  /// Kasir tidak perlu menggulir sampai ujung formulir untuk menyimpan, dan
+  /// angka yang akan ditagih ke pelanggan selalu ada di depan mata.
+  Widget _bottomBar() {
+    final scheme = Theme.of(context).colorScheme;
+    final qty = _items.length;
+    final hasItems = qty > 0;
+
+    return Material(
+      color: scheme.surface,
+      elevation: 8,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.md),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      hasItems ? '$qty layanan · Total' : 'Total',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                    Text(
+                      formatRupiah(_total),
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (_payLater && hasItems)
+                      Text(
+                        'Bayar nanti',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: scheme.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(0, AppTouch.comfortable),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xl),
+                ),
+                onPressed: _saving ? null : _save,
+                icon: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.print),
+                label: Text(_saving ? 'Menyimpan...' : 'Simpan & Cetak'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -785,15 +862,47 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
 }
 
 class _Label extends StatelessWidget {
-  const _Label(this.text);
+  const _Label(this.text, {this.step});
 
   final String text;
 
+  /// Nomor langkah. Kasir yang baru belajar jadi tahu urutannya dan berapa
+  /// yang tersisa, tanpa harus menebak.
+  final int? step;
+
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 8, left: 4),
-        child: Text(text, style: Theme.of(context).textTheme.titleMedium),
-      );
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, left: 4),
+      child: Row(
+        children: [
+          if (step != null) ...[
+            Container(
+              width: 24,
+              height: 24,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: scheme.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                '$step',
+                style: TextStyle(
+                  color: scheme.onPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+          ],
+          Text(text, style: Theme.of(context).textTheme.titleMedium),
+        ],
+      ),
+    );
+  }
 }
 
 /// Pilihan pewangi (FR-12). Daftarnya diatur pemilik di Pengaturan,

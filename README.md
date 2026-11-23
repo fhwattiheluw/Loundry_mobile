@@ -33,6 +33,17 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 - Status cucian: Diterima, Diproses, Selesai, Diambil, Dibatalkan
 - Status bayar terpisah: Belum bayar, DP, Lunas
 
+**Alur order dan daftar**
+- Order Baru berlangkah bernomor (Pelanggan, Layanan, Catatan, Pembayaran) dengan
+  bar total dan tombol Simpan & Cetak yang selalu terlihat di bawah
+- Setelah simpan muncul layar **Order berhasil**: nomor pendek besar, ringkasan,
+  status nota (bisa coba cetak lagi bila printer gagal), kirim WhatsApp,
+  Lihat Detail, dan **Order Baru** untuk pelanggan berikutnya
+- Daftar Order punya ringkasan (jumlah, nilai, sisa tagihan, telat) yang
+  mengikuti filter, dikelompokkan: **Perlu perhatian** (lewat estimasi) di
+  atas, lalu Hari ini, Kemarin, dan per tanggal. Ketuk Sisa tagihan untuk
+  menyaring yang belum lunas
+
 **Pembayaran**
 - Lunas, DP bertahap, atau bayar saat ambil
 - Di Order Baru, pilihan **Bayar sekarang / Bayar nanti** dibuat eksplisit:
