@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../core/design_system.dart';
 import '../../core/formatters.dart';
+import '../../core/security.dart';
 import '../../data/db/settings_keys.dart';
 import '../../domain/models/models.dart';
 import '../settings/printer_settings_screen.dart';
@@ -13,7 +14,13 @@ import '../widgets/layout.dart';
 import '../../core/friendly_error.dart';
 import '../widgets/states.dart';
 
-/// Lima langkah yang harus dilewati toko baru sebelum melayani pelanggan.
+/// Lima langkah yang harus dilewati toko baru sebelum melayani pelanggan:
+/// nama usaha, harga, printer, backup, lalu PIN.
+///
+/// Pada pemasangan baru wizard ini muncul SEBELUM layar masuk, karena
+/// pemilik belum punya PIN. Urusan toko dulu, PIN dibuat paling akhir. Pada
+/// pemasangan lama yang belum menyelesaikannya, wizard muncul sesudah masuk
+/// dan langkah PIN boleh dikosongkan.
 ///
 /// Tanpa layar ini, toko baru mendarat di dashboard bernama "Laundry Saya"
 /// dengan harga contoh, dan sebagian besar pemilik tidak akan pernah
@@ -49,6 +56,25 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
 
   /// Harga yang sedang diketik, dikunci pada id layanan.
   final _prices = <int, TextEditingController>{};
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Wizard yang terputus di tengah (aplikasi ditutup) dimulai lagi dari
+    // awal; isian yang sudah tersimpan jangan sampai terlihat hilang.
+    final settings = ref.read(settingsRepoProvider);
+    final name = settings.get(SettingsKeys.businessName);
+    final address = settings.get(SettingsKeys.businessAddress);
+
+    if (name != 'Laundry Saya') _nameController.text = name;
+    if (address != 'Jl. Contoh No. 1') _addressController.text = address;
+    _phoneController.text = settings.get(SettingsKeys.businessPhone);
+  }
+
+  /// Benar selama pemilik belum punya PIN. Dibaca dari database lewat
+  /// [firstRunProvider], jadi tidak mungkin berselisih dengan keadaan PIN.
+  bool get _firstRun => ref.read(firstRunProvider).valueOrNull ?? false;
 
   @override
   void dispose() {
@@ -132,12 +158,24 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
         ref.invalidate(servicesProvider);
         return true;
 
-      case 2:
+      case 4:
         final pin = _pinController.text;
-        if (pin.isEmpty) return true; // Dilewati, PIN lama tetap berlaku.
+
+        if (pin.isEmpty) {
+          if (!_firstRun) return true; // Dilewati, PIN lama tetap berlaku.
+
+          setState(() => _pinError = 'Buat PIN dulu untuk mulai memakai.');
+          return false;
+        }
 
         if (pin.length < 4) {
           setState(() => _pinError = 'PIN minimal 4 angka.');
+          return false;
+        }
+        if (isWeakPin(pin)) {
+          setState(() => _pinError =
+              'PIN ini terlalu mudah ditebak. Hindari 1234, 0000, atau '
+              'angka berurutan.');
           return false;
         }
         if (pin != _pinConfirmController.text) {
@@ -145,8 +183,8 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
           return false;
         }
 
-        final user = ref.read(currentUserProvider);
-        await ref.read(userRepoProvider).setPin(user.id!, pin);
+        // Baru disimpan di _finish, bersama kode pemulihan, supaya wizard
+        // yang terputus tidak meninggalkan PIN tanpa kode pemulihan.
         setState(() => _pinError = null);
         return true;
 
@@ -158,17 +196,44 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
   Future<void> _finish() async {
     setState(() => _saving = true);
 
-    // Kode pemulihan dibuat di akhir wizard, bukan saat PIN diganti:
-    // pemilik yang melewati langkah PIN pun tetap harus punya jalan masuk
-    // kembali bila suatu hari ia terkunci di luar.
-    final code = await ref.read(pinRecoveryProvider).generateRecoveryCode();
+    final firstRun = _firstRun;
+    final users = ref.read(userRepoProvider);
+    final pin = _pinController.text;
+    AppUser? owner;
 
-    await ref
-        .read(settingsRepoProvider)
-        .set(SettingsKeys.setupDone, '1');
+    try {
+      if (firstRun) {
+        owner = await users.createFirstOwnerPin(pin);
+      } else if (pin.isNotEmpty) {
+        await users.setPin(ref.read(currentUserProvider).id!, pin);
+      }
 
-    if (mounted) await _showRecoveryCode(code);
+      // Kode pemulihan dibuat di akhir wizard, bukan saat PIN diganti:
+      // pemilik yang melewati langkah PIN pun tetap harus punya jalan masuk
+      // kembali bila suatu hari ia terkunci di luar.
+      final code = await ref.read(pinRecoveryProvider).generateRecoveryCode();
 
+      await ref.read(settingsRepoProvider).set(SettingsKeys.setupDone, '1');
+
+      if (mounted) await _showRecoveryCode(code);
+    } catch (e) {
+      // PIN mungkin sudah tersimpan sebelum galat; baca ulang keadaan
+      // sebenarnya supaya aplikasi tidak macet di wizard.
+      ref.invalidate(firstRunProvider);
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Belum selesai. ${friendlyError(e)}')),
+        );
+      }
+      return;
+    }
+
+    // Pemilik yang baru saja membuat PIN langsung masuk; menyuruhnya
+    // mengetik PIN yang detik tadi ia buat hanya membuang waktu.
+    if (owner != null) ref.read(sessionProvider.notifier).signIn(owner);
+
+    ref.invalidate(firstRunProvider);
     ref.invalidate(settingsLoadedProvider);
     if (mounted) setState(() => _saving = false);
   }
@@ -263,9 +328,9 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
                 children: [
                   _stepBusiness(),
                   _stepPrices(),
-                  _stepPin(),
                   _stepPrinter(),
                   _stepBackup(),
+                  _stepPin(),
                 ],
               ),
             ),
@@ -465,19 +530,26 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
   }
 
   Widget _stepPin() {
+    final firstRun = ref.watch(firstRunProvider).valueOrNull ?? false;
+
     return _wrap(
-      title: 'Ganti PIN Anda',
-      subtitle: 'PIN bawaan 1234 dipakai semua orang yang memasang aplikasi '
-          'ini. Selama belum diganti, siapa pun yang memegang HP Anda bisa '
-          'membuka laporan pendapatan.',
+      title: firstRun ? 'Buat PIN aplikasi' : 'Ganti PIN Anda',
+      subtitle: firstRun
+          ? 'Langkah terakhir. PIN dipakai setiap kali membuka aplikasi dan '
+              'melindungi laporan pendapatan dari siapa pun yang memegang HP '
+              'Anda. Pilih angka yang mudah Anda ingat tapi tidak mudah '
+              'ditebak.'
+          : 'Isi bila ingin mengganti PIN sekarang. Dikosongkan berarti PIN '
+              'lama tetap berlaku.',
       children: [
         TextField(
           controller: _pinController,
           obscureText: true,
           keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           maxLength: 6,
           decoration: const InputDecoration(
-            labelText: 'PIN baru',
+            labelText: 'PIN',
             helperText: '4 sampai 6 angka',
             counterText: '',
             prefixIcon: Icon(Icons.lock_outline),
@@ -488,9 +560,10 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
           controller: _pinConfirmController,
           obscureText: true,
           keyboardType: TextInputType.number,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           maxLength: 6,
           decoration: InputDecoration(
-            labelText: 'Ulangi PIN baru',
+            labelText: 'Ulangi PIN',
             counterText: '',
             errorText: _pinError,
             prefixIcon: const Icon(Icons.lock_reset),
@@ -498,9 +571,29 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
         ),
         const SizedBox(height: AppSpacing.md),
         Text(
-          'Dikosongkan berarti PIN tetap 1234, dan bisa diganti nanti di '
-          'Pengaturan. Tapi jangan lama-lama.',
+          firstRun
+              ? 'Setelah menekan Mulai pakai, Anda akan diberi kode pemulihan '
+                  'untuk berjaga-jaga bila suatu hari lupa PIN. PIN bisa '
+                  'diganti kapan saja di Pengaturan.'
+              : 'PIN bisa diganti kapan saja di Pengaturan.',
           style: Theme.of(context).textTheme.bodySmall,
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        const Card(
+          child: Padding(
+            padding: EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Setelah ini',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+                SizedBox(height: AppSpacing.sm),
+                Text('1. Buka shift dan masukkan kas awal di laci'),
+                Text('2. Tekan Order Baru saat pelanggan datang'),
+                Text('3. Backup seminggu sekali, simpan di luar HP'),
+              ],
+            ),
+          ),
         ),
       ],
     );
@@ -519,23 +612,6 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
           ),
           icon: const Icon(Icons.print_outlined),
           label: const Text('Hubungkan printer'),
-        ),
-        const SizedBox(height: AppSpacing.xl),
-        const Card(
-          child: Padding(
-            padding: EdgeInsets.all(AppSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Setelah ini',
-                    style: TextStyle(fontWeight: FontWeight.w700)),
-                SizedBox(height: AppSpacing.sm),
-                Text('1. Buka shift dan masukkan kas awal di laci'),
-                Text('2. Tekan Order Baru saat pelanggan datang'),
-                Text('3. Backup seminggu sekali, simpan di luar HP'),
-              ],
-            ),
-          ),
         ),
       ],
     );

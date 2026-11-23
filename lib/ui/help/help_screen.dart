@@ -254,10 +254,12 @@ const _sections = [
       tone: 12,
       question: 'Pindah ke HP baru atau data hilang',
       steps: [
-        'Pasang aplikasi di HP baru dan lewati pengaturan awal.',
+        'Pasang aplikasi di HP baru, lalu isi pengaturan awal secukupnya. '
+            'PIN yang dibuat di sini hanya sementara.',
         'Pindahkan berkas backup ke HP baru.',
         'Buka Pengaturan, Backup dan restore, lalu tekan Kembalikan dari '
             'berkas backup.',
+        'Setelah dikembalikan, masuk dengan PIN yang lama.',
       ],
     ),
     HelpTopic(

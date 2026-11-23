@@ -49,6 +49,26 @@ void main() {
     });
   });
 
+  group('PIN lemah', () {
+    test('angka sama semua ditolak', () {
+      for (final pin in ['0000', '1111', '777777']) {
+        expect(isWeakPin(pin), isTrue, reason: pin);
+      }
+    });
+
+    test('urutan naik dan turun ditolak, termasuk 1234 bekas PIN bawaan', () {
+      for (final pin in ['1234', '123456', '2345', '4321', '987654']) {
+        expect(isWeakPin(pin), isTrue, reason: pin);
+      }
+    });
+
+    test('PIN yang tidak berpola diterima', () {
+      for (final pin in ['2580', '1357', '4829', '135790', '1212', '7890']) {
+        expect(isWeakPin(pin), isFalse, reason: pin);
+      }
+    });
+  });
+
   group('validasi nomor HP', () {
     test('nomor seluler Indonesia diterima', () {
       expect(isValidPhone('081234567890'), isTrue);

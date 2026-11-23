@@ -16,6 +16,28 @@ String hashPin(String pin) {
 
 bool verifyPin(String pin, String hash) => hashPin(pin) == hash;
 
+/// PIN yang terlalu mudah ditebak: semua angka sama (0000, 7777) atau
+/// berurutan naik atau turun (1234, 123456, 4321).
+///
+/// Ini tebakan pertama siapa pun yang memegang HP orang lain, dan PIN 1234
+/// persis yang dulu dipakai sebagai PIN bawaan.
+bool isWeakPin(String pin) {
+  if (pin.length < 2) return false;
+
+  var same = true;
+  var up = true;
+  var down = true;
+
+  for (var i = 1; i < pin.length; i++) {
+    final step = pin.codeUnitAt(i) - pin.codeUnitAt(i - 1);
+    if (step != 0) same = false;
+    if (step != 1) up = false;
+    if (step != -1) down = false;
+  }
+
+  return same || up || down;
+}
+
 /// Normalisasi nomor HP Indonesia ke format internasional tanpa tanda plus.
 ///
 /// 0812-3456-7890 -> 6281234567890

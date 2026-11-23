@@ -269,6 +269,45 @@ class UserRepository {
     return db.insert('users', user.toMap());
   }
 
+  /// Pemasangan baru: pemilik sudah ada tetapi belum membuat PIN.
+  ///
+  /// Dasarnya data, bukan tanda terpisah, supaya "PIN sudah dibuat" dan
+  /// "bukan lagi pemasangan baru" tidak mungkin berselisih.
+  Future<bool> ownerPinNotSet() async {
+    final db = await _db.database;
+    final result = await db.rawQuery(
+      "SELECT COUNT(*) AS c FROM users "
+      "WHERE role = 'owner' AND active = 1 AND pin_hash = ''",
+    );
+    return (Sqflite.firstIntValue(result) ?? 0) > 0;
+  }
+
+  /// Membuat PIN pertama pemilik. Hanya berhasil selama pemilik belum punya
+  /// PIN; sesudahnya melempar [StateError].
+  ///
+  /// Pengaman ini penting: kalau bisa dipanggil kapan saja, siapa pun yang
+  /// memegang HP dapat mengganti PIN pemilik tanpa tahu PIN lamanya.
+  /// Mengembalikan pemilik yang sudah ber-PIN, siap dipakai masuk.
+  Future<AppUser> createFirstOwnerPin(String pin) async {
+    final db = await _db.database;
+
+    final rows = await db.query(
+      'users',
+      where: "role = 'owner' AND active = 1 AND pin_hash = ''",
+      orderBy: 'id',
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      throw StateError('PIN pemilik sudah pernah dibuat.');
+    }
+
+    final id = rows.first['id'] as int;
+    await setPin(id, pin);
+
+    final updated = await db.query('users', where: 'id = ?', whereArgs: [id]);
+    return AppUser.fromMap(updated.first);
+  }
+
   Future<void> setPin(int userId, String newPin) async {
     final db = await _db.database;
     await db.update('users', {'pin_hash': hashPin(newPin)},

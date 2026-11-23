@@ -109,6 +109,8 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 - Layar login dikunci bertahap setelah PIN salah berulang (tiap kelima kali:
   30 detik, 5 menit, 15 menit), juga pada persetujuan diskon oleh Owner
 - Kasir tidak bisa mengubah harga atau membuka laporan keseluruhan
+- PIN dibuat pemilik sendiri di langkah terakhir wizard pemasangan; tidak ada
+  PIN bawaan, dan PIN pertama tidak bisa dibuat ulang oleh orang lain
 - PIN harus unik (login hanya memakai PIN), juga saat PIN diganti;
   menonaktifkan akun meminta konfirmasi
 - Setiap transaksi menyimpan siapa yang membuatnya
@@ -168,8 +170,13 @@ bukan dari ingatan: `ConsentInformation.canRequestAds`,
 Yang belum bisa diverifikasi: kompilasi penuh. Lingkungan tempat kode ini
 ditulis tidak bisa memasang Flutter SDK.
 
-**PIN awal: `1234`** (peran Owner). Ganti lewat Pengaturan → Pengguna dan PIN
-sebelum dipakai di konter.
+**Tidak ada PIN bawaan.** Saat aplikasi dibuka pertama kali, wizard
+pengaturan awal langsung tampil: nama usaha, harga, printer, backup, dan
+terakhir **membuat PIN Owner** (PIN yang mudah ditebak seperti 1234 atau 0000
+ditolak) beserta kode pemulihan. Sesudahnya pemilik langsung masuk. Pada
+pemasangan yang sudah punya PIN, alurnya tetap lewat layar PIN seperti biasa.
+Untuk mencoba alur pemasangan baru di HP yang sudah pernah dipakai, hapus data
+aplikasi (Pengaturan Android → Aplikasi → hapus data) atau pasang ulang.
 
 Data contoh yang ikut terpasang: enam layanan laundry dengan harga umum,
 template WhatsApp berbahasa Indonesia, dan catatan kaki nota. Semua bisa
@@ -232,7 +239,8 @@ Yang diuji:
 | `test/backup_reminder_test.dart` | Aturan pengingat backup mingguan |
 | `test/friendly_error_test.dart` | Terjemahan galat teknis menjadi kalimat yang bisa dipahami |
 | `test/setup_checklist_test.dart` | Aturan daftar langkah awal: selesai, tersembunyi, hilang sendiri |
-| `test/security_test.dart` | Normalisasi dan validasi nomor HP (termasuk `+62 0812` dan `0062`), hash PIN, format angka |
+| `test/security_test.dart` | Normalisasi dan validasi nomor HP (termasuk `+62 0812` dan `0062`), hash PIN, PIN lemah, format angka |
+| `test/first_run_test.dart` | Pemasangan baru tanpa PIN bawaan, pembuatan PIN pertama pemilik, pengaman agar tidak bisa direbut, pemasangan lama tidak terpengaruh |
 | `test/notification_service_test.dart` | Mode kirim, anti kirim ganda, jam tenang, antrean tanpa pesan ganda, kirim ulang |
 | `test/message_template_test.dart` | Isi pesan, daftar variabel, deteksi variabel salah ketik, order contoh |
 | `test/whatsapp_api_sender_test.dart` | Parameter template Meta tanpa baris baru, versi API, permintaan dan penolakan |
@@ -335,7 +343,7 @@ flutter build apk --release --split-per-abi
 
 ### 5. Sebelum mengunggah
 
-- [ ] PIN bawaan `1234` sudah diganti
+- [ ] Pemasangan baru sudah dicoba dari awal: wizard, buat PIN, catat kode pemulihan
 - [ ] ID AdMob produksi sudah dipasang, bukan ID uji
 - [ ] Kebijakan privasi sudah ada dan bisa diakses publik
 - [ ] Advertising ID sudah dideklarasikan di Play Console

@@ -9,9 +9,13 @@ import 'settings_keys.dart';
 Future<void> seedInitialData(Database db) async {
   final now = DateTime.now().toIso8601String();
 
+  // Pemilik dibuat TANPA PIN (hash kosong, yang tidak pernah cocok dengan PIN
+  // apa pun). Tidak ada PIN bawaan yang sama di semua pemasangan: wizard
+  // pertama kali meminta pemilik membuat PIN-nya sendiri di langkah terakhir,
+  // lewat UserRepository.createFirstOwnerPin.
   await db.insert('users', {
     'name': 'Owner',
-    'pin_hash': hashPin('1234'),
+    'pin_hash': '',
     'role': 'owner',
     'active': 1,
   });

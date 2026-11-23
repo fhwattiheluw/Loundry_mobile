@@ -91,12 +91,25 @@ class _Root extends ConsumerWidget {
         // Aman dipanggil berulang kali.
         ref.read(adServiceProvider).init();
 
+        // Pemasangan baru: pemilik belum punya PIN, jadi tidak ada yang bisa
+        // dimasukkan di layar masuk. Wizard dulu (nama usaha, harga, printer,
+        // backup), dan PIN dibuat di langkah terakhirnya. Menunggu data
+        // dibaca dulu supaya layar masuk tidak sempat berkedip.
+        final firstRun = ref.watch(firstRunProvider);
+        if (firstRun.isLoading && !firstRun.hasValue) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (firstRun.valueOrNull ?? false) return const SetupWizard();
+
         if (user == null) return const PinLoginScreen();
 
-        // Pemasangan baru lewat wizard dulu. Tanpa itu, toko baru mendarat
-        // di dashboard bernama "Laundry Saya" dengan harga contoh, dan
-        // sebagian besar pemilik tidak akan pernah menemukan Pengaturan
-        // sendiri.
+        // Pemasangan lama yang belum sempat menyelesaikan wizard (sudah
+        // punya PIN) tetap diarahkan ke wizard sesudah masuk. Tanpa itu,
+        // toko mendarat di dashboard bernama "Laundry Saya" dengan harga
+        // contoh, dan sebagian besar pemilik tidak akan pernah menemukan
+        // Pengaturan sendiri.
         final settingsRepo = ref.read(settingsRepoProvider);
         if (!settingsRepo.getBool(SettingsKeys.setupDone)) {
           return const SetupWizard();

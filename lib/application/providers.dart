@@ -51,6 +51,13 @@ final serviceRepoProvider = Provider<ServiceRepository>(
   (ref) => ServiceRepository(ref.watch(databaseProvider)),
 );
 
+/// Benar pada pemasangan baru: pemilik belum membuat PIN. Aplikasi lalu
+/// membuka wizard pengaturan awal, bukan layar masuk, dan PIN dibuat di
+/// langkah terakhir wizard.
+final firstRunProvider = FutureProvider<bool>(
+  (ref) => ref.watch(userRepoProvider).ownerPinNotSet(),
+);
+
 final userRepoProvider = Provider<UserRepository>(
   (ref) => UserRepository(ref.watch(databaseProvider)),
 );
