@@ -35,6 +35,10 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 
 **Pembayaran**
 - Lunas, DP bertahap, atau bayar saat ambil
+- Di Order Baru, pilihan **Bayar sekarang / Bayar nanti** dibuat eksplisit:
+  Bayar nanti menyimpan order sebagai belum bayar dan langsung masuk Piutang;
+  kolom jumlah yang dibiarkan kosong pada Bayar sekarang tidak lagi diam-diam
+  tersimpan sebagai belum bayar
 - Metode bayar yang bisa ditambah sendiri
 - Hitung kembalian otomatis
 - Diskon dengan batas untuk kasir, di atas batas butuh PIN Owner

@@ -39,6 +39,10 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
   String _payMethod = 'Tunai';
   bool _saving = false;
 
+  /// Pelanggan belum membayar sekarang. Order tetap tersimpan, tercatat
+  /// belum bayar, dan masuk ke daftar Piutang sampai dilunasi.
+  bool _payLater = false;
+
   /// Pesan galat di bawah kolom, supaya kasir tahu kolom mana yang kurang.
   String? _nameError;
   String? _phoneError;
@@ -155,6 +159,19 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
       return;
     }
 
+    // Pilihan pembayaran harus disengaja. Kolom kosong pada "Bayar sekarang"
+    // hampir selalu berarti lupa mengisi, dan order yang diam-diam tersimpan
+    // belum bayar adalah uang yang tidak tertagih.
+    if (!_payLater && _total > 0 && _payNow <= 0) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Jumlah bayar masih kosong. Isi jumlahnya, atau '
+              'pilih "Bayar nanti" bila pelanggan belum membayar.'),
+        ),
+      );
+      return;
+    }
+
     final settings = ref.read(settingsRepoProvider);
     final user = ref.read(currentUserProvider);
     final maxDiscount =
@@ -212,7 +229,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                 ? null
                 : _noteController.text.trim(),
             estimatedAt: _estimate,
-            initialPayment: _payNow,
+            initialPayment: _payLater ? 0 : _payNow,
             paymentMethod: _payMethod,
           );
 
@@ -570,54 +587,86 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
               padding: const EdgeInsets.all(14),
               child: Column(
                 children: [
-                  TextField(
-                    controller: _payController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: rupiahInputFormatters,
-                    onChanged: (_) => setState(() {}),
-                    decoration: const InputDecoration(
-                      labelText: 'Bayar sekarang',
-                      prefixText: 'Rp ',
-                      helperText: 'Kosongkan bila bayar nanti saat diambil',
-                      prefixIcon: Icon(Icons.payments_outlined),
+                  SizedBox(
+                    width: double.infinity,
+                    child: SegmentedButton<bool>(
+                      showSelectedIcon: false,
+                      style: SegmentedButton.styleFrom(
+                        minimumSize: const Size(0, AppTouch.minimum),
+                      ),
+                      segments: const [
+                        ButtonSegment(
+                          value: false,
+                          label: Text('Bayar sekarang'),
+                        ),
+                        ButtonSegment(
+                          value: true,
+                          label: Text('Bayar nanti'),
+                        ),
+                      ],
+                      selected: {_payLater},
+                      onSelectionChanged: (choice) => setState(() {
+                        _payLater = choice.first;
+                        // Jumlah yang sempat diketik tidak boleh ikut
+                        // tersimpan sebagai pembayaran.
+                        if (_payLater) _payController.clear();
+                      }),
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 14),
 
-                  // Pecahan yang paling sering diserahkan pelanggan, dan
-                  // "Lunasi" untuk pembayaran penuh. Mengetik lima digit di
-                  // konter yang ramai adalah sumber salah ketik.
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      ActionChip(
-                        avatar: const Icon(Icons.done_all, size: 18),
-                        label: const Text('Lunasi'),
-                        onPressed: _total <= 0
-                            ? null
-                            : () => setState(() =>
-                                _payController.text = formatPlain(_total)),
+                  if (_payLater)
+                    _payLaterNote()
+                  else ...[
+                    TextField(
+                      controller: _payController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: rupiahInputFormatters,
+                      onChanged: (_) => setState(() {}),
+                      decoration: const InputDecoration(
+                        labelText: 'Bayar sekarang',
+                        prefixText: 'Rp ',
+                        helperText: 'Jumlah yang diserahkan pelanggan',
+                        prefixIcon: Icon(Icons.payments_outlined),
                       ),
-                      for (final nominal in const [
-                        25000,
-                        50000,
-                        100000,
-                        150000,
-                        200000,
-                      ])
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Pecahan yang paling sering diserahkan pelanggan, dan
+                    // "Lunasi" untuk pembayaran penuh. Mengetik lima digit di
+                    // konter yang ramai adalah sumber salah ketik.
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
                         ActionChip(
-                          label: Text(formatPlain(nominal)),
-                          onPressed: () => setState(() =>
-                              _payController.text = formatPlain(nominal)),
+                          avatar: const Icon(Icons.done_all, size: 18),
+                          label: const Text('Lunasi'),
+                          onPressed: _total <= 0
+                              ? null
+                              : () => setState(() =>
+                                  _payController.text = formatPlain(_total)),
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _MethodSelector(
-                    value: _payMethod,
-                    onChanged: (m) => setState(() => _payMethod = m),
-                  ),
+                        for (final nominal in const [
+                          25000,
+                          50000,
+                          100000,
+                          150000,
+                          200000,
+                        ])
+                          ActionChip(
+                            label: Text(formatPlain(nominal)),
+                            onPressed: () => setState(() =>
+                                _payController.text = formatPlain(nominal)),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _MethodSelector(
+                      value: _payMethod,
+                      onChanged: (m) => setState(() => _payMethod = m),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -649,6 +698,10 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                   _summaryRow('Dibayar', formatRupiah(_payNow)),
                   _summaryRow('Sisa', formatRupiah(_total - _payNow)),
                 ],
+                if (_payLater) ...[
+                  _summaryRow('Pembayaran', 'Bayar nanti'),
+                  _summaryRow('Sisa', formatRupiah(_total)),
+                ],
               ],
             ),
           ),
@@ -671,6 +724,39 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
           ),
         ],
       ),
+      ),
+    );
+  }
+
+  /// Penjelasan singkat saat "Bayar nanti" dipilih: apa yang akan terjadi
+  /// pada order ini, supaya kasir tidak ragu menekan Simpan.
+  Widget _payLaterNote() {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.schedule, size: 20, color: scheme.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              _total > 0
+                  ? 'Order disimpan sebagai belum bayar. Tagihan '
+                      '${formatRupiah(_total)} masuk ke daftar Piutang dan '
+                      'bisa dibayar kapan saja lewat detail order, misalnya '
+                      'saat cucian diambil.'
+                  : 'Order disimpan sebagai belum bayar dan bisa dibayar '
+                      'kapan saja lewat detail order.',
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+        ],
       ),
     );
   }

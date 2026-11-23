@@ -253,6 +253,24 @@ void main() {
       expect(rows.map((r) => r.remaining), containsAll([28000, 18000]));
     });
 
+    test('order bayar nanti keluar dari piutang begitu dilunasi', () async {
+      // Alur tombol "Bayar nanti" di Order Baru: disimpan tanpa pembayaran,
+      // dilunasi belakangan (misalnya saat cucian diambil).
+      final order = await buatOrder(bayar: 0);
+      expect((await reports.receivables()).length, 1);
+
+      await orders.addPayment(
+        orderId: order.id!,
+        amount: order.total,
+        method: 'Tunai',
+        user: owner,
+      );
+
+      expect(await reports.receivables(), isEmpty);
+      expect((await orders.byId(order.id!))!.paymentStatus,
+          PaymentStatus.lunas);
+    });
+
     test('order batal tidak muncul sebagai piutang', () async {
       final order = await buatOrder(bayar: 0);
       await orders.cancel(order.id!, user: owner, reason: 'Salah input');
