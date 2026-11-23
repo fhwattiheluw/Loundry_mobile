@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../application/providers.dart';
 import '../../data/db/settings_keys.dart';
+import '../../core/friendly_error.dart';
 
 /// Logo usaha yang tercetak di kepala nota (FR-88).
 class LogoSettingsScreen extends ConsumerStatefulWidget {
@@ -58,7 +59,9 @@ class _LogoSettingsScreenState extends ConsumerState<LogoSettingsScreen> {
       if (!mounted) return;
       setState(() => _busy = false);
       messenger.showSnackBar(
-        SnackBar(content: Text('Gagal memasang logo: $e')),
+        SnackBar(
+          content: Text('Logo belum terpasang. ${friendlyError(e)}'),
+        ),
       );
     }
   }

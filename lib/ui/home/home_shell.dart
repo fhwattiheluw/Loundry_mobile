@@ -40,13 +40,15 @@ class HomeShell extends ConsumerStatefulWidget {
 }
 
 class _HomeShellState extends ConsumerState<HomeShell> {
-  int _index = 0;
-
   @override
   void initState() {
     super.initState();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Kasir yang baru masuk selalu mulai dari Beranda, bukan dari tab yang
+      // terakhir dibuka kasir sebelumnya.
+      ref.read(homeTabProvider.notifier).state = HomeTab.home;
+
       // Interstitial ditayangkan SEKALI per sesi, di titik transisi setelah
       // kasir masuk, dan tidak pernah di tengah transaksi. Kebijakan AdMob
       // melarang interstitial yang terpicu setelah setiap aksi pengguna.
@@ -131,6 +133,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     if (user == null) return const SizedBox.shrink();
 
     final wide = context.isWide;
+    final index = ref.watch(homeTabProvider);
+    void goTo(int i) => ref.read(homeTabProvider.notifier).state = i;
 
     const pages = [
       DashboardScreen(),
@@ -146,7 +150,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
     // Garis itu sudah memakai ruang status bar. Layar di bawahnya tidak
     // boleh menambah jarak status bar lagi, kalau tidak muncul celah kosong.
     final offline = ref.watch(connectionProvider) == NetworkStatus.offline;
-    final stack = IndexedStack(index: _index, children: pages);
+    final stack = IndexedStack(index: index, children: pages);
     final body = Column(
       children: [
         const _OfflineStrip(),
@@ -170,15 +174,15 @@ class _HomeShellState extends ConsumerState<HomeShell> {
         ),
       ],
     );
-    final showFab = _index <= 1;
+    final showFab = index <= HomeTab.orders;
 
     if (wide) {
       return Scaffold(
         body: Row(
           children: [
             NavigationRail(
-              selectedIndex: _index,
-              onDestinationSelected: (i) => setState(() => _index = i),
+              selectedIndex: index,
+              onDestinationSelected: goTo,
               labelType: NavigationRailLabelType.all,
               // Tombol order baru ikut di rel, supaya tetap terjangkau
               // tanpa melayang menutupi isi tabel.
@@ -218,8 +222,8 @@ class _HomeShellState extends ConsumerState<HomeShell> {
             )
           : null,
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
+        selectedIndex: index,
+        onDestinationSelected: goTo,
         destinations: [
           for (final d in _destinations)
             NavigationDestination(

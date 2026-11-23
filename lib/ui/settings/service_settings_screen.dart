@@ -5,7 +5,10 @@ import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../../core/friendly_error.dart';
+import '../widgets/feedback.dart';
 import '../widgets/layout.dart';
+import '../widgets/states.dart';
 
 class ServiceSettingsScreen extends ConsumerWidget {
   const ServiceSettingsScreen({super.key});
@@ -23,8 +26,25 @@ class ServiceSettingsScreen extends ConsumerWidget {
       ),
       body: services.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Gagal memuat: $e')),
-        data: (list) => ListView.separated(
+        error: (e, _) => ErrorState(
+          title: 'Layanan belum bisa dimuat',
+          message: friendlyError(e),
+          onRetry: () => ref.invalidate(servicesProvider),
+        ),
+        data: (list) => list.isEmpty
+            ? EmptyState(
+                icon: Icons.local_laundry_service_outlined,
+                title: 'Belum ada layanan',
+                message: 'Tambahkan layanan seperti Cuci Kiloan atau Setrika '
+                    'beserta harganya. Layanan inilah yang dipilih kasir '
+                    'saat membuat order.',
+                action: FilledButton.icon(
+                  onPressed: () => _edit(context, ref, null),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Tambah layanan pertama'),
+                ),
+              )
+            : ListView.separated(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
           itemCount: list.length,
           separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -46,16 +66,13 @@ class ServiceSettingsScreen extends ConsumerWidget {
                   if (value == 'edit') {
                     _edit(context, ref, service);
                   } else {
-                    await ref
-                        .read(serviceRepoProvider)
-                        .deactivate(service.id!);
-                    ref.invalidate(servicesProvider);
+                    await _deactivate(context, ref, service);
                   }
                 },
                 itemBuilder: (_) => const [
                   PopupMenuItem(value: 'edit', child: Text('Ubah')),
                   PopupMenuItem(
-                      value: 'off', child: Text('Nonaktifkan')),
+                      value: 'off', child: Text('Sembunyikan dari kasir')),
                 ],
               ),
               onTap: () => _edit(context, ref, service),
@@ -63,6 +80,31 @@ class ServiceSettingsScreen extends ConsumerWidget {
           },
         ),
       ),
+    );
+  }
+
+  /// Layanan tidak dihapus, hanya disembunyikan dari pilihan kasir, jadi
+  /// nota lama tetap utuh. Tombol "Urungkan" ada karena menu titik tiga
+  /// mudah tersentuh tanpa sengaja.
+  Future<void> _deactivate(
+    BuildContext context,
+    WidgetRef ref,
+    LaundryService service,
+  ) async {
+    final repo = ref.read(serviceRepoProvider);
+
+    await repo.deactivate(service.id!);
+    ref.invalidate(servicesProvider);
+
+    if (!context.mounted) return;
+    showToast(
+      context,
+      '"${service.name}" disembunyikan dari pilihan kasir.',
+      actionLabel: 'Urungkan',
+      onAction: () async {
+        await repo.activate(service.id!);
+        ref.invalidate(servicesProvider);
+      },
     );
   }
 

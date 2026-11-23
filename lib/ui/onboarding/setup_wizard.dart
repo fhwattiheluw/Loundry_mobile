@@ -10,6 +10,8 @@ import '../../domain/models/models.dart';
 import '../settings/printer_settings_screen.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/layout.dart';
+import '../../core/friendly_error.dart';
+import '../widgets/states.dart';
 
 /// Lima langkah yang harus dilewati toko baru sebelum melayani pelanggan.
 ///
@@ -420,7 +422,11 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
 
     return services.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Gagal memuat layanan: $e')),
+      error: (e, _) => ErrorState(
+        title: 'Layanan belum bisa dimuat',
+        message: friendlyError(e),
+        onRetry: () => ref.invalidate(servicesProvider),
+      ),
       data: (list) {
         for (final service in list) {
           _prices.putIfAbsent(

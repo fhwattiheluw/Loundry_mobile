@@ -42,6 +42,10 @@ abstract final class SettingsKeys {
   static const pinFailures = 'pin_failures';
   static const pinLockedUntil = 'pin_locked_until';
 
+  /// Pemilik menyembunyikan daftar "Langkah awal" di Beranda. Daftar juga
+  /// hilang sendiri begitu semua langkahnya selesai.
+  static const setupChecklistHidden = 'setup_checklist_hidden';
+
   /// 'system', 'light', atau 'dark'.
   static const themeMode = 'theme_mode';
 

@@ -7,6 +7,7 @@ import '../../core/design_system.dart';
 import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
 import '../customers/customer_screen.dart';
+import '../help/help_screen.dart';
 import '../../services/ads/ad_service.dart';
 import '../widgets/layout.dart';
 import 'ad_status_screen.dart';
@@ -99,6 +100,19 @@ class SettingsScreen extends ConsumerWidget {
                   label: const Text('Keluar'),
                 ),
               ],
+            ),
+          ),
+
+          const SizedBox(height: 20),
+          const _Heading('Bantuan'),
+          Card(
+            child: ListTile(
+              leading: const IconBadge(Icons.help_outline, tone: 13),
+              title: const Text('Panduan dan pertanyaan umum'),
+              subtitle: const Text(
+                  'Cara order, cetak nota, backup, dan lupa PIN'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _open(context, const HelpScreen()),
             ),
           ),
 

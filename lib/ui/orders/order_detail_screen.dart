@@ -15,6 +15,8 @@ import '../widgets/layout.dart';
 import '../widgets/stat_tile.dart';
 import 'payment_sheet.dart';
 import 'status_confirm.dart';
+import '../../core/friendly_error.dart';
+import '../widgets/states.dart';
 
 class OrderDetailScreen extends ConsumerWidget {
   const OrderDetailScreen({super.key, required this.orderId});
@@ -39,7 +41,10 @@ class OrderDetailScreen extends ConsumerWidget {
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Gagal memuat: $e')),
+        error: (e, _) => ErrorState(
+          title: 'Order tidak bisa dibuka',
+          message: friendlyError(e),
+        ),
         data: (order) {
           if (order == null) {
             return const Center(child: Text('Order tidak ditemukan.'));
@@ -463,7 +468,9 @@ class _PhotoCard extends ConsumerWidget {
       if (photo != null) ref.invalidate(orderPhotosProvider(orderId));
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Gagal mengambil foto: $e')),
+        SnackBar(
+          content: Text('Foto belum tersimpan. ${friendlyError(e)}'),
+        ),
       );
     }
   }
@@ -534,7 +541,7 @@ class _PhotoCard extends ConsumerWidget {
               ),
               error: (e, _) => Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: Text('Gagal memuat foto: $e',
+                child: Text('Foto belum bisa ditampilkan. ${friendlyError(e)}',
                     style: Theme.of(context).textTheme.bodySmall),
               ),
               data: (list) {

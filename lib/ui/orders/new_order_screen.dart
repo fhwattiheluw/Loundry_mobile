@@ -12,6 +12,8 @@ import '../../services/auth/pin_guard.dart';
 import '../widgets/layout.dart';
 import '../widgets/number_pad.dart';
 import 'order_detail_screen.dart';
+import '../../core/friendly_error.dart';
+import '../widgets/feedback.dart';
 
 /// Layar yang paling sering dipakai kasir.
 /// Target: satu order kiloan selesai dibuat dan tercetak di bawah 60 detik.
@@ -36,6 +38,19 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
   String? _perfume;
   String _payMethod = 'Tunai';
   bool _saving = false;
+
+  /// Pesan galat di bawah kolom, supaya kasir tahu kolom mana yang kurang.
+  String? _nameError;
+  String? _phoneError;
+
+  /// Ada isian yang akan hilang bila layar ditutup. Setelah order tersimpan
+  /// layar ditutup lewat [Navigator.pop], yang tidak melewati penjaga ini.
+  bool get _hasUnsavedInput =>
+      !_saving &&
+      (_items.isNotEmpty ||
+          _nameController.text.trim().isNotEmpty ||
+          _phoneController.text.trim().isNotEmpty ||
+          _noteController.text.trim().isNotEmpty);
 
   @override
   void dispose() {
@@ -78,6 +93,8 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
       _customer = picked;
       _nameController.text = picked.name;
       _phoneController.text = prettyPhone(picked.phone);
+      _nameError = null;
+      _phoneError = null;
     });
   }
 
@@ -106,27 +123,34 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
   Future<void> _save() async {
     final messenger = ScaffoldMessenger.of(context);
 
-    if (_items.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Tambahkan minimal satu layanan.')),
-      );
-      return;
-    }
-
     final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
 
-    if (name.isEmpty) {
+    // Semua kekurangan ditandai sekaligus, bukan satu per satu. Kasir yang
+    // harus menekan Simpan tiga kali untuk menemukan tiga kekurangan akan
+    // merasa aplikasinya menyiksa.
+    setState(() {
+      _nameError = name.isEmpty ? 'Nama pelanggan belum diisi' : null;
+      _phoneError = phone.isNotEmpty && !isValidPhone(phone)
+          ? 'Nomor tidak valid. Contoh: 0812-3456-7890'
+          : null;
+    });
+
+    if (_nameError != null || _phoneError != null) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Nama pelanggan belum diisi.')),
+        const SnackBar(
+          content: Text('Lengkapi data pelanggan di bagian atas dulu.'),
+        ),
       );
       return;
     }
 
-    if (phone.isNotEmpty && !isValidPhone(phone)) {
+    if (_items.isEmpty) {
       messenger.showSnackBar(
         const SnackBar(
-            content: Text('Nomor HP tidak valid. Contoh: 0812-3456-7890')),
+          content: Text('Pilih minimal satu layanan lewat tombol "Tambah" '
+              'di bagian Layanan.'),
+        ),
       );
       return;
     }
@@ -210,7 +234,12 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
       if (!mounted) return;
       setState(() => _saving = false);
       messenger.showSnackBar(
-        SnackBar(content: Text('Gagal menyimpan order: $e')),
+        SnackBar(
+          content: Text(
+            'Order belum tersimpan. ${friendlyError(e)}',
+          ),
+          duration: const Duration(seconds: 6),
+        ),
       );
     }
   }
@@ -322,7 +351,11 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
   @override
   Widget build(BuildContext context) {
 
-    return Scaffold(
+    return UnsavedChangesGuard(
+      hasChanges: () => _hasUnsavedInput,
+      message: 'Order ini belum disimpan. Pelanggan dan layanan yang sudah '
+          'diisi akan hilang.',
+      child: Scaffold(
       appBar: AppBar(title: const Text('Order Baru')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -339,9 +372,16 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                         child: TextField(
                           controller: _nameController,
                           textCapitalization: TextCapitalization.words,
-                          decoration: const InputDecoration(
+                          textInputAction: TextInputAction.next,
+                          onChanged: (_) {
+                            if (_nameError != null) {
+                              setState(() => _nameError = null);
+                            }
+                          },
+                          decoration: InputDecoration(
                             labelText: 'Nama',
-                            prefixIcon: Icon(Icons.person_outline),
+                            prefixIcon: const Icon(Icons.person_outline),
+                            errorText: _nameError,
                           ),
                         ),
                       ),
@@ -357,11 +397,19 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                   TextField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(
+                    textInputAction: TextInputAction.done,
+                    onChanged: (_) {
+                      if (_phoneError != null) {
+                        setState(() => _phoneError = null);
+                      }
+                    },
+                    decoration: InputDecoration(
                       labelText: 'Nomor WhatsApp',
                       hintText: '0812-3456-7890',
-                      prefixIcon: Icon(Icons.chat_outlined),
-                      helperText: 'Kosongkan bila pelanggan tidak mau dihubungi',
+                      prefixIcon: const Icon(Icons.chat_outlined),
+                      helperText:
+                          'Kosongkan bila pelanggan tidak mau dihubungi',
+                      errorText: _phoneError,
                     ),
                   ),
                 ],
@@ -424,11 +472,36 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                                 const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           IconButton(
+                            tooltip: 'Hapus layanan ini',
                             icon: const Icon(Icons.close, size: 18),
-                            onPressed: () => setState(() {
-                              _items.removeAt(i);
-                              _estimate = null;
-                            }),
+                            onPressed: () {
+                              final removed = _items[i];
+                              final position = i;
+
+                              setState(() {
+                                _items.removeAt(position);
+                                _estimate = null;
+                              });
+
+                              // Salah sentuh ikon kecil ini mudah terjadi,
+                              // dan mengetik ulang berat dan harga memakan
+                              // waktu.
+                              showToast(
+                                context,
+                                '${removed.serviceName} dihapus dari order.',
+                                actionLabel: 'Urungkan',
+                                onAction: () {
+                                  if (!mounted) return;
+                                  setState(() {
+                                    _items.insert(
+                                      position.clamp(0, _items.length),
+                                      removed,
+                                    );
+                                    _estimate = null;
+                                  });
+                                },
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -597,6 +670,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
             label: Text(_saving ? 'Menyimpan...' : 'Simpan & Cetak Nota'),
           ),
         ],
+      ),
       ),
     );
   }

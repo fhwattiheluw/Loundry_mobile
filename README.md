@@ -69,6 +69,20 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 - Pelanggan teratas dan perbandingan dengan periode sebelumnya
 - Ekspor CSV untuk Excel, dan PDF siap cetak
 
+**Kemudahan pakai**
+- Pesan galat berbahasa sehari-hari beserta langkah berikutnya, bukan teks
+  teknis (`core/friendly_error.dart`)
+- Konfirmasi dan tombol Urungkan untuk aksi yang mudah salah sentuh: hapus
+  layanan dari order, sembunyikan layanan
+- Tombol kembali menahan order atau formulir yang belum disimpan
+- Isian yang kurang ditandai sekaligus di bawah kolomnya, bukan satu per satu
+- Kartu "Langkah awal" di Beranda untuk Owner (profil usaha, printer, backup
+  pertama), hilang sendiri bila semuanya selesai
+- Layar Bantuan berisi panduan dan pertanyaan umum, dibuka dari Pengaturan
+- Pintasan status di Beranda langsung membuka tab Order yang sudah tersaring
+- Keadaan kosong yang berbeda untuk belum ada data, pencarian kosong, dan
+  filter terlalu sempit, masing-masing dengan tombol jalan keluar
+
 **Backup**
 - Backup otomatis harian ke penyimpanan aplikasi, tujuh salinan terakhir
 - Bagikan backup ke WhatsApp, email, atau Google Drive
@@ -175,6 +189,7 @@ lib/
     printer/     ESC/POS dan koneksi Bluetooth
     notification/ WhatsApp dan log kirim
     backup/      backup, restore, dan pengingat mingguan
+    setup/       daftar langkah awal di Beranda
     ads/         AdMob
     connectivity/ gerbang koneksi internet
   application/   provider Riverpod
@@ -207,6 +222,8 @@ Yang diuji:
 | `test/audit_fixes_test.dart` | Pencarian dan penyimpanan pelanggan (termasuk tanpa nomor HP), status order batal, cucian menumpuk |
 | `test/pin_guard_test.dart` | Penguncian percobaan PIN |
 | `test/backup_reminder_test.dart` | Aturan pengingat backup mingguan |
+| `test/friendly_error_test.dart` | Terjemahan galat teknis menjadi kalimat yang bisa dipahami |
+| `test/setup_checklist_test.dart` | Aturan daftar langkah awal: selesai, tersembunyi, hilang sendiri |
 | `test/security_test.dart` | Normalisasi dan validasi nomor HP, hash PIN, format rupiah |
 
 Uji laporan memakai SQLite sungguhan lewat `sqflite_common_ffi`, bukan tiruan,

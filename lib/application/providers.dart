@@ -22,6 +22,7 @@ import '../services/notification/notification_service.dart';
 import '../services/notification/whatsapp_api_sender.dart';
 import '../services/printer/receipt_builder.dart';
 import '../services/printer/receipt_printer.dart';
+import '../services/setup/setup_checklist.dart';
 
 // ------------------------------------------------------------------- dasar
 
@@ -175,10 +176,39 @@ final backupReminderProvider = Provider<BackupReminder>(
 /// di cache biasa, bukan sesuatu yang bisa ditonton Riverpod.
 final backupTickProvider = StateProvider<int>((ref) => 0);
 
+/// Tab yang sedang terbuka di rangka utama: 0 Beranda, 1 Order, 2 Laporan,
+/// 3 Pengaturan. Ada di provider supaya layar mana pun bisa membawa kasir
+/// ke tab lain, misalnya pintasan status di Beranda langsung membuka daftar
+/// Order yang sudah tersaring.
+abstract final class HomeTab {
+  static const home = 0;
+  static const orders = 1;
+  static const reports = 2;
+  static const settings = 3;
+}
+
+final homeTabProvider = StateProvider<int>((ref) => HomeTab.home);
+
 final backupStatusProvider = Provider<BackupStatus>((ref) {
   ref.watch(backupTickProvider);
   ref.watch(settingsLoadedProvider);
   return ref.watch(backupReminderProvider).status();
+});
+
+/// Status daftar "Langkah awal" di Beranda. Dihitung ulang setiap pengaturan
+/// atau status backup berubah, jadi centangnya muncul begitu pemilik kembali
+/// dari layar pengaturan.
+final setupChecklistProvider = Provider<SetupChecklist>((ref) {
+  ref.watch(settingsLoadedProvider);
+  final settings = ref.watch(settingsRepoProvider);
+  final backup = ref.watch(backupStatusProvider);
+
+  return SetupChecklist.evaluate(
+    businessName: settings.get(SettingsKeys.businessName),
+    printerName: settings.get(SettingsKeys.printerName),
+    backedUp: !backup.neverBackedUp,
+    hidden: settings.getBool(SettingsKeys.setupChecklistHidden),
+  );
 });
 
 final exportServiceProvider = Provider<ExportService>(

@@ -12,9 +12,11 @@ import '../../services/ads/ad_service.dart';
 import '../widgets/layout.dart';
 import '../widgets/states.dart';
 import '../widgets/stat_tile.dart';
+import 'new_order_screen.dart';
 import 'order_detail_screen.dart';
 import 'scan_order_screen.dart';
 import 'status_confirm.dart';
+import '../../core/friendly_error.dart';
 
 class OrderListScreen extends ConsumerStatefulWidget {
   const OrderListScreen({super.key});
@@ -132,6 +134,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                 suffixIcon: filter.query.isEmpty
                     ? null
                     : IconButton(
+                        tooltip: 'Hapus pencarian',
                         icon: const Icon(Icons.clear),
                         onPressed: () {
                           _searchController.clear();
@@ -188,7 +191,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                 itemBuilder: (_, __) => const OrderCardSkeleton(),
               ),
               error: (e, _) => ErrorState(
-                message: '$e',
+                message: friendlyError(e),
                 onRetry: () => ref.refreshOrderData(),
               ),
               data: (raw) {
@@ -209,12 +212,57 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                   });
 
                 if (list.isEmpty) {
+                  final searching = filter.query.trim().isNotEmpty;
+                  final filtering =
+                      filter.statuses.isNotEmpty || filter.unpaidOnly;
+
+                  // Tiga keadaan kosong yang berbeda butuh tiga jalan keluar
+                  // yang berbeda: belum pernah ada order, pencarian tidak
+                  // menemukan apa pun, atau filter terlalu sempit.
+                  if (searching) {
+                    return EmptyState(
+                      icon: Icons.search_off,
+                      title: 'Tidak ada yang cocok',
+                      message: 'Tidak ada order untuk "${filter.query.trim()}". '
+                          'Coba nama, nomor HP, atau nomor nota yang lain.',
+                      action: OutlinedButton(
+                        onPressed: () {
+                          _searchController.clear();
+                          _setFilter(filter.copyWith(query: ''));
+                        },
+                        child: const Text('Hapus pencarian'),
+                      ),
+                    );
+                  }
+
+                  if (filtering) {
+                    return EmptyState(
+                      icon: Icons.filter_alt_off_outlined,
+                      title: 'Tidak ada order di filter ini',
+                      message: 'Coba filter lain, atau tampilkan semua order.',
+                      action: OutlinedButton(
+                        onPressed: () => _setFilter(const OrderFilter()),
+                        child: const Text('Tampilkan semua'),
+                      ),
+                    );
+                  }
+
                   return EmptyState(
                     icon: Icons.inbox_outlined,
-                    title: 'Belum ada order di filter ini',
-                    message: filter.statuses.isEmpty && !filter.unpaidOnly
-                        ? 'Order baru akan muncul di sini.'
-                        : 'Coba pilih filter lain di atas.',
+                    title: 'Belum ada order',
+                    message: 'Order pertama Anda akan muncul di sini. '
+                        'Pelanggan dan nomor nota dibuat otomatis.',
+                    action: FilledButton.icon(
+                      onPressed: () async {
+                        final created = await Navigator.of(context).push<bool>(
+                          MaterialPageRoute(
+                              builder: (_) => const NewOrderScreen()),
+                        );
+                        if (created == true) ref.refreshOrderData();
+                      },
+                      icon: const Icon(Icons.add),
+                      label: const Text('Buat order pertama'),
+                    ),
                   );
                 }
 

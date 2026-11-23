@@ -167,6 +167,7 @@ class _WhatsAppSettingsScreenState
                 labelText: 'Access token',
                 helperText: 'Token permanen, bukan token sementara 24 jam',
                 suffixIcon: IconButton(
+                  tooltip: _showToken ? 'Sembunyikan token' : 'Tampilkan token',
                   icon: Icon(
                       _showToken ? Icons.visibility_off : Icons.visibility),
                   onPressed: () => setState(() => _showToken = !_showToken),

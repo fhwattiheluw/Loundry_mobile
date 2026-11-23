@@ -13,6 +13,7 @@ import '../../services/ads/ad_service.dart';
 import '../widgets/layout.dart';
 import '../widgets/stat_tile.dart';
 import 'receivables_screen.dart';
+import '../../core/friendly_error.dart';
 
 class ReportScreen extends ConsumerWidget {
   const ReportScreen({super.key});
@@ -120,7 +121,12 @@ class ReportScreen extends ConsumerWidget {
                 height: 120,
                 child: Center(child: CircularProgressIndicator()),
               ),
-              error: (e, _) => Text('Gagal memuat: $e'),
+              error: (e, _) => Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Text(
+                  'Laporan belum bisa dimuat. ${friendlyError(e)}',
+                ),
+              ),
               data: (data) => Column(
                 children: [
                   Row(
@@ -292,7 +298,9 @@ class ReportScreen extends ConsumerWidget {
           ref.read(adServiceProvider).showInterstitialAt('cetak laporan'));
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Gagal menyiapkan laporan: $e')),
+        SnackBar(
+          content: Text('Laporan belum siap. ${friendlyError(e)}'),
+        ),
       );
     }
   }
@@ -541,7 +549,12 @@ class _RevenueChart extends ConsumerWidget {
           height: 220,
           child: data.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('$e')),
+            error: (e, _) => Center(
+              child: Text(
+                'Grafik belum bisa dimuat. ${friendlyError(e)}',
+                textAlign: TextAlign.center,
+              ),
+            ),
             data: (days) {
               if (days.isEmpty) {
                 return const Center(child: Text('Belum ada data'));
@@ -665,7 +678,10 @@ class _AmountList extends ConsumerWidget {
           height: 80,
           child: Center(child: CircularProgressIndicator()),
         ),
-        error: (e, _) => ListTile(title: Text('Gagal memuat: $e')),
+        error: (e, _) => ListTile(
+          leading: const Icon(Icons.error_outline),
+          title: Text('Belum bisa dimuat. ${friendlyError(e)}'),
+        ),
         data: (rows) {
           if (rows.isEmpty) {
             return const ListTile(title: Text('Belum ada data'));

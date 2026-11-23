@@ -9,6 +9,7 @@ import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
 import '../widgets/layout.dart';
 import '../widgets/number_pad.dart';
+import '../../core/friendly_error.dart';
 
 /// Layar pembayaran. Mengembalikan true bila ada pembayaran yang tersimpan.
 Future<bool?> showPaymentSheet(
@@ -130,7 +131,9 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _saving = false);
-      messenger.showSnackBar(SnackBar(content: Text('Gagal menyimpan: $e')));
+      messenger.showSnackBar(
+        SnackBar(content: Text('Pembayaran belum tersimpan. ${friendlyError(e)}')),
+      );
     }
   }
 

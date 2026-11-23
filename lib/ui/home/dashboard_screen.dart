@@ -16,8 +16,14 @@ import '../orders/new_order_screen.dart';
 import '../orders/order_detail_screen.dart';
 import '../orders/scan_order_screen.dart';
 import '../reports/receivables_screen.dart';
+import '../../data/db/settings_keys.dart';
+import '../../services/setup/setup_checklist.dart';
+import '../help/help_screen.dart';
+import '../settings/business_settings_screen.dart';
+import '../settings/printer_settings_screen.dart';
 import '../widgets/layout.dart';
 import '../widgets/states.dart';
+import '../../core/friendly_error.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -39,6 +45,7 @@ class DashboardScreen extends ConsumerWidget {
     final summary = ref.watch(revenueSummaryProvider);
     final stale = ref.watch(staleOrdersProvider);
     final backup = ref.watch(backupStatusProvider);
+    final checklist = ref.watch(setupChecklistProvider);
 
     return Scaffold(
       body: RefreshIndicator(
@@ -103,12 +110,36 @@ class DashboardScreen extends ConsumerWidget {
                   ),
                 ],
 
+                // Langkah awal hanya untuk Owner, karena pengaturan usaha,
+                // printer, dan backup memang urusannya.
+                if ((user?.isOwner ?? false) && checklist.visible) ...[
+                  const SizedBox(height: AppSpacing.xl),
+                  _SetupChecklistCard(
+                    checklist: checklist,
+                    onOpen: (step) => _push(
+                      context,
+                      switch (step) {
+                        SetupStep.business => const BusinessSettingsScreen(),
+                        SetupStep.printer => const PrinterSettingsScreen(),
+                        SetupStep.backup => const BackupWizardScreen(),
+                      },
+                    ),
+                    onHelp: () => _push(context, const HelpScreen()),
+                    onHide: () async {
+                      await ref
+                          .read(settingsRepoProvider)
+                          .set(SettingsKeys.setupChecklistHidden, '1');
+                      ref.invalidate(settingsLoadedProvider);
+                    },
+                  ),
+                ],
+
                 const SizedBox(height: AppSpacing.xxl),
                 const SectionHeader('Perlu tindakan'),
                 stale.when(
                   loading: () => const LoadingState(height: 120),
                   error: (e, _) => ErrorState(
-                    message: '$e',
+                    message: friendlyError(e),
                     onRetry: () => ref.refreshOrderData(),
                   ),
                   data: (orders) => orders.isEmpty
@@ -119,14 +150,11 @@ class DashboardScreen extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.xxl),
                 const SectionHeader('Pantau cucian'),
                 _StatusShortcuts(onPick: (filter, label) {
+                  // Langsung buka daftar Order yang sudah tersaring. Dulu
+                  // kasir hanya diberi tahu "buka tab Order", dan satu
+                  // langkah itu sering terlewat.
                   ref.read(orderFilterProvider.notifier).state = filter;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content:
-                          Text('Filter "$label" dipasang. Buka tab Order.'),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
+                  ref.read(homeTabProvider.notifier).state = HomeTab.orders;
                 }),
 
                 // Iklan native di ujung beranda, berjarak dari kartu yang
@@ -463,6 +491,103 @@ class _BackupReminderCard extends StatelessWidget {
                     label: const Text('Backup sekarang'),
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Daftar langkah yang membuat aplikasi siap dipakai berjualan.
+///
+/// Sengaja berupa daftar kecil dengan kemajuan yang terlihat, bukan jendela
+/// yang memblokir layar: pemilik yang sedang sibuk bisa mengabaikannya dan
+/// kembali nanti.
+class _SetupChecklistCard extends StatelessWidget {
+  const _SetupChecklistCard({
+    required this.checklist,
+    required this.onOpen,
+    required this.onHelp,
+    required this.onHide,
+  });
+
+  final SetupChecklist checklist;
+  final void Function(SetupStep step) onOpen;
+  final VoidCallback onHelp;
+  final VoidCallback onHide;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final done = context.status.selesai;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Langkah awal · ${checklist.doneCount} dari '
+                    '${checklist.total}',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Sembunyikan daftar ini',
+                  onPressed: onHide,
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+              child: LinearProgressIndicator(
+                value: checklist.doneCount / checklist.total,
+                minHeight: 6,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            for (final item in checklist.items)
+              Semantics(
+                label: '${item.title}, ${item.done ? 'sudah' : 'belum'} selesai',
+                button: !item.done,
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  minVerticalPadding: AppSpacing.sm,
+                  leading: Icon(
+                    item.done
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    color: item.done ? done : scheme.outline,
+                  ),
+                  title: Text(
+                    item.title,
+                    style: item.done
+                        ? theme.textTheme.bodyLarge?.copyWith(
+                            decoration: TextDecoration.lineThrough,
+                            color: scheme.onSurfaceVariant,
+                          )
+                        : theme.textTheme.bodyLarge,
+                  ),
+                  subtitle: item.done ? null : Text(item.hint),
+                  trailing: item.done ? null : const Icon(Icons.chevron_right),
+                  onTap: item.done ? null : () => onOpen(item.step),
+                ),
+              ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: onHelp,
+                icon: const Icon(Icons.help_outline, size: 18),
+                label: const Text('Baca panduan singkat'),
               ),
             ),
           ],

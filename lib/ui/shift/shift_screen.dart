@@ -9,6 +9,8 @@ import '../../core/formatters.dart';
 import '../../domain/models/models.dart';
 import '../widgets/layout.dart';
 import '../widgets/stat_tile.dart';
+import '../../core/friendly_error.dart';
+import '../widgets/states.dart';
 
 /// Buka dan tutup shift kasir.
 ///
@@ -25,7 +27,10 @@ class ShiftScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Shift Kasir')),
       body: shift.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Gagal memuat: $e')),
+        error: (e, _) => ErrorState(
+          message: friendlyError(e),
+          onRetry: () => ref.invalidate(currentShiftProvider),
+        ),
         data: (open) =>
             open == null ? const _OpenShiftForm() : _OpenShiftView(shift: open),
       ),
@@ -153,7 +158,7 @@ class _OpenShiftView extends ConsumerWidget {
               height: 120,
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (e, _) => Text('Gagal memuat: $e'),
+            error: (e, _) => Text('Ringkasan belum bisa dimuat. ${friendlyError(e)}'),
             data: (data) => Column(
               children: [
                 Row(

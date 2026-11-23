@@ -8,6 +8,7 @@ import '../../core/security.dart';
 import '../orders/order_detail_screen.dart';
 import '../widgets/layout.dart';
 import '../widgets/states.dart';
+import '../../core/friendly_error.dart';
 
 /// Daftar piutang, diurutkan dari yang paling lama.
 /// Ini layar yang membuat uang tidak hilang diam-diam.
@@ -22,7 +23,10 @@ class ReceivablesScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Piutang')),
       body: data.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Gagal memuat: $e')),
+        error: (e, _) => ErrorState(
+          message: friendlyError(e),
+          onRetry: () => ref.invalidate(receivablesProvider),
+        ),
         data: (rows) {
           if (rows.isEmpty) {
             return const EmptyState(

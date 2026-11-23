@@ -218,6 +218,14 @@ class ServiceRepository {
     await db.update('services', {'active': 0},
         where: 'id = ?', whereArgs: [id]);
   }
+
+  /// Mengaktifkan lagi layanan yang tadi dinonaktifkan, untuk tombol
+  /// "Urungkan" di layar layanan.
+  Future<void> activate(int id) async {
+    final db = await _db.database;
+    await db.update('services', {'active': 1},
+        where: 'id = ?', whereArgs: [id]);
+  }
 }
 
 class UserRepository {

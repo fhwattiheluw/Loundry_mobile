@@ -12,6 +12,7 @@ import '../../domain/models/models.dart';
 import '../widgets/layout.dart';
 import '../widgets/states.dart';
 import 'broadcast_screen.dart';
+import '../../core/friendly_error.dart';
 
 class CustomerScreen extends ConsumerStatefulWidget {
   const CustomerScreen({super.key});
@@ -115,7 +116,12 @@ class _CustomerScreenState extends ConsumerState<CustomerScreen> {
       );
     } catch (e) {
       messenger.showSnackBar(
-        SnackBar(content: Text('Gagal membaca berkas: $e')),
+        SnackBar(
+          content: Text(
+            'Berkas tidak bisa diimpor. ${friendlyError(e)} '
+            'Pastikan berkasnya berformat CSV.',
+          ),
+        ),
       );
     }
   }
@@ -275,11 +281,20 @@ class _CustomerScreenState extends ConsumerState<CustomerScreen> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _customers.isEmpty
-                    ? const EmptyState(
-                        icon: Icons.people_outline,
-                        title: 'Pelanggan tidak ditemukan',
-                        message: 'Pelanggan baru tersimpan otomatis saat '
-                            'kamu membuat order.',
+                    ? EmptyState(
+                        icon: _searchController.text.trim().isEmpty
+                            ? Icons.people_outline
+                            : Icons.search_off,
+                        title: _searchController.text.trim().isEmpty
+                            ? 'Belum ada pelanggan'
+                            : 'Pelanggan tidak ditemukan',
+                        message: _searchController.text.trim().isEmpty
+                            ? 'Pelanggan tersimpan otomatis saat Anda '
+                                'membuat order. Anda juga bisa mengimpor '
+                                'daftar dari berkas CSV.'
+                            : 'Coba nama atau nomor HP yang lain. '
+                                'Pelanggan baru tersimpan otomatis saat '
+                                'Anda membuat order.',
                       )
                     : ListView.separated(
                         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
