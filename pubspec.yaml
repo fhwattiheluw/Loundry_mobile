@@ -25,7 +25,7 @@ dependencies:
   http: ^1.2.2
 
   # Format angka dan tanggal Indonesia
-  intl: ^0.19.0
+  intl: ^0.20.2
 
   # Printer thermal Bluetooth (ESC/POS)
   print_bluetooth_thermal: ^1.0.9
