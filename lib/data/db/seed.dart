@@ -1,6 +1,5 @@
 import 'package:sqflite/sqflite.dart';
 
-import '../../core/security.dart';
 import 'default_templates.dart';
 import 'settings_keys.dart';
 

@@ -8,7 +8,6 @@ import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
 import '../../domain/payment_banner.dart';
 import '../widgets/layout.dart';
-import '../widgets/stat_tile.dart';
 import 'new_order_screen.dart';
 import 'order_detail_screen.dart';
 
