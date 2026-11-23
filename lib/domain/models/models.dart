@@ -244,6 +244,7 @@ class LaundryOrder {
     this.pickedUpBy,
     this.cancelledAt,
     this.cancelReason,
+    this.finishedAt,
     this.items = const [],
     this.customerName = '',
     this.customerPhone = '',
@@ -281,6 +282,11 @@ class LaundryOrder {
   final DateTime? cancelledAt;
   final String? cancelReason;
 
+  /// Kapan status terakhir kali menjadi "selesai", dari log status. Hanya
+  /// terisi oleh kueri yang memintanya (daftar cucian menumpuk), bukan
+  /// kolom di tabel orders.
+  final DateTime? finishedAt;
+
   final List<OrderItem> items;
   final String customerName;
   final String customerPhone;
@@ -316,6 +322,7 @@ class LaundryOrder {
         pickedUpBy: pickedUpBy,
         cancelledAt: cancelledAt,
         cancelReason: cancelReason,
+        finishedAt: finishedAt,
         items: items ?? this.items,
         customerName: customerName,
         customerPhone: customerPhone,
@@ -343,6 +350,7 @@ class LaundryOrder {
         pickedUpBy: m['picked_up_by'] as String?,
         cancelledAt: _date(m['cancelled_at']),
         cancelReason: m['cancel_reason'] as String?,
+        finishedAt: _date(m['finished_at']),
         customerName: m['customer_name'] as String? ?? '',
         customerPhone: m['customer_phone'] as String? ?? '',
       );

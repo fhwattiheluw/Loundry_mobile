@@ -17,7 +17,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const _fileName = 'laundry_pos.db';
-  static const _schemaVersion = 7;
+  static const _schemaVersion = 8;
 
   final _key = DatabaseKey();
 
@@ -39,18 +39,38 @@ class AppDatabase {
       path,
       password: password,
       version: _schemaVersion,
-      onConfigure: (db) async {
-        await db.execute('PRAGMA foreign_keys = ON');
-      },
+      onConfigure: _configure,
+      onOpen: (db) async => db.execute('PRAGMA foreign_keys = ON'),
       onCreate: (db, version) async {
         await _v1(db);
         await _v2(db);
         await _v3(db);
         await _v4(db);
         await _v5(db);
+        await _v8(db);
         await seedInitialData(db);
       },
       onUpgrade: _migrate,
+    );
+  }
+
+  /// Kunci asing dimatikan hanya selama migrasi yang membangun ulang tabel.
+  ///
+  /// SQLite tidak bisa mengubah batasan kolom. Satu-satunya jalan adalah
+  /// tabel baru, salin, hapus yang lama, lalu ganti nama. Selama kunci asing
+  /// hidup, menghapus tabel induk (`customers`) gagal karena `orders` masih
+  /// merujuknya, dan PRAGMA ini tidak bisa diubah di dalam transaksi
+  /// migrasi, jadi harus diputuskan di sini, sebelum transaksi dibuka.
+  /// [onOpen] menyalakannya lagi begitu migrasi selesai.
+  static Future<void> _configure(sql.Database db) async {
+    final rows = await db.rawQuery('PRAGMA user_version');
+    final version = sql.Sqflite.firstIntValue(rows) ?? 0;
+
+    // 0 berarti database baru: tabel masih kosong, tidak ada yang dirujuk.
+    final rebuildingTables = version > 0 && version < 8;
+
+    await db.execute(
+      'PRAGMA foreign_keys = ${rebuildingTables ? 'OFF' : 'ON'}',
     );
   }
 
@@ -78,6 +98,7 @@ class AppDatabase {
         await _v3(db);
         await _v4(db);
         await _v5(db);
+        await _v8(db);
         await seedInitialData(db);
       },
     );
@@ -107,6 +128,42 @@ class AppDatabase {
     if (from < 5) await _v5(db);
     if (from < 6) await _v6(db);
     if (from < 7) await _v7(db);
+    if (from < 8) await _v8(db);
+  }
+
+  /// Versi 8: pelanggan tanpa nomor HP.
+  ///
+  /// Kolom `phone` semula `UNIQUE`, padahal order boleh dibuat tanpa nomor.
+  /// Akibatnya pelanggan kedua yang tanpa nomor tidak bisa disimpan, dan
+  /// pencarian berdasarkan nomor menyamakan semua pelanggan tanpa nomor
+  /// menjadi satu orang: order "Budi" tercatat atas nama "Ani".
+  ///
+  /// Keunikan sekarang hanya berlaku untuk nomor yang terisi.
+  Future<void> _v8(sql.Database db) async {
+    await db.execute('''
+      CREATE TABLE customers_new (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        name           TEXT    NOT NULL,
+        phone          TEXT    NOT NULL,
+        address        TEXT,
+        note           TEXT,
+        notify_enabled INTEGER NOT NULL DEFAULT 1,
+        created_at     TEXT    NOT NULL
+      )
+    ''');
+    await db.execute('''
+      INSERT INTO customers_new
+        (id, name, phone, address, note, notify_enabled, created_at)
+      SELECT id, name, phone, address, note, notify_enabled, created_at
+      FROM customers
+    ''');
+    await db.execute('DROP TABLE customers');
+    await db.execute('ALTER TABLE customers_new RENAME TO customers');
+    await db.execute('CREATE INDEX idx_customers_name ON customers(name)');
+    await db.execute(
+      "CREATE UNIQUE INDEX idx_customers_phone ON customers(phone) "
+      "WHERE phone != ''",
+    );
   }
 
   /// Versi 7: salinan nota bawaan menjadi 2 lembar.

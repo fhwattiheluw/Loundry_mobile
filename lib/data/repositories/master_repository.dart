@@ -14,12 +14,21 @@ class CustomerRepository {
     final db = await _db.database;
     final term = query.trim();
 
+    // Kata kunci tanpa satu pun angka ("Budi") menghasilkan nomor kosong
+    // setelah dinormalkan. Pola LIKE '%%' cocok dengan SEMUA baris, jadi
+    // bila klausa nomor ikut dipasang, mencari nama selalu mengembalikan
+    // seluruh pelanggan.
+    final digits = normalizePhone(term);
+
     final rows = term.isEmpty
         ? await db.query('customers', orderBy: 'name COLLATE NOCASE', limit: limit)
         : await db.query(
             'customers',
-            where: 'name LIKE ? OR phone LIKE ?',
-            whereArgs: ['%$term%', '%${normalizePhone(term)}%'],
+            where: digits.isEmpty ? 'name LIKE ?' : 'name LIKE ? OR phone LIKE ?',
+            whereArgs: [
+              '%$term%',
+              if (digits.isNotEmpty) '%$digits%',
+            ],
             orderBy: 'name COLLATE NOCASE',
             limit: limit,
           );
@@ -27,12 +36,17 @@ class CustomerRepository {
     return rows.map(Customer.fromMap).toList();
   }
 
+  /// Mencari pelanggan dari nomornya. Nomor kosong tidak pernah cocok:
+  /// pelanggan tanpa nomor tidak bisa dibedakan lewat nomor.
   Future<Customer?> findByPhone(String rawPhone) async {
+    final phone = normalizePhone(rawPhone);
+    if (phone.isEmpty) return null;
+
     final db = await _db.database;
     final rows = await db.query(
       'customers',
       where: 'phone = ?',
-      whereArgs: [normalizePhone(rawPhone)],
+      whereArgs: [phone],
       limit: 1,
     );
     return rows.isEmpty ? null : Customer.fromMap(rows.first);
@@ -48,18 +62,35 @@ class CustomerRepository {
   /// Menyimpan pelanggan baru, atau mengembalikan yang sudah ada bila
   /// nomornya sama. Duplikat pelanggan adalah sumber kekacauan paling umum
   /// di data laundry.
+  ///
+  /// Pelanggan tanpa nomor HP dikenali dari namanya (huruf besar kecil tidak
+  /// dibedakan). Tanpa aturan ini, semua pelanggan tanpa nomor melebur jadi
+  /// satu orang dan order mereka tercatat atas nama pelanggan yang pertama.
   Future<Customer> saveOrGet(Customer customer) async {
-    final existing = await findByPhone(customer.phone);
-    if (existing != null) return existing;
-
+    final phone = normalizePhone(customer.phone);
     final db = await _db.database;
+
+    if (phone.isEmpty) {
+      final rows = await db.query(
+        'customers',
+        where: "phone = '' AND name = ? COLLATE NOCASE",
+        whereArgs: [customer.name.trim()],
+        limit: 1,
+      );
+      if (rows.isNotEmpty) return Customer.fromMap(rows.first);
+    } else {
+      final existing = await findByPhone(phone);
+      if (existing != null) return existing;
+    }
+
     final id = await db.insert('customers', {
       ...customer.toMap(),
-      'phone': normalizePhone(customer.phone),
+      'name': customer.name.trim(),
+      'phone': phone,
       'created_at': DateTime.now().toIso8601String(),
     });
 
-    return customer.copyWith(id: id, phone: normalizePhone(customer.phone));
+    return customer.copyWith(id: id, phone: phone);
   }
 
   Future<void> update(Customer customer) async {

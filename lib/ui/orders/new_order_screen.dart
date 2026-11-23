@@ -8,6 +8,7 @@ import '../../core/security.dart';
 import '../../data/db/settings_keys.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
+import '../../services/auth/pin_guard.dart';
 import '../widgets/layout.dart';
 import '../widgets/number_pad.dart';
 import 'order_detail_screen.dart';
@@ -157,6 +158,18 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
       // bisa dicocokkan saat tutup shift. Null bila kasir belum buka shift.
       final shift = await ref.read(currentShiftProvider.future);
 
+      if (shift == null && _payNow > 0 && _payMethod == 'Tunai') {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Shift belum dibuka, jadi pembayaran tunai ini tidak masuk '
+              'hitungan kas shift. Buka shift di menu Pengaturan.',
+            ),
+            duration: Duration(seconds: 6),
+          ),
+        );
+      }
+
       final order = await ref.read(orderRepoProvider).create(
             customer: customer,
             items: _items,
@@ -262,8 +275,31 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
           ),
           FilledButton(
             onPressed: () async {
+              final guard = ref.read(pinGuardProvider);
+
+              final locked = guard.lockRemaining();
+              if (locked != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Terlalu banyak PIN salah. Coba lagi '
+                        'dalam ${PinGuard.describe(locked)}.'),
+                  ),
+                );
+                return;
+              }
+
               final user =
                   await ref.read(userRepoProvider).authenticate(controller.text);
+
+              // PIN kasir yang benar bukan persetujuan Owner, jadi dihitung
+              // gagal. Kalau tidak, kasir yang punya PIN sendiri bisa
+              // mereset hitungan sambil menebak PIN Owner.
+              if (user == null || !user.isOwner) {
+                await guard.recordFailure();
+              } else {
+                await guard.recordSuccess();
+              }
+
               if (context.mounted) {
                 Navigator.pop(context, user != null && user.isOwner);
               }

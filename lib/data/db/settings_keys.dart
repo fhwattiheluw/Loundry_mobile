@@ -36,6 +36,12 @@ abstract final class SettingsKeys {
   static const pinResetCodeHash = 'pin_reset_code_hash';
   static const pinResetExpiresAt = 'pin_reset_expires_at';
 
+  /// Percobaan PIN salah berturut-turut dan batas waktu kunci layar login.
+  /// Disimpan di database, bukan di memori, supaya menutup dan membuka lagi
+  /// aplikasi tidak mengulang hitungan dari nol.
+  static const pinFailures = 'pin_failures';
+  static const pinLockedUntil = 'pin_locked_until';
+
   /// 'system', 'light', atau 'dark'.
   static const themeMode = 'theme_mode';
 

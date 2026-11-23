@@ -135,13 +135,27 @@ class OrderRepository {
   }
 
   /// Order selesai yang belum diambil melewati batas hari (FR-31, FR-62).
+  ///
+  /// Hitungannya dari saat cucian benar-benar ditandai selesai, bukan dari
+  /// estimasi selesai. Cucian yang diperkirakan jadi Senin tapi baru
+  /// selesai Kamis tidak boleh langsung dianggap menumpuk pada hari
+  /// selesainya.
   Future<List<LaundryOrder>> staleOrders(int reminderDays) async {
     final db = await _db.database;
     final cutoff = DateTime.now().subtract(Duration(days: reminderDays));
 
+    const finished = '''
+      COALESCE(
+        (SELECT MAX(s.changed_at) FROM status_logs s
+         WHERE s.order_id = o.id AND s.status = 'selesai'),
+        o.estimated_at)
+    ''';
+
     final rows = await db.rawQuery(
-      "$_orderSelect WHERE o.laundry_status = 'selesai' AND o.estimated_at <= ? "
-      'ORDER BY o.estimated_at ASC',
+      'SELECT sub.*, $finished AS finished_at '
+      'FROM ($_orderSelect) sub JOIN orders o ON o.id = sub.id '
+      "WHERE o.laundry_status = 'selesai' AND $finished <= ? "
+      'ORDER BY finished_at ASC',
       [cutoff.toIso8601String()],
     );
 
@@ -254,6 +268,17 @@ class OrderRepository {
 
   // ----------------------------------------------------------------- status
 
+  Future<String?> _statusOf(DatabaseExecutor txn, int orderId) async {
+    final rows = await txn.query(
+      'orders',
+      columns: ['laundry_status'],
+      where: 'id = ?',
+      whereArgs: [orderId],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : rows.first['laundry_status'] as String;
+  }
+
   Future<void> changeStatus(
     int orderId,
     LaundryStatus status, {
@@ -264,6 +289,23 @@ class OrderRepository {
     final now = DateTime.now();
 
     await db.transaction((txn) async {
+      final current = await _statusOf(txn, orderId);
+
+      // Order yang dibatalkan tidak boleh hidup kembali lewat jalur ini:
+      // pembatalan membawa alasan dan waktunya sendiri, dan laporan sudah
+      // mengeluarkannya dari hitungan. Pembatalan sendiri hanya lewat
+      // cancel(), supaya alasannya selalu tercatat.
+      if (current == LaundryStatus.dibatalkan.name) {
+        throw StateError('Order yang sudah dibatalkan tidak bisa diubah.');
+      }
+      if (status == LaundryStatus.dibatalkan) {
+        throw StateError('Gunakan pembatalan order, bukan ubah status.');
+      }
+
+      // Status yang sama tidak menulis log kedua. Dua ketukan cepat di
+      // konter yang ramai tidak boleh menggandakan riwayat atau pesan.
+      if (current == status.name) return;
+
       await txn.update(
         'orders',
         {
@@ -306,7 +348,11 @@ class OrderRepository {
     required AppUser user,
   }) async {
     for (final id in orderIds) {
-      await changeStatus(id, status, user: user);
+      try {
+        await changeStatus(id, status, user: user);
+      } on StateError {
+        // Order dibatalkan di tengah daftar tidak boleh menghentikan sisanya.
+      }
     }
   }
 
@@ -330,6 +376,12 @@ class OrderRepository {
     final now = DateTime.now();
 
     await db.transaction((txn) async {
+      // Membatalkan dua kali akan menimpa alasan dan waktu pembatalan yang
+      // pertama, yaitu catatan yang justru dibutuhkan saat ada sengketa.
+      if (await _statusOf(txn, orderId) == LaundryStatus.dibatalkan.name) {
+        return;
+      }
+
       await txn.update(
         'orders',
         {
@@ -366,6 +418,15 @@ class OrderRepository {
     final now = DateTime.now();
 
     await db.transaction((txn) async {
+      // Uang yang masuk ke order batal tidak punya pasangan di laporan:
+      // order itu sudah keluar dari hitungan, tapi kasnya tetap bertambah.
+      // Pengembalian (nilai negatif) tetap boleh, karena itulah cara
+      // membereskan order batal yang sudah terlanjur dibayar.
+      if (amount > 0 &&
+          await _statusOf(txn, orderId) == LaundryStatus.dibatalkan.name) {
+        throw StateError('Order yang dibatalkan tidak bisa dibayar.');
+      }
+
       await txn.insert('payments', {
         'order_id': orderId,
         'shift_id': shiftId,

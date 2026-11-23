@@ -86,6 +86,8 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 
 **Pengguna**
 - Login PIN, dua peran: Owner dan Kasir
+- Layar login dikunci bertahap setelah PIN salah berulang (tiap kelima kali:
+  30 detik, 5 menit, 15 menit), juga pada persetujuan diskon oleh Owner
 - Kasir tidak bisa mengubah harga atau membuka laporan keseluruhan
 - Setiap transaksi menyimpan siapa yang membuatnya
 
@@ -202,6 +204,9 @@ Yang diuji:
 | `test/price_calculator_test.dart` | Pembulatan berat, minimum, express, diskon, status bayar, estimasi selesai, kembalian |
 | `test/report_repository_test.dart` | Nomor order urut, pendapatan dari pembayaran, refund, pembatalan, piutang, grafik harian |
 | `test/shift_repository_test.dart` | Buka dan tutup shift, kas seharusnya, selisih kas, pemisahan tunai dan non-tunai |
+| `test/audit_fixes_test.dart` | Pencarian dan penyimpanan pelanggan (termasuk tanpa nomor HP), status order batal, cucian menumpuk |
+| `test/pin_guard_test.dart` | Penguncian percobaan PIN |
+| `test/backup_reminder_test.dart` | Aturan pengingat backup mingguan |
 | `test/security_test.dart` | Normalisasi dan validasi nomor HP, hash PIN, format rupiah |
 
 Uji laporan memakai SQLite sungguhan lewat `sqflite_common_ffi`, bukan tiruan,

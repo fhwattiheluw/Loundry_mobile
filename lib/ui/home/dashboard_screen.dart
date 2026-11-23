@@ -563,7 +563,7 @@ class _StaleOrders extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               subtitle: Text(
-                'Selesai ${relativeDays(order.estimatedAt, DateTime.now())}'
+                'Selesai ${relativeDays(order.finishedAt ?? order.estimatedAt, DateTime.now())}'
                 '${order.remaining > 0 ? '  ·  sisa ${formatRupiah(order.remaining)}' : ''}',
               ),
               trailing: Row(

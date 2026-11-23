@@ -13,6 +13,7 @@ import '../services/photo/order_photo_service.dart';
 import '../services/ads/ad_service.dart';
 import '../services/auth/pin_recovery.dart';
 import '../services/ads/consent_manager.dart';
+import '../services/auth/pin_guard.dart';
 import '../services/backup/backup_reminder.dart';
 import '../services/backup/backup_service.dart';
 import '../services/export/export_service.dart';
@@ -159,6 +160,10 @@ final adServiceProvider = Provider<AdService>(
 
 final backupServiceProvider = Provider<BackupService>(
   (ref) => BackupService(ref.watch(databaseProvider)),
+);
+
+final pinGuardProvider = Provider<PinGuard>(
+  (ref) => PinGuard(ref.watch(settingsRepoProvider)),
 );
 
 final backupReminderProvider = Provider<BackupReminder>(

@@ -71,6 +71,21 @@ class _PaymentSheetState extends ConsumerState<_PaymentSheet> {
     try {
       final shift = await ref.read(currentShiftProvider.future);
 
+      // Uang tunai tanpa shift terbuka tidak ikut hitungan kas laci saat
+      // tutup shift. Kasir perlu tahu SEKARANG, bukan saat selisihnya
+      // muncul dan tidak ada yang bisa menjelaskannya.
+      if (shift == null && _method == 'Tunai') {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Shift belum dibuka, jadi pembayaran tunai ini tidak masuk '
+              'hitungan kas shift. Buka shift di menu Pengaturan.',
+            ),
+            duration: Duration(seconds: 6),
+          ),
+        );
+      }
+
       await ref.read(orderRepoProvider).addPayment(
             orderId: widget.order.id!,
             amount: _amount,

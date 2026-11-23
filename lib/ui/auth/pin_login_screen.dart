@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../data/db/settings_keys.dart';
+import '../../services/auth/pin_guard.dart';
 import '../widgets/app_logo.dart';
 import 'forgot_pin_screen.dart';
 
@@ -50,6 +51,21 @@ class _PinLoginScreenState extends ConsumerState<PinLoginScreen>
   Future<void> _submit() async {
     if (_pin.length < _minLength || _checking) return;
 
+    final guard = ref.read(pinGuardProvider);
+
+    // Terkunci: PIN tidak diperiksa sama sekali. Memeriksanya tetap akan
+    // memberi tahu penebak apakah tebakannya benar.
+    final locked = guard.lockRemaining();
+    if (locked != null) {
+      setState(() {
+        _error = 'Terlalu banyak PIN salah. Coba lagi dalam '
+            '${PinGuard.describe(locked)}.';
+        _pin = '';
+      });
+      HapticFeedback.mediumImpact();
+      return;
+    }
+
     setState(() {
       _checking = true;
       _error = null;
@@ -60,9 +76,16 @@ class _PinLoginScreenState extends ConsumerState<PinLoginScreen>
     if (!mounted) return;
 
     if (user == null) {
+      final lock = await guard.recordFailure();
+      if (!mounted) return;
+
       setState(() {
         _checking = false;
-        _error = 'PIN salah.';
+        _error = lock > Duration.zero
+            ? 'PIN salah terlalu sering. Layar dikunci '
+                '${PinGuard.describe(lock)}.'
+            : 'PIN salah. Sisa ${guard.attemptsLeftInRound} kesempatan '
+                'sebelum layar dikunci.';
         _pin = '';
       });
       _shake.forward(from: 0);
@@ -70,6 +93,7 @@ class _PinLoginScreenState extends ConsumerState<PinLoginScreen>
       return;
     }
 
+    await guard.recordSuccess();
     ref.read(sessionProvider.notifier).signIn(user);
   }
 
