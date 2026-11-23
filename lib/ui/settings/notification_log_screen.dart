@@ -72,7 +72,7 @@ class _NotificationLogScreenState
           ),
         ],
       ),
-      body: _loading
+      body: ContentWidth(child: _loading
           ? const Center(child: CircularProgressIndicator())
           : _rows.isEmpty
               ? const EmptyState(
@@ -119,7 +119,7 @@ class _NotificationLogScreenState
                       ),
                     ));
                   },
-                ),
+                )),
     );
   }
 }

@@ -5,6 +5,7 @@ import '../../application/providers.dart';
 import '../../data/db/default_templates.dart';
 import '../../data/db/settings_keys.dart';
 import '../../services/notification/message_template.dart';
+import '../widgets/layout.dart';
 
 /// Template pesan WhatsApp yang bisa diubah pemilik (FR-65).
 class TemplateSettingsScreen extends ConsumerStatefulWidget {
@@ -177,7 +178,7 @@ class _TemplateSettingsScreenState
 
     return Scaffold(
       appBar: AppBar(title: const Text('Template WhatsApp')),
-      body: ListView(
+      body: ContentWidth(child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
           Card(
@@ -301,7 +302,7 @@ class _TemplateSettingsScreenState
             label: const Text('Simpan template'),
           ),
         ],
-      ),
+      )),
     );
   }
 }

@@ -6,6 +6,7 @@ import '../../application/providers.dart';
 import '../../core/security.dart';
 import '../../data/db/settings_keys.dart';
 import '../../domain/models/models.dart';
+import '../widgets/layout.dart';
 
 /// Kirim pesan promo ke pelanggan terpilih (FR-64).
 ///
@@ -129,7 +130,7 @@ class _BroadcastScreenState extends ConsumerState<BroadcastScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: ContentWidth(child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
@@ -215,7 +216,7 @@ class _BroadcastScreenState extends ConsumerState<BroadcastScreen> {
                       ),
           ),
         ],
-      ),
+      )),
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../data/db/settings_keys.dart';
 import '../../services/notification/whatsapp_api_sender.dart';
+import '../widgets/layout.dart';
 
 /// Pilihan mode pengiriman WhatsApp dan jam tenang (FR-66, FR-67, FR-72).
 class WhatsAppSettingsScreen extends ConsumerStatefulWidget {
@@ -137,7 +138,7 @@ class _WhatsAppSettingsScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Pengiriman WhatsApp')),
-      body: ListView(
+      body: ContentWidth(child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
           const Text('Mode pengiriman',
@@ -290,7 +291,7 @@ class _WhatsAppSettingsScreenState
             label: const Text('Simpan'),
           ),
         ],
-      ),
+      )),
     );
   }
 }

@@ -41,7 +41,7 @@ class OrderDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: async.when(
+      body: ContentWidth(child: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(
           title: 'Order tidak bisa dibuka',
@@ -53,7 +53,7 @@ class OrderDetailScreen extends ConsumerWidget {
           }
           return _Body(order: order);
         },
-      ),
+      )),
       bottomNavigationBar: async.maybeWhen(
         data: (order) =>
             order == null ? null : _ActionBar(order: order),

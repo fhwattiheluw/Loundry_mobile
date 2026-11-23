@@ -62,7 +62,7 @@ class AdStatusScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Status iklan')),
-      body: ValueListenableBuilder<Map<String, String>>(
+      body: ContentWidth(child: ValueListenableBuilder<Map<String, String>>(
         valueListenable: AdService.report,
         builder: (context, report, _) {
           return ListView(
@@ -177,7 +177,7 @@ class AdStatusScreen extends ConsumerWidget {
             ],
           );
         },
-      ),
+      )),
     );
   }
 }

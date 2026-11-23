@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../application/providers.dart';
 import '../../data/db/settings_keys.dart';
 import '../widgets/feedback.dart';
+import '../widgets/layout.dart';
 
 /// Profil usaha dan teks yang tercetak di nota.
 ///
@@ -147,7 +148,7 @@ class _BusinessSettingsScreenState
       hasChanges: () => _dirty && !_saving,
       child: Scaffold(
       appBar: AppBar(title: const Text('Profil usaha dan nota')),
-      body: ListView(
+      body: ContentWidth(child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
           for (final entry in _fields.entries) ...[
@@ -186,7 +187,7 @@ class _BusinessSettingsScreenState
             label: Text(_saving ? 'Menyimpan...' : 'Simpan'),
           ),
         ],
-      ),
+      )),
       ),
     );
   }

@@ -24,7 +24,7 @@ class ServiceSettingsScreen extends ConsumerWidget {
         icon: const Icon(Icons.add),
         label: const Text('Layanan baru'),
       ),
-      body: services.when(
+      body: ContentWidth(child: services.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(
           title: 'Layanan belum bisa dimuat',
@@ -79,7 +79,7 @@ class ServiceSettingsScreen extends ConsumerWidget {
             ));
           },
         ),
-      ),
+      )),
     );
   }
 

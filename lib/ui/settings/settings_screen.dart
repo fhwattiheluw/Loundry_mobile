@@ -37,7 +37,7 @@ class SettingsScreen extends ConsumerWidget {
         title: const Text('Pengaturan'),
         titleTextStyle: Theme.of(context).textTheme.titleLarge,
       ),
-      body: ListView(
+      body: ContentWidth(child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
           Container(
@@ -429,7 +429,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 

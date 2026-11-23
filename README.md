@@ -55,6 +55,9 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 - Pelanggan: mengetuk nama membuka kartu berisi jumlah order, total belanja,
   sisa tagihan, order terakhir, dan tombol Order baru untuk orang itu
 - Laporan: kartu Status pembayaran, dan satuan layanan ditulis kg atau pcs
+- Semua layar membatasi lebar isinya lewat `ContentWidth`, jadi di tablet
+  teks tidak melar selebar layar dan tombol tidak jadi sepanjang satu meja.
+  Pemindai QR sengaja dikecualikan karena pratinjau kamera memang penuh
 
 **Alur order dan daftar**
 - Order Baru berlangkah bernomor (Pelanggan, Layanan, Catatan, Pembayaran) dengan

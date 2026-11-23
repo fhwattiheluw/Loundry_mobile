@@ -99,7 +99,7 @@ class _PrinterSettingsScreenState
           ),
         ],
       ),
-      body: ListView(
+      body: ContentWidth(child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
           const Text('Lebar kertas',
@@ -233,7 +233,7 @@ class _PrinterSettingsScreenState
             label: const Text('Uji cetak'),
           ),
         ],
-      ),
+      )),
     );
   }
 }

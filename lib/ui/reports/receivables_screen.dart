@@ -21,7 +21,7 @@ class ReceivablesScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Piutang')),
-      body: data.when(
+      body: ContentWidth(child: data.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(
           message: friendlyError(e),
@@ -154,7 +154,7 @@ class ReceivablesScreen extends ConsumerWidget {
             ],
           );
         },
-      ),
+      )),
     );
   }
 }

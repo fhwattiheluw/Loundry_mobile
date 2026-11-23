@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../application/providers.dart';
 import '../../data/db/settings_keys.dart';
 import '../../core/friendly_error.dart';
+import '../widgets/layout.dart';
 
 /// Logo usaha yang tercetak di kepala nota (FR-88).
 class LogoSettingsScreen extends ConsumerStatefulWidget {
@@ -90,7 +91,7 @@ class _LogoSettingsScreenState extends ConsumerState<LogoSettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Logo di nota')),
-      body: ListView(
+      body: ContentWidth(child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
           Card(
@@ -159,7 +160,7 @@ class _LogoSettingsScreenState extends ConsumerState<LogoSettingsScreen> {
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ],
-      ),
+      )),
     );
   }
 }

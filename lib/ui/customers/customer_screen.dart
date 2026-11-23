@@ -250,7 +250,7 @@ class _CustomerScreenState extends ConsumerState<CustomerScreen> {
             ),
         ],
       ),
-      body: Column(
+      body: ContentWidth(child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -342,7 +342,7 @@ class _CustomerScreenState extends ConsumerState<CustomerScreen> {
                       ),
           ),
         ],
-      ),
+      )),
     );
   }
 }

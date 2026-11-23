@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../core/design_system.dart';
+import 'layout.dart';
 
 /// Makna sebuah tombol, bukan warnanya.
 ///
@@ -57,27 +58,31 @@ class ActionStack extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
               AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (secondary.isNotEmpty)
-                Row(
-                  children: [
-                    for (var i = 0; i < secondary.length; i++) ...[
-                      if (i > 0) const SizedBox(width: AppSpacing.sm),
-                      Expanded(child: _button(context, secondary[i], true)),
+          // Di tablet tombol tidak ikut melebar sampai ujung layar; lebarnya
+          // disamakan dengan isi halaman di atasnya.
+          child: ContentWidth(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (secondary.isNotEmpty)
+                  Row(
+                    children: [
+                      for (var i = 0; i < secondary.length; i++) ...[
+                        if (i > 0) const SizedBox(width: AppSpacing.sm),
+                        Expanded(child: _button(context, secondary[i], true)),
+                      ],
                     ],
-                  ],
-                ),
-              for (var i = 0; i < primary.length; i++) ...[
-                if (i > 0 || secondary.isNotEmpty)
-                  const SizedBox(height: AppSpacing.sm),
-                SizedBox(
-                  width: double.infinity,
-                  child: _button(context, primary[i], false),
-                ),
+                  ),
+                for (var i = 0; i < primary.length; i++) ...[
+                  if (i > 0 || secondary.isNotEmpty)
+                    const SizedBox(height: AppSpacing.sm),
+                  SizedBox(
+                    width: double.infinity,
+                    child: _button(context, primary[i], false),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

@@ -77,7 +77,7 @@ class ReportScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: RefreshIndicator(
+      body: ContentWidth(child: RefreshIndicator(
         onRefresh: () async => ref.refreshOrderData(),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
@@ -253,7 +253,7 @@ class ReportScreen extends ConsumerWidget {
 
           ],
         ),
-      ),
+      )),
     );
   }
 
@@ -884,7 +884,7 @@ class _CashierNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(title: const Text('Laporan')),
-        body: Padding(
+        body: ContentWidth(child: Padding(
           padding: const EdgeInsets.all(32),
           child: Center(
             child: Column(
@@ -906,6 +906,6 @@ class _CashierNotice extends StatelessWidget {
               ],
             ),
           ),
-        ),
+        )),
       );
 }

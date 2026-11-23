@@ -114,7 +114,7 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Lupa PIN pemilik')),
-      body: ListView(
+      body: ContentWidth(child: ListView(
         padding: const EdgeInsets.all(AppSpacing.lg),
         children: [
           if (_info != null) ...[
@@ -131,7 +131,7 @@ class _ForgotPinScreenState extends ConsumerState<ForgotPinScreen> {
             _Step.newPin => _pinStep(),
           },
         ],
-      ),
+      )),
     );
   }
 

@@ -17,6 +17,7 @@ import 'order_detail_screen.dart';
 import 'scan_order_screen.dart';
 import 'status_confirm.dart';
 import '../../core/friendly_error.dart';
+import '../widgets/layout.dart';
 
 class OrderListScreen extends ConsumerStatefulWidget {
   const OrderListScreen({super.key});
@@ -106,7 +107,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
                 ),
               ],
       ),
-      body: Column(
+      body: ContentWidth(maxWidth: 900, child: Column(
         children: [
           Padding(
             padding: EdgeInsets.fromLTRB(context.screenPadding, AppSpacing.sm, context.screenPadding, 0),
@@ -320,7 +321,7 @@ class _OrderListScreenState extends ConsumerState<OrderListScreen> {
             ),
           ),
         ],
-      ),
+      )),
     );
   }
 

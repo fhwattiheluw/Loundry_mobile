@@ -410,7 +410,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
       child: Scaffold(
       appBar: AppBar(title: const Text('Order Baru')),
       bottomNavigationBar: _bottomBar(),
-      body: ListView(
+      body: ContentWidth(child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           const _Label('Pelanggan', step: 1),
@@ -743,7 +743,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
           ),
 
         ],
-      ),
+      )),
       ),
     );
   }
@@ -764,7 +764,8 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(
               AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.md),
-          child: Row(
+          child: ContentWidth(
+            child: Row(
             children: [
               Expanded(
                 child: Column(
@@ -816,6 +817,7 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
                 label: Text(_saving ? 'Menyimpan...' : 'Simpan & Cetak'),
               ),
             ],
+            ),
           ),
         ),
       ),

@@ -25,7 +25,7 @@ class ShiftScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Shift Kasir')),
-      body: shift.when(
+      body: ContentWidth(child: shift.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => ErrorState(
           message: friendlyError(e),
@@ -33,7 +33,7 @@ class ShiftScreen extends ConsumerWidget {
         ),
         data: (open) =>
             open == null ? const _OpenShiftForm() : _OpenShiftView(shift: open),
-      ),
+      )),
     );
   }
 }
@@ -379,7 +379,7 @@ class ShiftHistoryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       appBar: AppBar(title: const Text('Riwayat Shift')),
-      body: FutureBuilder<List<Map<String, Object?>>>(
+      body: ContentWidth(child: FutureBuilder<List<Map<String, Object?>>>(
         future: ref.watch(shiftRepoProvider).history(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
@@ -420,7 +420,7 @@ class ShiftHistoryScreen extends ConsumerWidget {
             },
           );
         },
-      ),
+      )),
     );
   }
 }

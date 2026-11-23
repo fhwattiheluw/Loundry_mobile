@@ -120,7 +120,7 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
         icon: const Icon(Icons.person_add_outlined),
         label: const Text('Tambah kasir'),
       ),
-      body: ListView(
+      body: ContentWidth(child: ListView(
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 96),
         children: [
           Padding(
@@ -176,7 +176,7 @@ class _UserSettingsScreenState extends ConsumerState<UserSettingsScreen> {
             const Divider(height: 1),
           ],
         ],
-      ),
+      )),
     );
   }
 

@@ -9,6 +9,7 @@ import '../../data/db/settings_keys.dart';
 import '../../services/auth/pin_guard.dart';
 import '../widgets/app_logo.dart';
 import 'forgot_pin_screen.dart';
+import '../widgets/layout.dart';
 
 /// Login memakai PIN, bukan email dan kata sandi, supaya kasir bisa masuk
 /// dalam dua detik saat konter ramai.
@@ -120,7 +121,7 @@ class _PinLoginScreenState extends ConsumerState<PinLoginScreen>
         settings.get(SettingsKeys.businessName, fallback: 'Laundry Manise');
 
     return Scaffold(
-      body: SafeArea(
+      body: ContentWidth(child: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
@@ -226,7 +227,7 @@ class _PinLoginScreenState extends ConsumerState<PinLoginScreen>
             ),
           ),
         ),
-      ),
+      )),
     );
   }
 }

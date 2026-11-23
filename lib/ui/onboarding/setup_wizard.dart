@@ -296,7 +296,7 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: SafeArea(
+      body: ContentWidth(child: SafeArea(
         child: Column(
           children: [
             Padding(
@@ -365,7 +365,7 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
             ),
           ],
         ),
-      ),
+      )),
     );
   }
 

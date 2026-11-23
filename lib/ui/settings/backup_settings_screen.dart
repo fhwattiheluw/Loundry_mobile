@@ -116,7 +116,7 @@ class _BackupSettingsScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Backup dan Restore')),
-      body: ListView(
+      body: ContentWidth(child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
           _StatusCard(
@@ -266,7 +266,7 @@ class _BackupSettingsScreenState
               ),
             ),
         ],
-      ),
+      )),
     );
   }
 }
