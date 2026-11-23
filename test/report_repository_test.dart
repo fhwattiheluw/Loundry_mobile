@@ -117,6 +117,30 @@ void main() {
       expect(summary.newReceivable, 28000);
     });
 
+    test('pembagian lunas dan belum lunas dihitung per order', () async {
+      await buatOrder(bayar: 28000);
+      await buatOrder(bayar: 10000);
+      await buatOrder(bayar: 0);
+
+      final summary = await reports.summary(DateTime.now(), DateTime.now());
+
+      expect(summary.paidOrderCount, 1);
+      expect(summary.paidOrderValue, 28000);
+      expect(summary.unpaidOrderCount, 2,
+          reason: 'DP sebagian tetap belum lunas');
+      expect(summary.newReceivable, 46000, reason: '18000 + 28000');
+    });
+
+    test('order batal tidak masuk pembagian pembayaran', () async {
+      final order = await buatOrder(bayar: 0);
+      await orders.cancel(order.id!, user: owner, reason: 'uji');
+
+      final summary = await reports.summary(DateTime.now(), DateTime.now());
+
+      expect(summary.paidOrderCount, 0);
+      expect(summary.unpaidOrderCount, 0);
+    });
+
     test('pendapatan sama dengan uang yang diterima', () async {
       await buatOrder(bayar: 10000);
       await buatOrder(bayar: 28000);

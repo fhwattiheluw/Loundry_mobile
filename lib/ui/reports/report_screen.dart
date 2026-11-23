@@ -161,6 +161,8 @@ class ReportScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  _PaymentSplit(data: data),
                   // Kotak yang isinya nol hanya memakan tempat untuk
                   // mengatakan tidak ada apa-apa. Baris ini hilang sama
                   // sekali bila tidak ada diskon maupun refund.
@@ -403,6 +405,136 @@ class ReportScreen extends ConsumerWidget {
       picked.start,
       picked.end,
       '${formatDate(picked.start)} - ${formatDate(picked.end)}',
+    );
+  }
+}
+
+/// Pembagian order periode ini: yang sudah lunas dan yang belum.
+///
+/// Dua angka yang berbeda artinya sengaja ditaruh berdampingan. Di sisi
+/// lunas yang ditulis adalah nilai order yang sudah beres, di sisi belum
+/// lunas yang ditulis adalah sisa yang belum tertagih, bukan nilai
+/// ordernya. Pemilik perlu tahu berapa uang yang masih di luar, bukan
+/// berapa besar nota yang belum lunas.
+class _PaymentSplit extends StatelessWidget {
+  const _PaymentSplit({required this.data});
+
+  final RevenueSummary data;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.status;
+
+    if (data.orderCount == 0) return const SizedBox.shrink();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(
+                  left: AppSpacing.xs, bottom: AppSpacing.sm),
+              child: Text(
+                'Status pembayaran',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+            ),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _half(
+                      context,
+                      color: palette.lunas,
+                      icon: Icons.check_circle_outline,
+                      title: 'Lunas',
+                      count: data.paidOrderCount,
+                      amount: data.paidOrderValue,
+                      note: 'nilai order',
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: _half(
+                      context,
+                      color: palette.belumLunas,
+                      icon: Icons.schedule_outlined,
+                      title: 'Belum lunas',
+                      count: data.unpaidOrderCount,
+                      amount: data.newReceivable,
+                      note: 'belum tertagih',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _half(
+    BuildContext context, {
+    required Color color,
+    required IconData icon,
+    required String title,
+    required int count,
+    required int amount,
+    required String note,
+  }) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: AppSpacing.xs),
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            '$count order',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              formatRupiah(amount),
+              maxLines: 1,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+          ),
+          Text(
+            note,
+            style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -718,7 +850,8 @@ class _AmountList extends ConsumerWidget {
                   title: Text(rows[i].name),
                   subtitle: Text(
                     showQty
-                        ? '${rows[i].count} order · ${formatQty(rows[i].qty)} satuan'
+                        ? '${rows[i].count} order · ${formatQty(rows[i].qty)}'
+                            ' ${rows[i].unit.isEmpty ? "satuan" : rows[i].unit}'
                         : '${rows[i].count} transaksi',
                   ),
                   trailing: Column(

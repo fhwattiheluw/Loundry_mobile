@@ -10,6 +10,9 @@ class RevenueSummary {
     required this.cashIn,
     required this.refundTotal,
     required this.newReceivable,
+    required this.paidOrderCount,
+    required this.paidOrderValue,
+    required this.unpaidOrderCount,
   });
 
   /// Jumlah order yang dibuat dalam periode, tidak termasuk yang dibatalkan.
@@ -27,6 +30,15 @@ class RevenueSummary {
   /// Nilai order periode ini yang belum dibayar sampai akhir periode.
   final int newReceivable;
 
+  /// Order periode ini yang sudah lunas, beserta nilainya.
+  final int paidOrderCount;
+  final int paidOrderValue;
+
+  /// Order periode ini yang masih punya sisa tagihan. Uangnya ada di
+  /// [newReceivable], bukan di sini, supaya angka yang terbaca adalah yang
+  /// benar-benar belum masuk.
+  final int unpaidOrderCount;
+
   int get averageOrderValue =>
       orderCount == 0 ? 0 : (grossOrderValue / orderCount).round();
 
@@ -37,6 +49,9 @@ class RevenueSummary {
     cashIn: 0,
     refundTotal: 0,
     newReceivable: 0,
+    paidOrderCount: 0,
+    paidOrderValue: 0,
+    unpaidOrderCount: 0,
   );
 }
 
@@ -53,12 +68,16 @@ class NamedAmount {
     required this.amount,
     this.count = 0,
     this.qty = 0,
+    this.unit = '',
   });
 
   final String name;
   final int amount;
   final int count;
   final double qty;
+
+  /// Satuan layanan: kg, pcs, meter, paket. Kosong bila tidak relevan.
+  final String unit;
 }
 
 class ReceivableRow {
@@ -124,6 +143,21 @@ class ReportRepository {
       [a, b],
     );
 
+    // Satu order dihitung lunas ketika sisanya nol atau kurang. Dipisah di
+    // SQL, bukan di Dart, supaya laporan sebulan tidak perlu menarik ribuan
+    // baris ke memori HP.
+    final splitRows = await db.rawQuery(
+      'SELECT '
+      'COALESCE(SUM(CASE WHEN sisa <= 0 THEN 1 ELSE 0 END), 0) AS lunas_c, '
+      'COALESCE(SUM(CASE WHEN sisa <= 0 THEN total ELSE 0 END), 0) AS lunas_v, '
+      'COALESCE(SUM(CASE WHEN sisa > 0 THEN 1 ELSE 0 END), 0) AS belum_c '
+      'FROM (SELECT o.total AS total, o.total - COALESCE('
+      '(SELECT SUM(p.amount) FROM payments p WHERE p.order_id = o.id), 0) AS sisa '
+      "FROM orders o WHERE o.laundry_status != 'dibatalkan' "
+      'AND o.created_at BETWEEN ? AND ?)',
+      [a, b],
+    );
+
     return RevenueSummary(
       orderCount: (orderRows.first['c'] as num).toInt(),
       grossOrderValue: (orderRows.first['gross'] as num).toInt(),
@@ -131,6 +165,9 @@ class ReportRepository {
       cashIn: (cashRows.first['net'] as num).toInt(),
       refundTotal: (cashRows.first['refund'] as num).toInt(),
       newReceivable: (receivableRows.first['sisa'] as num).toInt(),
+      paidOrderCount: (splitRows.first['lunas_c'] as num).toInt(),
+      paidOrderValue: (splitRows.first['lunas_v'] as num).toInt(),
+      unpaidOrderCount: (splitRows.first['belum_c'] as num).toInt(),
     );
   }
 
@@ -176,6 +213,7 @@ class ReportRepository {
 
     final rows = await db.rawQuery('''
       SELECT i.service_name AS name,
+             MIN(i.unit) AS unit,
              COUNT(DISTINCT i.order_id) AS c,
              COALESCE(SUM(i.qty), 0) AS qty,
              COALESCE(SUM(i.subtotal), 0) AS amount
@@ -193,6 +231,7 @@ class ReportRepository {
               amount: (r['amount'] as num).toInt(),
               count: (r['c'] as num).toInt(),
               qty: (r['qty'] as num).toDouble(),
+              unit: (r['unit'] as String?) ?? '',
             ))
         .toList();
   }
