@@ -5,6 +5,30 @@ import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
 import '../db/app_database.dart';
 
+/// Riwayat ringkas seorang pelanggan.
+class CustomerStats {
+  const CustomerStats({
+    required this.orderCount,
+    required this.totalValue,
+    required this.outstanding,
+    required this.lastOrderAt,
+  });
+
+  final int orderCount;
+  final int totalValue;
+
+  /// Sisa tagihan dari seluruh ordernya, bukan hanya yang terakhir.
+  final int outstanding;
+  final DateTime? lastOrderAt;
+
+  static const empty = CustomerStats(
+    orderCount: 0,
+    totalValue: 0,
+    outstanding: 0,
+    lastOrderAt: null,
+  );
+}
+
 class CustomerRepository {
   CustomerRepository(this._db);
 
@@ -34,6 +58,34 @@ class CustomerRepository {
           );
 
     return rows.map(Customer.fromMap).toList();
+  }
+
+  /// Riwayat singkat satu pelanggan untuk ditampilkan sebelum kasir
+  /// membuat order: sudah berapa kali, habis berapa, terakhir kapan, dan
+  /// masih punya tagihan atau tidak. Order batal tidak dihitung.
+  Future<CustomerStats> statsFor(int customerId) async {
+    final db = await _db.database;
+
+    final rows = await db.rawQuery('''
+      SELECT COUNT(*) AS c,
+             COALESCE(SUM(o.total), 0) AS nilai,
+             MAX(o.created_at) AS terakhir,
+             COALESCE(SUM(MAX(0, o.total - COALESCE(
+               (SELECT SUM(p.amount) FROM payments p WHERE p.order_id = o.id),
+               0))), 0) AS sisa
+      FROM orders o
+      WHERE o.customer_id = ? AND o.laundry_status != 'dibatalkan'
+    ''', [customerId]);
+
+    final r = rows.first;
+    final last = r['terakhir'] as String?;
+
+    return CustomerStats(
+      orderCount: (r['c'] as num).toInt(),
+      totalValue: (r['nilai'] as num).toInt(),
+      outstanding: (r['sisa'] as num).toInt(),
+      lastOrderAt: last == null ? null : DateTime.parse(last),
+    );
   }
 
   /// Mencari pelanggan dari nomornya. Nomor kosong tidak pernah cocok:

@@ -48,6 +48,51 @@ void main() {
     );
   }
 
+  group('riwayat pelanggan', () {
+    test('menjumlah order, belanja, dan sisa tagihan pelanggan itu saja',
+        () async {
+      final budi = await customers
+          .saveOrGet(const Customer(name: 'Budi', phone: '081234567890'));
+      final ani = await customers
+          .saveOrGet(const Customer(name: 'Ani', phone: '085711112222'));
+
+      await buatOrder(budi, bayar: 28000);
+      await buatOrder(budi, bayar: 10000);
+      await buatOrder(ani, bayar: 0);
+
+      final stats = await customers.statsFor(budi.id!);
+
+      expect(stats.orderCount, 2);
+      expect(stats.totalValue, 56000);
+      expect(stats.outstanding, 18000, reason: 'order Ani tidak ikut');
+      expect(stats.lastOrderAt, isNotNull);
+    });
+
+    test('order batal tidak dihitung', () async {
+      final budi = await customers
+          .saveOrGet(const Customer(name: 'Budi', phone: '081234567890'));
+      final order = await buatOrder(budi, bayar: 0);
+      await orders.cancel(order.id!, user: owner, reason: 'uji');
+
+      final stats = await customers.statsFor(budi.id!);
+
+      expect(stats.orderCount, 0);
+      expect(stats.outstanding, 0);
+      expect(stats.lastOrderAt, isNull);
+    });
+
+    test('pelanggan tanpa order memberi angka nol, bukan galat', () async {
+      final citra =
+          await customers.saveOrGet(const Customer(name: 'Citra', phone: ''));
+
+      final stats = await customers.statsFor(citra.id!);
+
+      expect(stats.orderCount, 0);
+      expect(stats.totalValue, 0);
+      expect(stats.lastOrderAt, isNull);
+    });
+  });
+
   group('pencarian pelanggan', () {
     setUp(() async {
       await customers.saveOrGet(

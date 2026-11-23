@@ -18,7 +18,12 @@ import '../widgets/feedback.dart';
 /// Layar yang paling sering dipakai kasir.
 /// Target: satu order kiloan selesai dibuat dan tercetak di bawah 60 detik.
 class NewOrderScreen extends ConsumerStatefulWidget {
-  const NewOrderScreen({super.key});
+  const NewOrderScreen({super.key, this.customer});
+
+  /// Pelanggan yang sudah dipilih dari kartu pelanggan. Kolom nama dan
+  /// nomor terisi sejak layar dibuka, jadi kasir langsung ke pemilihan
+  /// layanan.
+  final Customer? customer;
 
   @override
   ConsumerState<NewOrderScreen> createState() => _NewOrderScreenState();
@@ -55,6 +60,18 @@ class _NewOrderScreenState extends ConsumerState<NewOrderScreen> {
           _nameController.text.trim().isNotEmpty ||
           _phoneController.text.trim().isNotEmpty ||
           _noteController.text.trim().isNotEmpty);
+
+  @override
+  void initState() {
+    super.initState();
+
+    final preset = widget.customer;
+    if (preset != null) {
+      _customer = preset;
+      _nameController.text = preset.name;
+      _phoneController.text = prettyPhone(preset.phone);
+    }
+  }
 
   @override
   void dispose() {

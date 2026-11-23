@@ -12,6 +12,7 @@ import '../../domain/models/models.dart';
 import '../widgets/layout.dart';
 import '../widgets/states.dart';
 import 'broadcast_screen.dart';
+import 'customer_sheet.dart';
 import '../../core/friendly_error.dart';
 
 class CustomerScreen extends ConsumerStatefulWidget {
@@ -331,7 +332,11 @@ class _CustomerScreenState extends ConsumerState<CustomerScreen> {
                                 ? null
                                 : const Icon(Icons.notifications_off_outlined,
                                     size: 18),
-                            onTap: () => _edit(customer),
+                            onTap: () => showCustomerSheet(
+                              context,
+                              customer,
+                              onEdit: () => _edit(customer),
+                            ),
                           ));
                         },
                       ),

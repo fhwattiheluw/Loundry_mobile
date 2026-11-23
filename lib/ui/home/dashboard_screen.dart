@@ -67,6 +67,8 @@ class DashboardScreen extends ConsumerWidget {
                   summary: summary,
                   onSignOut: () => ref.read(sessionProvider.notifier).signOut(),
                   onRetry: () => ref.refreshOrderData(),
+                  onOpenReceivables: () =>
+                      _push(context, const ReceivablesScreen()),
                 ),
 
                 const SizedBox(height: AppSpacing.xl),
@@ -180,12 +182,14 @@ class _HeroCard extends StatelessWidget {
     required this.summary,
     required this.onSignOut,
     required this.onRetry,
+    required this.onOpenReceivables,
   });
 
   final String name;
   final AsyncValue<RevenueSummary> summary;
   final VoidCallback onSignOut;
   final VoidCallback onRetry;
+  final VoidCallback onOpenReceivables;
 
   @override
   Widget build(BuildContext context) {
@@ -297,14 +301,19 @@ class _HeroCard extends StatelessWidget {
                         value: '${data.orderCount}',
                       ),
                       _HeroDivider(),
+                      // Rata-rata nota dipindah ke Laporan. Di konter yang
+                      // ditanyakan pemilik tiap sore bukan rata-rata, tapi
+                      // berapa nota yang uangnya belum masuk.
                       _HeroStat(
-                        label: 'Piutang baru',
-                        value: formatRupiah(data.newReceivable),
+                        label: 'Belum lunas',
+                        value: '${data.unpaidOrderCount}',
+                        onTap: onOpenReceivables,
                       ),
                       _HeroDivider(),
                       _HeroStat(
-                        label: 'Rata-rata nota',
-                        value: formatRupiah(data.averageOrderValue),
+                        label: 'Piutang baru',
+                        value: formatRupiah(data.newReceivable),
+                        onTap: onOpenReceivables,
                       ),
                     ],
                   ),
@@ -336,17 +345,27 @@ class _HeroLoading extends StatelessWidget {
 }
 
 class _HeroStat extends StatelessWidget {
-  const _HeroStat({required this.label, required this.value});
+  const _HeroStat({required this.label, required this.value, this.onTap});
 
   final String label;
   final String value;
+
+  /// Angka yang bisa ditindaklanjuti sebaiknya langsung membuka layarnya.
+  /// Tanpa ini pemilik membaca "piutang Rp 300.000" lalu harus mencari
+  /// sendiri daftarnya di menu lain.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Expanded(
-      child: Column(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Column(
         children: [
           FittedBox(
             fit: BoxFit.scaleDown,
@@ -366,7 +385,9 @@ class _HeroStat extends StatelessWidget {
               fontSize: 11.5,
             ),
           ),
-        ],
+            ],
+          ),
+        ),
       ),
     );
   }

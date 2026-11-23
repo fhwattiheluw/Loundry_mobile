@@ -43,6 +43,19 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 - Variabel `{aplikasi}` bisa disisipkan sendiri ke template WhatsApp bila
   pemilik ingin tautan aplikasi ikut terkirim ke pelanggan
 
+**Tampilan**
+- Detail Order: Kirim WA dan Cetak nota jadi tombol yang terlihat, bukan lagi
+  di menu tiga titik. Tombol uang memakai warna kuning dan menyebut nominal
+  sisanya. Menu tiga titik hanya berisi Batalkan order
+- Warna tombol punya arti tetap di seluruh aplikasi lewat `ActionStack`:
+  hijau tosca melangkah maju, kuning menyangkut uang, garis tepi pendukung,
+  merah merugikan
+- Beranda: angka Belum lunas dan Piutang baru bisa diketuk langsung ke daftar
+  piutang
+- Pelanggan: mengetuk nama membuka kartu berisi jumlah order, total belanja,
+  sisa tagihan, order terakhir, dan tombol Order baru untuk orang itu
+- Laporan: kartu Status pembayaran, dan satuan layanan ditulis kg atau pcs
+
 **Alur order dan daftar**
 - Order Baru berlangkah bernomor (Pelanggan, Layanan, Catatan, Pembayaran) dengan
   bar total dan tombol Simpan & Cetak yang selalu terlihat di bawah
