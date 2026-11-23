@@ -6,14 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
-import '../../core/security.dart';
 import '../../core/design_system.dart';
 import '../../domain/models/enums.dart';
 import '../../domain/models/models.dart';
 import '../../domain/payment_banner.dart';
 import '../../services/photo/order_photo_service.dart';
 import '../widgets/layout.dart';
+import '../widgets/actions.dart';
 import '../widgets/stat_tile.dart';
+import 'order_actions.dart';
 import 'payment_sheet.dart';
 import 'status_confirm.dart';
 import '../../core/friendly_error.dart';
@@ -737,8 +738,12 @@ class _NotificationHistory extends ConsumerWidget {
   }
 }
 
-/// Tombol aksi utama. Yang paling sering dipakai diletakkan paling kanan,
-/// di jangkauan ibu jari.
+/// Baris tombol yang menempel di bawah layar.
+///
+/// Dua aksi pendukung di satu baris, lalu aksi yang mengubah keadaan
+/// bertumpuk selebar layar: uang lebih dulu, baru status. Urutan itu
+/// mengikuti kebiasaan konter, pelanggan membayar dulu baru cucian
+/// diserahkan.
 class _ActionBar extends ConsumerWidget {
   const _ActionBar({required this.order});
 
@@ -815,71 +820,48 @@ class _ActionBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final next = order.laundryStatus.next;
     final canAct = order.laundryStatus != LaundryStatus.dibatalkan;
+    final hasPhone = order.customerPhone.isNotEmpty;
 
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: Row(
-          children: [
-            if (order.remaining > 0 && canAct) ...[
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    final paid = await showPaymentSheet(context, ref, order);
-                    if (paid == true) {
-                      ref.invalidate(orderDetailProvider(order.id!));
-                      ref.refreshOrderData();
-                    }
-                  },
-                  icon: const Icon(Icons.payments_outlined),
-                  label: const Text('Bayar'),
-                ),
-              ),
-              const SizedBox(width: 12),
-            ],
-            if (next != null && canAct)
-              Expanded(
-                flex: 2,
-                child: FilledButton.icon(
-                  onPressed: () => _advance(context, ref),
-                  icon: const Icon(Icons.arrow_forward),
-                  label: Text(next.label),
-                ),
-              )
-            else
-              Expanded(
-                flex: 2,
-                child: OutlinedButton.icon(
-                  onPressed: () => _reprint(context, ref),
-                  icon: const Icon(Icons.print_outlined),
-                  label: const Text('Cetak ulang nota'),
-                ),
-              ),
-          ],
+    // Dua aksi pendukung yang dipakai berkali-kali sehari. Dulu keduanya
+    // bersembunyi di menu tiga titik, tempat yang jarang dibuka kasir.
+    final secondary = <AppAction>[
+      if (hasPhone)
+        AppAction(
+          label: 'Kirim WA',
+          icon: Icons.chat_outlined,
+          onPressed: () => sendOrderWhatsApp(context, ref, order),
         ),
+      AppAction(
+        label: 'Cetak nota',
+        icon: Icons.print_outlined,
+        onPressed: () => reprintOrderReceipt(context, ref, order),
       ),
-    );
-  }
+    ];
 
-  Future<void> _reprint(BuildContext context, WidgetRef ref) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final user = ref.read(currentUserProvider);
+    final primary = <AppAction>[
+      if (order.remaining > 0 && canAct)
+        AppAction(
+          label: 'Terima bayar ${formatRupiah(order.remaining)}',
+          icon: Icons.payments_outlined,
+          kind: ActionKind.money,
+          onPressed: () async {
+            final paid = await showPaymentSheet(context, ref, order);
+            if (paid == true) {
+              ref.invalidate(orderDetailProvider(order.id!));
+              ref.refreshOrderData();
+            }
+          },
+        ),
+      if (next != null && canAct)
+        AppAction(
+          label: next.label,
+          icon: Icons.arrow_forward,
+          kind: ActionKind.primary,
+          onPressed: () => _advance(context, ref),
+        ),
+    ];
 
-    final bytes = await ref.read(receiptBuilderProvider).buildOrderReceipt(
-          order,
-          cashierName: user.name,
-          isReprint: true,
-        );
-
-    final result = await ref.read(printerProvider).printBytes(bytes);
-
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(result.success
-            ? 'Nota dicetak ulang.'
-            : 'Gagal mencetak. ${result.message}'),
-      ),
-    );
+    return ActionStack(primary: primary, secondary: secondary);
   }
 }
 
@@ -890,82 +872,28 @@ class _OverflowMenu extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (order.laundryStatus == LaundryStatus.dibatalkan) {
+      return const SizedBox.shrink();
+    }
+
+    // Cetak ulang dan kirim WhatsApp sudah pindah ke baris tombol di bawah.
+    // Yang tersisa di sini hanya aksi merugikan, yang memang sebaiknya
+    // butuh dua ketukan.
     return PopupMenuButton<String>(
       onSelected: (value) async {
-        switch (value) {
-          case 'reprint':
-            await _reprint(context, ref);
-          case 'wa':
-            await _sendWhatsApp(context, ref);
-          case 'cancel':
-            await _cancel(context, ref);
-        }
+        if (value == 'cancel') await _cancel(context, ref);
       },
       itemBuilder: (context) => [
-        const PopupMenuItem(
-          value: 'reprint',
+        PopupMenuItem(
+          value: 'cancel',
           child: ListTile(
-            leading: Icon(Icons.print_outlined),
-            title: Text('Cetak ulang nota'),
+            leading:
+                Icon(Icons.block, color: Theme.of(context).colorScheme.error),
+            title: const Text('Batalkan order'),
           ),
         ),
-        if (order.customerPhone.isNotEmpty)
-          const PopupMenuItem(
-            value: 'wa',
-            child: ListTile(
-              leading: Icon(Icons.chat_outlined),
-              title: Text('Kirim WhatsApp'),
-            ),
-          ),
-        if (order.laundryStatus != LaundryStatus.dibatalkan)
-          PopupMenuItem(
-            value: 'cancel',
-            child: ListTile(
-              leading: Icon(Icons.block, color: Theme.of(context).colorScheme.error),
-              title: const Text('Batalkan order'),
-            ),
-          ),
       ],
     );
-  }
-
-  Future<void> _reprint(BuildContext context, WidgetRef ref) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final user = ref.read(currentUserProvider);
-
-    final bytes = await ref.read(receiptBuilderProvider).buildOrderReceipt(
-          order,
-          cashierName: user.name,
-          isReprint: true,
-        );
-
-    final result = await ref.read(printerProvider).printBytes(bytes);
-
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(result.success
-            ? 'Nota dicetak ulang.'
-            : 'Gagal mencetak. ${result.message}'),
-      ),
-    );
-  }
-
-  Future<void> _sendWhatsApp(BuildContext context, WidgetRef ref) async {
-    final trigger = order.laundryStatus == LaundryStatus.selesai
-        ? NotificationTrigger.cucianSelesai
-        : NotificationTrigger.orderDiterima;
-
-    final messenger = ScaffoldMessenger.of(context);
-
-    final result = await ref
-        .read(notificationServiceProvider)
-        .notify(order, trigger, force: true);
-
-    ref.invalidate(orderDetailProvider(order.id!));
-
-    if (!result.sent) {
-      messenger.showSnackBar(SnackBar(content: Text(result.message)));
-    }
   }
 
   Future<void> _cancel(BuildContext context, WidgetRef ref) async {
