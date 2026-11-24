@@ -19,10 +19,22 @@ class ContentWidth extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Dua hal yang dijaga supaya isi berperilaku persis seperti tanpa
+    // pembungkus ini, hanya lebarnya yang dibatasi:
+    //
+    // - heightFactor: 1 membuat kotak ini setinggi isinya. Tanpa itu Center
+    //   memekar setinggi ruang yang diizinkan: aman di body, tapi di
+    //   bottomNavigationBar (yang boleh setinggi layar) bar tombol menutupi
+    //   seluruh halaman. Daftar dan kolom tetap mengisi tinggi penuh karena
+    //   memang begitu sifatnya sendiri.
+    // - SizedBox selebar mungkin memberi isi lebar yang pasti. Center
+    //   melonggarkan lebar, sehingga Column rata kiri yang isinya pendek
+    //   akan menyempit lalu bergeser ke tengah.
     return Center(
+      heightFactor: 1,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
-        child: child,
+        child: SizedBox(width: double.infinity, child: child),
       ),
     );
   }

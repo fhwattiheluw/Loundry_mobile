@@ -117,7 +117,10 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
 - Grafik tren harian
 - Daftar piutang dengan umur tagihan
 - Pelanggan teratas dan perbandingan dengan periode sebelumnya
-- Ekspor CSV untuk Excel, dan PDF siap cetak
+- Ekspor CSV untuk Excel, dan PDF siap cetak. Setelah laporan jadi, pilih
+  **Simpan ke HP** (dialog Simpan sebagai bawaan Android, misalnya ke folder
+  Download, tanpa izin penyimpanan) atau **Bagikan** ke WhatsApp, email,
+  atau Drive. Isinya ikut memuat jumlah order lunas dan belum lunas
 
 **Kemudahan pakai**
 - Pesan galat berbahasa sehari-hari beserta langkah berikutnya, bukan teks

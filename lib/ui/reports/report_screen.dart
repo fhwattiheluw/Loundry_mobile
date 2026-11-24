@@ -10,6 +10,7 @@ import '../../core/formatters.dart';
 import '../../data/db/settings_keys.dart';
 import '../../data/repositories/report_repository.dart';
 import '../../services/ads/ad_service.dart';
+import '../../services/export/export_service.dart';
 import '../widgets/layout.dart';
 import '../widgets/stat_tile.dart';
 import 'receivables_screen.dart';
@@ -259,11 +260,6 @@ class ReportScreen extends ConsumerWidget {
     );
   }
 
-  /// Ekspor laporan.
-  ///
-  /// CSV selalu gratis supaya pemilik tidak pernah terhalang mengambil
-  /// datanya sendiri. PDF ditawarkan lewat rewarded ad yang benar-benar
-  /// bisa ditolak, sesuai format iklan yang memang diizinkan AdMob.
   /// Mencetak laporan periode yang sedang dilihat ke printer struk.
   ///
   /// Angka-angkanya dibaca ulang dari provider yang sama dengan yang
@@ -316,6 +312,11 @@ class ReportScreen extends ConsumerWidget {
     }
   }
 
+  /// Ekspor laporan.
+  ///
+  /// CSV selalu gratis supaya pemilik tidak pernah terhalang mengambil
+  /// datanya sendiri. PDF ditawarkan lewat rewarded ad yang benar-benar
+  /// bisa ditolak, sesuai format iklan yang memang diizinkan AdMob.
   Future<void> _export(
     BuildContext context,
     WidgetRef ref, {
@@ -361,34 +362,52 @@ class ReportScreen extends ConsumerWidget {
       const SnackBar(content: Text('Menyiapkan laporan...')),
     );
 
-    final summary = await ref.read(revenueSummaryProvider.future);
-    final byService = await ref.read(revenueByServiceProvider.future);
-    final byMethod = await ref.read(revenueByMethodProvider.future);
-    final exporter = ref.read(exportServiceProvider);
+    final ReportFile file;
+    try {
+      final summary = await ref.read(revenueSummaryProvider.future);
+      final byService = await ref.read(revenueByServiceProvider.future);
+      final byMethod = await ref.read(revenueByMethodProvider.future);
+      final exporter = ref.read(exportServiceProvider);
 
-    final result = asPdf
-        ? await exporter.exportPdf(
-            from: range.from,
-            to: range.to,
-            businessName: settings.get(SettingsKeys.businessName),
-            businessAddress: settings.get(SettingsKeys.businessAddress),
-            summary: summary,
-            byService: byService,
-            byMethod: byMethod,
-          )
-        : await exporter.exportCsv(
-            from: range.from,
-            to: range.to,
-            businessName: settings.get(SettingsKeys.businessName),
-            summary: summary,
-            daily: await ref.read(dailyRevenueProvider.future),
-            byService: byService,
-            byMethod: byMethod,
-          );
-
-    if (!result.success) {
-      messenger.showSnackBar(SnackBar(content: Text(result.message)));
+      file = asPdf
+          ? await exporter.buildPdf(
+              from: range.from,
+              to: range.to,
+              businessName: settings.get(SettingsKeys.businessName),
+              businessAddress: settings.get(SettingsKeys.businessAddress),
+              summary: summary,
+              byService: byService,
+              byMethod: byMethod,
+            )
+          : await exporter.buildCsv(
+              from: range.from,
+              to: range.to,
+              businessName: settings.get(SettingsKeys.businessName),
+              summary: summary,
+              daily: await ref.read(dailyRevenueProvider.future),
+              byService: byService,
+              byMethod: byMethod,
+            );
+    } catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Laporan gagal dibuat. ${friendlyError(e)}')),
+      );
+      return;
     }
+
+    messenger.hideCurrentSnackBar();
+    if (!context.mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (_) => _ExportSheet(
+        file: file,
+        subject:
+            'Laporan Pendapatan ${settings.get(SettingsKeys.businessName)}',
+        messenger: messenger,
+        exporter: ref.read(exportServiceProvider),
+      ),
+    );
   }
 
   Future<void> _pickRange(BuildContext context, WidgetRef ref) async {
@@ -407,6 +426,146 @@ class ReportScreen extends ConsumerWidget {
       picked.start,
       picked.end,
       '${formatDate(picked.start)} - ${formatDate(picked.end)}',
+    );
+  }
+}
+
+/// Lembar "Laporan siap": simpan ke HP atau bagikan.
+///
+/// Simpan ditaruh paling atas karena itulah yang dimaksud pemilik saat
+/// menekan Ekspor: berkasnya ada di HP dan bisa dibuka lagi kapan saja.
+/// Bagikan tetap ada untuk mengirim langsung ke WhatsApp atau email.
+class _ExportSheet extends StatefulWidget {
+  const _ExportSheet({
+    required this.file,
+    required this.subject,
+    required this.messenger,
+    required this.exporter,
+  });
+
+  final ReportFile file;
+  final String subject;
+  final ScaffoldMessengerState messenger;
+  final ExportService exporter;
+
+  @override
+  State<_ExportSheet> createState() => _ExportSheetState();
+}
+
+class _ExportSheetState extends State<_ExportSheet> {
+  bool _busy = false;
+
+  Future<void> _save() async {
+    setState(() => _busy = true);
+    try {
+      final saved = await widget.exporter.saveToDevice(widget.file);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      widget.messenger.showSnackBar(
+        SnackBar(
+          content: Text(saved
+              ? '${widget.file.fileName} tersimpan. Buka lewat aplikasi '
+                  'Berkas (File Manager) di folder yang Anda pilih.'
+              : 'Tidak disimpan.'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      widget.messenger.showSnackBar(
+        SnackBar(content: Text('Gagal menyimpan. ${friendlyError(e)}')),
+      );
+    }
+  }
+
+  Future<void> _share() async {
+    setState(() => _busy = true);
+    try {
+      await widget.exporter.share(widget.file, subject: widget.subject);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      widget.messenger.showSnackBar(
+        SnackBar(content: Text('Gagal membagikan. ${friendlyError(e)}')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isPdf = widget.file.fileName.endsWith('.pdf');
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, AppSpacing.md),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Laporan siap',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    isPdf
+                        ? Icons.picture_as_pdf_outlined
+                        : Icons.table_chart_outlined,
+                    color: scheme.primary,
+                    size: 32,
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.file.fileName,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        Text(
+                          '${isPdf ? 'PDF' : 'CSV, bisa dibuka di Excel'}'
+                          ' · ${widget.file.sizeLabel}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            FilledButton.icon(
+              onPressed: _busy ? null : _save,
+              icon: const Icon(Icons.download_outlined),
+              label: const Text('Simpan ke HP'),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size(0, AppTouch.comfortable),
+              ),
+              onPressed: _busy ? null : _share,
+              icon: const Icon(Icons.share_outlined),
+              label: const Text('Bagikan (WhatsApp, email, Drive)'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
