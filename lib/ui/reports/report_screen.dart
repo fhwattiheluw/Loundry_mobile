@@ -327,7 +327,15 @@ class ReportScreen extends ConsumerWidget {
     final settings = ref.read(settingsRepoProvider);
     final ads = ref.read(adServiceProvider);
 
-    if (asPdf && ads.enabled && ads.rewardedReady) {
+    // Iklan yang sudah ditonton membuka ekspor PDF selama 15 menit. Bila
+    // ekspor perlu diulang, misalnya salah memilih periode atau dialog
+    // simpan tertutup, pemilik tidak dipaksa menonton iklan lagi untuk
+    // hadiah yang sudah ia dapat.
+    final unlockedUntil = _pdfUnlockedUntil;
+    final unlocked =
+        unlockedUntil != null && DateTime.now().isBefore(unlockedUntil);
+
+    if (asPdf && !unlocked && ads.enabled && ads.rewardedReady) {
       final accepted = await offerRewardedAd(
         context,
         title: 'Ekspor PDF',
@@ -356,6 +364,17 @@ class ReportScreen extends ConsumerWidget {
         );
         return;
       }
+      _pdfUnlockedUntil = DateTime.now().add(const Duration(minutes: 15));
+    }
+
+    if (!context.mounted) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Iklan selesai. Tekan Ekspor sekali lagi; iklan '
+              'tidak perlu ditonton ulang selama 15 menit.'),
+        ),
+      );
+      return;
     }
 
     messenger.showSnackBar(
@@ -396,7 +415,19 @@ class ReportScreen extends ConsumerWidget {
     }
 
     messenger.hideCurrentSnackBar();
-    if (!context.mounted) return;
+
+    // Layar ini bisa saja sudah diganti saat iklan atau pembuatan laporan
+    // berjalan. Jangan pernah berhenti tanpa kabar: pemilik baru saja
+    // menonton iklan dan berhak tahu apa yang terjadi.
+    if (!context.mounted) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Laporan sudah dibuat, tapi layar sempat berganti. '
+              'Tekan Ekspor sekali lagi; iklan tidak perlu ditonton ulang.'),
+        ),
+      );
+      return;
+    }
 
     await showModalBottomSheet<void>(
       context: context,
@@ -429,6 +460,13 @@ class ReportScreen extends ConsumerWidget {
     );
   }
 }
+
+/// Batas waktu ekspor PDF tanpa iklan setelah iklan berhadiah ditonton.
+///
+/// Variabel biasa, bukan provider: harus tetap tercatat walau layar
+/// Laporan sempat dibongkar ketika iklan tampil, dan `ref` milik widget
+/// yang sudah dibongkar tidak boleh dipakai lagi.
+DateTime? _pdfUnlockedUntil;
 
 /// Lembar "Laporan siap": simpan ke HP atau bagikan.
 ///

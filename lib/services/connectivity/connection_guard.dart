@@ -21,38 +21,70 @@ enum NetworkStatus { checking, online, offline }
 /// setiap perubahan status disusul satu pemeriksaan DNS singkat.
 class ConnectionController extends StateNotifier<NetworkStatus> {
   ConnectionController() : super(NetworkStatus.checking) {
+    // Android melaporkan "perubahan jaringan" jauh lebih sering daripada
+    // koneksi benar-benar putus: kekuatan sinyal berubah, Wi-Fi dan 4G
+    // bergantian, atau iklan layar penuh dibuka. Laporan yang beruntun
+    // diredam dulu supaya cukup diperiksa sekali.
     _subscription = Connectivity().onConnectivityChanged.listen((_) {
-      check();
+      _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 800), check);
     });
     check();
   }
 
   StreamSubscription<Object?>? _subscription;
   Timer? _retryTimer;
+  Timer? _debounce;
+  bool _running = false;
+
+  /// Kegagalan berturut-turut selagi status masih online.
+  int _strikes = 0;
 
   static const _probeHosts = ['google.com', 'cloudflare.com'];
 
+  /// Memeriksa ulang koneksi.
+  ///
+  /// Status tidak pernah dikembalikan ke [NetworkStatus.checking]. Dulu
+  /// setiap pemeriksaan ulang menyetelnya, dan gerbang di atas langsung
+  /// mengganti seluruh aplikasi dengan layar "memeriksa koneksi": layar
+  /// yang sedang dibuka ikut dibongkar, isian Order Baru hilang, dan ekspor
+  /// laporan yang sedang menunggu iklan selesai berhenti tanpa kabar.
+  /// Sekarang pemeriksaan berjalan di latar dan tampilan baru berubah bila
+  /// hasilnya memang berubah.
   Future<void> check() async {
-    state = NetworkStatus.checking;
+    if (_running) return;
+    _running = true;
 
-    final results = await Connectivity().checkConnectivity();
-    final hasInterface =
-        results.any((r) => r != ConnectivityResult.none);
+    try {
+      final results = await Connectivity().checkConnectivity();
+      final hasInterface = results.any((r) => r != ConnectivityResult.none);
 
-    if (!hasInterface) {
+      if (hasInterface && await _canReachInternet()) {
+        _strikes = 0;
+        _retryTimer?.cancel();
+        if (mounted) state = NetworkStatus.online;
+        return;
+      }
+
+      // Satu kegagalan selagi online belum berarti putus: perpindahan Wi-Fi
+      // ke data seluler sempat tanpa jaringan sesaat. Diperiksa sekali
+      // lagi tiga detik kemudian sebelum layar luring ditampilkan.
+      if (state == NetworkStatus.online && _strikes == 0) {
+        _strikes = 1;
+        _retryTimer?.cancel();
+        _retryTimer = Timer(const Duration(seconds: 3), check);
+        return;
+      }
+
       _goOffline();
-      return;
-    }
-
-    if (await _canReachInternet()) {
-      _retryTimer?.cancel();
-      state = NetworkStatus.online;
-    } else {
-      _goOffline();
+    } finally {
+      _running = false;
     }
   }
 
   void _goOffline() {
+    _strikes = 0;
+    if (!mounted) return;
     state = NetworkStatus.offline;
 
     // Coba lagi sendiri tiap 10 detik, supaya kasir tidak perlu menekan
@@ -83,6 +115,7 @@ class ConnectionController extends StateNotifier<NetworkStatus> {
   void dispose() {
     _subscription?.cancel();
     _retryTimer?.cancel();
+    _debounce?.cancel();
     super.dispose();
   }
 }
@@ -101,7 +134,13 @@ final connectionProvider =
 /// Ini keputusan bisnis, bukan keterbatasan teknis. Seluruh lapisan data
 /// aplikasi sanggup bekerja tanpa internet, dan satu baris di app.dart
 /// cukup untuk membuka kembali pemakaian luring.
-class ConnectionGate extends ConsumerWidget {
+///
+/// Dipasang di MaterialApp.builder, membungkus Navigator, sehingga layar
+/// luring menutupi semua halaman yang sedang terbuka. Setelah aplikasi
+/// pernah online, aplikasi di bawahnya tidak pernah dibongkar: layar luring
+/// hanya ditumpuk di atasnya. Begitu internet kembali, kasir berada di
+/// layar yang sama dengan isian yang sama.
+class ConnectionGate extends ConsumerStatefulWidget {
   const ConnectionGate({
     super.key,
     required this.child,
@@ -112,16 +151,35 @@ class ConnectionGate extends ConsumerWidget {
   final bool requireInternet;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!requireInternet) return child;
+  ConsumerState<ConnectionGate> createState() => _ConnectionGateState();
+}
+
+class _ConnectionGateState extends ConsumerState<ConnectionGate> {
+  bool _wasOnline = false;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.requireInternet) return widget.child;
 
     final status = ref.watch(connectionProvider);
+    if (status == NetworkStatus.online) _wasOnline = true;
 
-    return switch (status) {
-      NetworkStatus.online => child,
-      NetworkStatus.checking => const _CheckingScreen(),
-      NetworkStatus.offline => const OfflineScreen(),
-    };
+    // Pembukaan pertama: belum ada yang bisa hilang, jadi aplikasi baru
+    // digambar setelah koneksi terbukti ada.
+    if (!_wasOnline) {
+      return status == NetworkStatus.offline
+          ? const OfflineScreen()
+          : const _CheckingScreen();
+    }
+
+    return Stack(
+      children: [
+        // Selalu di posisi pertama supaya elemennya tidak pernah diganti.
+        widget.child,
+        if (status == NetworkStatus.offline)
+          const Positioned.fill(child: OfflineScreen()),
+      ],
+    );
   }
 }
 
@@ -143,11 +201,26 @@ class _CheckingScreen extends StatelessWidget {
       );
 }
 
-class OfflineScreen extends ConsumerWidget {
+class OfflineScreen extends ConsumerStatefulWidget {
   const OfflineScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<OfflineScreen> createState() => _OfflineScreenState();
+}
+
+class _OfflineScreenState extends ConsumerState<OfflineScreen> {
+  bool _checking = false;
+
+  /// Pemeriksaan ulang tidak lagi mengubah status menjadi "memeriksa",
+  /// jadi tanda sibuknya dipegang tombol ini sendiri.
+  Future<void> _retry() async {
+    setState(() => _checking = true);
+    await ref.read(connectionProvider.notifier).check();
+    if (mounted) setState(() => _checking = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -198,10 +271,16 @@ class OfflineScreen extends ConsumerWidget {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
-                      onPressed: () =>
-                          ref.read(connectionProvider.notifier).check(),
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Coba lagi'),
+                      onPressed: _checking ? null : _retry,
+                      icon: _checking
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child:
+                                  CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.refresh),
+                      label: Text(_checking ? 'Memeriksa...' : 'Coba lagi'),
                     ),
                   ),
                   const SizedBox(height: 12),

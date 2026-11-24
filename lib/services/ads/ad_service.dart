@@ -273,7 +273,7 @@ class AdService {
       },
     );
 
-    await ad.show();
+    await _safeShow(ad.show, ad, onFailed: _preloadInterstitial);
   }
 
   /// Menayangkan interstitial di titik jeda yang disebut [reason].
@@ -314,7 +314,7 @@ class AdService {
       },
     );
 
-    await ad.show();
+    await _safeShow(ad.show, ad, onFailed: _preloadInterstitial);
   }
 
   // --------------------------------------------------------- iklan pembuka
@@ -402,7 +402,7 @@ class AdService {
       },
     );
 
-    ad.show();
+    unawaited(_safeShow(ad.show, ad, onFailed: _loadAppOpen));
   }
 
   // --------------------------------------------------------------- rewarded
@@ -436,24 +436,66 @@ class AdService {
   /// WAJIB menyediakan jalan lain untuk mencapai hasil yang sama.
   Future<bool> showRewarded() async {
     final ad = _rewarded;
-    if (!enabled || ad == null) return false;
+    if (!enabled || ad == null || _showingFullScreen) return false;
 
     _rewarded = null;
+    _showingFullScreen = true;
     var earned = false;
+
+    // ad.show() selesai begitu iklan MUNCUL, bukan saat ditutup: plugin
+    // Android langsung menjawab setelah menampilkan iklan. Dulu nilai
+    // earned dibaca saat itu, selalu false, sehingga ekspor PDF dibatalkan
+    // tepat ketika iklan baru mulai, dan pemilik yang menonton sampai
+    // "Reward diberikan" tidak mendapat apa-apa. Hasilnya kini diambil
+    // ketika iklan benar-benar ditutup.
+    final closed = Completer<bool>();
 
     ad.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (ad) {
+        _showingFullScreen = false;
         ad.dispose();
         _preloadRewarded();
+        if (!closed.isCompleted) closed.complete(earned);
       },
       onAdFailedToShowFullScreenContent: (ad, _) {
+        _showingFullScreen = false;
         ad.dispose();
         _preloadRewarded();
+        if (!closed.isCompleted) closed.complete(false);
       },
     );
 
-    await ad.show(onUserEarnedReward: (_, __) => earned = true);
-    return earned;
+    final shown = await _safeShow(
+      () => ad.show(onUserEarnedReward: (_, __) => earned = true),
+      ad,
+      onFailed: _preloadRewarded,
+    );
+    if (!shown) return false;
+
+    return closed.future;
+  }
+
+  /// Menjalankan show() tanpa membiarkan kegagalannya mengunci aplikasi.
+  ///
+  /// Bila Android gagal menampilkan iklan, plugin melempar galat dan
+  /// callback onAdFailedToShowFullScreenContent tidak dipanggil. Tanpa ini
+  /// [_showingFullScreen] tertinggal true selamanya dan semua iklan layar
+  /// penuh berikutnya diam-diam tidak pernah tampil.
+  Future<bool> _safeShow(
+    Future<void> Function() show,
+    Ad ad, {
+    required void Function() onFailed,
+  }) async {
+    try {
+      await show();
+      return true;
+    } catch (e) {
+      debugPrint('Iklan gagal ditampilkan: $e');
+      _showingFullScreen = false;
+      ad.dispose();
+      onFailed();
+      return false;
+    }
   }
 
   void dispose() {

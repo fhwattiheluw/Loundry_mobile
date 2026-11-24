@@ -334,7 +334,7 @@ menunjukkan unit mana yang masih uji, dan hasil muat tiap jenis iklan.
 | --- | --- |
 | Beranda, Order, Laporan | Banner tetap di dasar layar, di atas bilah navigasi, di semua tab |
 | Setelah login | Interstitial, maksimal sekali per sesi |
-| Ekspor laporan PDF | Rewarded ad opsional, bisa ditolak; ekspor CSV selalu gratis |
+| Ekspor laporan PDF | Rewarded ad opsional, bisa ditolak; setelah ditonton, PDF terbuka 15 menit tanpa iklan; ekspor CSV selalu gratis |
 | Input order, pembayaran, proses cetak | **Tidak ada iklan** |
 
 Iklan tidak bisa dimatikan: tidak ada sakelar di Pengaturan dan tidak ada
@@ -491,3 +491,10 @@ berjalan offline. Saat koneksi putus, aplikasi menampilkan layar pemberitahuan
 dan memeriksa ulang otomatis setiap 10 detik; data di perangkat tetap aman.
 Bila suatu saat konter perlu tetap melayani pelanggan saat jaringan mati,
 ubah `requireInternet` menjadi `false` di `lib/app.dart`.
+
+Gerbang koneksi dipasang di `MaterialApp.builder`, membungkus Navigator.
+Setelah aplikasi pernah online, layar luring hanya ditumpuk di atas halaman
+yang terbuka, tidak pernah membongkarnya, jadi isian yang sedang diketik
+tetap utuh saat sinyal kembali. Pemeriksaan ulang berjalan diam-diam,
+laporan jaringan beruntun diredam, dan status luring baru dinyatakan setelah
+dua kali gagal berturut-turut.

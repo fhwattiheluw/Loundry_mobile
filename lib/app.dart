@@ -35,20 +35,23 @@ class LaundryPosApp extends ConsumerWidget {
 
         return MediaQuery(
           data: MediaQuery.of(context).copyWith(textScaler: scale),
-          child: child!,
+          // Gerbang internet membungkus Navigator, bukan hanya halaman
+          // pertama, supaya layar luring menutupi semua halaman yang
+          // terbuka tanpa membongkarnya. Lihat ConnectionGate.
+          child: ConnectionGate(requireInternet: true, child: child!),
         );
       },
-      // Gerbang internet membungkus seluruh aplikasi. Layar apa pun hanya
-      // tergambar setelah koneksi terbukti ada.
+      // Gerbang internet (di builder di atas) membungkus seluruh aplikasi.
+      // Layar apa pun hanya tergambar setelah koneksi terbukti ada.
       // Aplikasi ini gratis dan hidup dari iklan, dan iklan hanya bisa
       // dimuat saat ada internet. Pemakaian luring berarti pemakaian yang
       // tidak menghasilkan apa pun, jadi internet diwajibkan.
       //
       // Harganya nyata: konter yang sinyalnya mati tidak bisa menerima
       // cucian sama sekali. Bila ternyata itu terlalu mahal di lapangan,
-      // satu baris di bawah ini mengembalikannya - seluruh lapisan data
+      // requireInternet di builder mengembalikannya - seluruh lapisan data
       // aplikasi tetap sanggup bekerja tanpa internet.
-      home: const ConnectionGate(requireInternet: true, child: _Root()),
+      home: const _Root(),
     );
   }
 }
