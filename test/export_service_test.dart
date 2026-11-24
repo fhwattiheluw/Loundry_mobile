@@ -66,7 +66,9 @@ void main() {
     });
 
     test('diawali BOM supaya Excel membaca huruf dengan benar', () {
-      expect(text.codeUnitAt(0), 0xFEFF);
+      // Diperiksa pada byte mentah: utf8.decode sengaja membuang BOM di
+      // awal teks, jadi memeriksa hasil dekode akan selalu gagal.
+      expect(file.bytes.sublist(0, 3), [0xEF, 0xBB, 0xBF]);
     });
 
     test('memakai titik koma, pemisah kolom Excel versi Indonesia', () {
