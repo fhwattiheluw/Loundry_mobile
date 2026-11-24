@@ -8,6 +8,7 @@ import '../../core/formatters.dart';
 import '../../core/security.dart';
 import '../../data/db/settings_keys.dart';
 import '../../domain/models/models.dart';
+import '../backup/backup_folder_card.dart';
 import '../settings/printer_settings_screen.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/layout.dart';
@@ -435,6 +436,10 @@ class _SetupWizardState extends ConsumerState<SetupWizard> {
                   : 'Izinkan notifikasi',
             ),
           ),
+        const SizedBox(height: AppSpacing.lg),
+        // Dipilih sejak hari pertama: backup otomatis harian yang tersimpan
+        // di Download tetap ada walau aplikasi suatu saat dicopot.
+        const BackupFolderCard(),
         const SizedBox(height: AppSpacing.md),
         Text(
           'Anda bisa membuat backup pertama kapan saja lewat Pengaturan, '

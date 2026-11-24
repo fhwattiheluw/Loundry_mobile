@@ -9,8 +9,9 @@ enum BackupMethod {
   /// Satu-satunya cara yang selamat bila HP hilang atau rusak.
   share,
 
-  /// Disimpan di folder aplikasi di HP ini. Berguna untuk salah-hapus, tapi
-  /// ikut hilang bersama HP atau saat aplikasi dicopot.
+  /// Disimpan di HP ini, di folder backup pilihan pemilik. Berguna untuk
+  /// salah-hapus. Di Download atau Documents tetap ada walau aplikasi
+  /// dicopot, tapi tetap ikut hilang bersama HP.
   device;
 
   String get code => name;

@@ -2,11 +2,14 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_sqlcipher/sqflite.dart' as cipher;
 
 import '../../data/db/app_database.dart';
+import '../../data/db/settings_keys.dart';
+import '../../data/repositories/settings_repository.dart';
 
 class BackupResult {
   const BackupResult.ok(this.message, {this.file})
@@ -44,6 +47,61 @@ class BackupInfo {
   String get sizeLabel => '${(sizeBytes / 1024).round()} KB';
 }
 
+/// Jenis folder backup otomatis.
+enum BackupFolderKind { app, download, documents, custom }
+
+/// Folder backup yang sedang dipakai.
+class BackupFolder {
+  const BackupFolder({required this.kind, required this.path, this.problem});
+
+  final BackupFolderKind kind;
+  final String path;
+
+  /// Terisi bila folder pilihan pemilik tidak bisa dipakai dan backup
+  /// sementara jatuh ke folder aplikasi.
+  final String? problem;
+
+  /// Folder di luar Android/data tidak ikut terhapus saat aplikasi dicopot.
+  bool get survivesUninstall => kind != BackupFolderKind.app;
+}
+
+/// Nama subfolder di Download atau Documents.
+const backupSubfolder = 'LaundryManise';
+
+/// Akar penyimpanan bersama dari folder milik aplikasi:
+/// /storage/emulated/0/Android/data/<paket>/files menjadi /storage/emulated/0.
+String? sharedStorageRoot(String appExternalDir) {
+  final i = appExternalDir.indexOf('/Android/');
+  return i <= 0 ? null : appExternalDir.substring(0, i);
+}
+
+/// Pilihan yang tersimpan di pengaturan menjadi jenis folder.
+BackupFolderKind folderKindOf(String pref) => switch (pref.trim()) {
+      '' || 'app' => BackupFolderKind.app,
+      'download' => BackupFolderKind.download,
+      'documents' => BackupFolderKind.documents,
+      _ => BackupFolderKind.custom,
+    };
+
+/// Jalur lengkap untuk sebuah pilihan. Null bila penyimpanan bersama
+/// tidak diketahui, misalnya di luar Android.
+String? folderPathFor(
+  String pref, {
+  required String appFolder,
+  required String? storageRoot,
+}) {
+  return switch (folderKindOf(pref)) {
+    BackupFolderKind.app => appFolder,
+    BackupFolderKind.download => storageRoot == null
+        ? null
+        : p.join(storageRoot, 'Download', backupSubfolder),
+    BackupFolderKind.documents => storageRoot == null
+        ? null
+        : p.join(storageRoot, 'Documents', backupSubfolder),
+    BackupFolderKind.custom => pref.trim(),
+  };
+}
+
 /// Backup adalah satu-satunya pengaman data di aplikasi ini.
 ///
 /// Tidak ada server, jadi ponsel hilang, rusak, atau aplikasi terhapus berarti
@@ -51,28 +109,20 @@ class BackupInfo {
 /// dijalankan setiap aplikasi dibuka, dan pemilik diingatkan mengekspor
 /// salinannya ke luar perangkat.
 class BackupService {
-  BackupService(this._db);
+  BackupService(this._db, this._settings);
 
   final AppDatabase _db;
+  final SettingsRepository _settings;
 
   static const _folderName = 'backup';
   static const _keepCount = 7;
 
-  /// Folder tempat backup otomatis disimpan.
+  /// Folder milik aplikasi: Android/data/<paket>/files/backup.
   ///
-  /// Di Android dipilih penyimpanan luar milik aplikasi, bukan folder
-  /// dalam: jalurnya bisa dibuka pemilik lewat Pengelola File mana pun,
-  /// sehingga berkasnya bisa disalin ke flashdisk atau dilampirkan ke
-  /// WhatsApp tanpa lewat aplikasi ini.
-  ///
-  /// Folder Download dan Documents tidak dipakai. Sejak Android 10 aplikasi
-  /// tidak boleh menulis ke sana tanpa izin akses seluruh penyimpanan, dan
-  /// izin itu hampir selalu ditolak Google Play untuk aplikasi kasir.
-  ///
-  /// Yang harus diingat: folder ini ikut terhapus bila aplikasi dicopot.
-  /// Backup di dalam HP yang sama tidak menolong saat HP-nya hilang, jadi
-  /// salinan mingguan ke luar HP tetap wajib.
-  Future<Directory> _backupDir() async {
+  /// Selalu bisa ditulis tanpa izin, karena itu menjadi folder bawaan dan
+  /// tempat jatuh bila folder pilihan pemilik tidak bisa dipakai. Folder
+  /// ini ikut terhapus bila aplikasi dicopot.
+  Future<String> _appFolderPath() async {
     Directory? base;
 
     if (Platform.isAndroid) {
@@ -84,15 +134,120 @@ class BackupService {
     }
 
     base ??= await getApplicationDocumentsDirectory();
-
-    final dir = Directory(p.join(base.path, _folderName));
-    if (!await dir.exists()) await dir.create(recursive: true);
-    return dir;
+    return p.join(base.path, _folderName);
   }
+
+  /// Akar penyimpanan bersama, misalnya /storage/emulated/0.
+  Future<String?> _storageRoot() async {
+    if (!Platform.isAndroid) return null;
+    try {
+      final ext = await getExternalStorageDirectory();
+      return ext == null ? null : sharedStorageRoot(ext.path);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Uji tulis sungguhan: membuat folder, menulis berkas kecil, lalu
+  /// menghapusnya. Lebih jujur daripada menebak dari versi Android, karena
+  /// aturan penyimpanan berbeda antar versi dan antar merek HP.
+  Future<bool> _canWrite(String path) async {
+    try {
+      await Directory(path).create(recursive: true);
+      final probe = File(p.join(path, '.cek-tulis'));
+      await probe.writeAsString('ok', flush: true);
+      await probe.delete();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Folder backup yang benar-benar dipakai sekarang.
+  ///
+  /// Bila folder pilihan pemilik tidak bisa ditulis (izin dicabut, kartu
+  /// memori dicabut), backup tetap berjalan di folder aplikasi dan
+  /// [BackupFolder.problem] terisi supaya layar bisa memperingatkan.
+  /// Backup otomatis tidak boleh berhenti diam-diam.
+  Future<BackupFolder> currentFolder() async {
+    final pref = _settings.get(SettingsKeys.backupFolder);
+    final kind = folderKindOf(pref);
+    final appFolder = await _appFolderPath();
+
+    if (kind != BackupFolderKind.app) {
+      final path = folderPathFor(
+        pref,
+        appFolder: appFolder,
+        storageRoot: await _storageRoot(),
+      );
+
+      if (path != null && await _canWrite(path)) {
+        return BackupFolder(kind: kind, path: path);
+      }
+
+      await Directory(appFolder).create(recursive: true);
+      return BackupFolder(
+        kind: BackupFolderKind.app,
+        path: appFolder,
+        problem: 'Folder pilihan Anda (${path ?? pref}) tidak bisa ditulis. '
+            'Backup sementara disimpan di folder aplikasi. Pilih ulang '
+            'foldernya.',
+      );
+    }
+
+    await Directory(appFolder).create(recursive: true);
+    return BackupFolder(kind: BackupFolderKind.app, path: appFolder);
+  }
+
+  /// Mengganti folder backup otomatis.
+  ///
+  /// Folder diuji dulu dengan menulis sungguhan. Di Android 8 sampai 10
+  /// izin penyimpanan diminta bila perlu. Di Android 11 ke atas izin itu
+  /// tidak dideklarasikan, sehingga permintaannya langsung ditolak tanpa
+  /// dialog, dan memang tidak dibutuhkan: folder Download dan Documents
+  /// bisa ditulis tanpa izin.
+  ///
+  /// Mengembalikan null bila berhasil, atau alasan yang bisa dibaca pemilik.
+  Future<String?> changeFolder(String pref) async {
+    final kind = folderKindOf(pref);
+    final path = folderPathFor(
+      pref,
+      appFolder: await _appFolderPath(),
+      storageRoot: await _storageRoot(),
+    );
+
+    if (path == null) {
+      return 'Penyimpanan bersama tidak ditemukan di perangkat ini.';
+    }
+
+    var ok = await _canWrite(path);
+
+    if (!ok && Platform.isAndroid && kind != BackupFolderKind.app) {
+      final status = await Permission.storage.request();
+      if (status.isGranted) ok = await _canWrite(path);
+    }
+
+    if (!ok) {
+      return kind == BackupFolderKind.custom
+          ? 'Folder itu tidak bisa ditulis. Android hanya mengizinkan '
+              'aplikasi menyimpan berkas di dalam folder Download atau '
+              'Documents. Pilih folder di dalam salah satunya.'
+          : 'Folder itu tidak bisa ditulis di HP ini.';
+    }
+
+    await _settings.set(
+      SettingsKeys.backupFolder,
+      kind == BackupFolderKind.app ? '' : pref,
+    );
+    return null;
+  }
+
+  Future<Directory> _backupDir() async =>
+      Directory((await currentFolder()).path);
 
   /// Jalur folder backup apa adanya, untuk ditampilkan di Pengaturan.
   /// Pemilik yang tahu jalurnya bisa menemukan berkasnya sendiri.
-  Future<String> backupFolderPath() async => (await _backupDir()).path;
+  Future<String> backupFolderPath() async => (await currentFolder()).path;
 
   Future<File> _databaseFile() async {
     final dir = await getDatabasesPath();

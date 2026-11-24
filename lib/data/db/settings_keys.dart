@@ -82,6 +82,10 @@ abstract final class SettingsKeys {
   /// di Pengaturan (waktu ISO 8601). Backup harian otomatis sengaja tidak
   /// dihitung: ia ada di dalam HP yang sama dan tidak melindungi dari HP
   /// hilang, jadi tidak boleh membungkam pengingat.
+  /// Folder backup otomatis: kosong untuk folder aplikasi, 'download',
+  /// 'documents', atau jalur lengkap folder pilihan pemilik.
+  static const backupFolder = 'backup_folder';
+
   static const backupLastAt = 'backup_last_at';
 
   /// 'share' (dibagikan ke luar HP) atau 'device' (disimpan di HP).

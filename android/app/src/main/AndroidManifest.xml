@@ -17,6 +17,21 @@
 
     <!-- Memindai QR nomor nota saat pengambilan -->
     <uses-permission android:name="android.permission.CAMERA" />
+
+    <!--
+      Backup otomatis ke folder Download/LaundryManise atau Documents, yang
+      tidak ikut terhapus saat aplikasi dicopot. Android 11 ke atas tidak
+      memerlukan izin apa pun untuk menulis berkas sendiri di kedua folder
+      itu, jadi izin ini dibatasi sampai Android 10 (API 29) dan tidak
+      pernah diminta di HP yang lebih baru. Bukan MANAGE_EXTERNAL_STORAGE,
+      yang dibatasi ketat oleh kebijakan Google Play.
+    -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29" />
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
@@ -58,6 +73,7 @@
     </queries>
 
     <application
+        android:requestLegacyExternalStorage="true"
         android:label="Laundry Manise"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"

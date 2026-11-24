@@ -167,7 +167,10 @@ final adServiceProvider = Provider<AdService>(
 );
 
 final backupServiceProvider = Provider<BackupService>(
-  (ref) => BackupService(ref.watch(databaseProvider)),
+  (ref) => BackupService(
+    ref.watch(databaseProvider),
+    ref.watch(settingsRepoProvider),
+  ),
 );
 
 final pinGuardProvider = Provider<PinGuard>(

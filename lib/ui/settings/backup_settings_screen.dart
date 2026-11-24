@@ -2,13 +2,13 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../application/providers.dart';
 import '../../core/formatters.dart';
 import '../../services/backup/backup_reminder.dart';
 import '../../services/backup/backup_service.dart';
+import '../backup/backup_folder_card.dart';
 import '../backup/backup_wizard_screen.dart';
 import '../widgets/layout.dart';
 import '../../core/design_system.dart';
@@ -181,36 +181,9 @@ class _BackupSettingsScreenState
             ),
 
             const SizedBox(height: 16),
-            // Pemilik yang tahu jalurnya bisa menyalin berkasnya sendiri
-            // lewat Pengelola File, tanpa membuka aplikasi ini.
-            FutureBuilder<String>(
-              future: ref.read(backupServiceProvider).backupFolderPath(),
-              builder: (context, snapshot) {
-                final path = snapshot.data;
-                if (path == null) return const SizedBox.shrink();
-
-                return Card(
-                  child: ListTile(
-                    leading: const IconBadge(Icons.folder_outlined, tone: 4),
-                    title: const Text('Folder backup otomatis'),
-                    subtitle: Text(
-                      path,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                    trailing: IconButton(
-                      tooltip: 'Salin jalur',
-                      icon: const Icon(Icons.copy, size: 18),
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: path));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Jalur folder disalin.')),
-                        );
-                      },
-                    ),
-                  ),
-                );
-              },
-            ),
+            // Folder bisa diganti. Download dan Documents tetap ada walau
+            // aplikasi dicopot, berbeda dengan folder aplikasi.
+            BackupFolderCard(onChanged: _load),
 
             const SizedBox(height: 12),
             OutlinedButton.icon(

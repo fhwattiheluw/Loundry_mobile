@@ -7,6 +7,7 @@ import '../../core/formatters.dart';
 import '../../services/backup/backup_reminder.dart';
 import '../../services/backup/backup_service.dart';
 import '../widgets/layout.dart';
+import 'backup_folder_card.dart';
 
 /// Empat langkah membuat backup: kenapa, ke mana, buat, selesai.
 ///
@@ -282,8 +283,8 @@ class _BackupWizardScreenState extends ConsumerState<BackupWizardScreen> {
       _ChoiceCard(
         icon: Icons.phone_android_outlined,
         title: 'Simpan di HP ini saja',
-        body: 'Aman dari salah hapus data, tapi ikut hilang bila HP '
-            'hilang atau aplikasi dicopot.',
+        body: 'Disimpan di folder pilihan Anda, misalnya Download. Tetap '
+            'ada walau aplikasi dicopot, tapi ikut hilang bila HP hilang.',
         selected: _method == BackupMethod.device,
         onTap: () => setState(() => _method = BackupMethod.device),
       ),
@@ -325,7 +326,8 @@ class _BackupWizardScreenState extends ConsumerState<BackupWizardScreen> {
             ? 'Aplikasi menyiapkan berkas, lalu membuka lembar bagikan. '
                 'Pilih tujuan: chat WhatsApp ke nomor sendiri, email, atau '
                 'Google Drive.'
-            : 'Aplikasi menyimpan salinan data di folder khusus di HP ini.',
+            : 'Aplikasi menyimpan salinan data di folder di bawah. Ketuk '
+                'Ubah untuk memilih folder lain, misalnya Download.',
       ),
       Card(
         child: ListTile(
@@ -341,6 +343,12 @@ class _BackupWizardScreenState extends ConsumerState<BackupWizardScreen> {
           ),
         ),
       ),
+      // Folder yang sama dipakai backup otomatis harian, jadi pilihan di
+      // sini sekaligus mengatur keduanya.
+      if (!share) ...[
+        const SizedBox(height: AppSpacing.md),
+        const BackupFolderCard(),
+      ],
       if (_problem != null) ...[
         const SizedBox(height: AppSpacing.md),
         Card(
@@ -367,6 +375,10 @@ class _BackupWizardScreenState extends ConsumerState<BackupWizardScreen> {
     final status = ref.watch(backupStatusProvider);
     final result = _result;
     final fileName = result?.file?.path.split('/').last;
+    final parts = result?.file?.path.split('/');
+    final folder = parts == null || parts.length < 2
+        ? null
+        : parts.sublist(0, parts.length - 1).join('/');
     final scheme = Theme.of(context).colorScheme;
 
     return [
@@ -399,7 +411,7 @@ class _BackupWizardScreenState extends ConsumerState<BackupWizardScreen> {
         child: Text(
           _method == BackupMethod.share
               ? 'Pastikan berkasnya sudah sampai di tujuan.'
-              : 'Tersimpan di HP ini.',
+              : 'Tersimpan di folder yang Anda pilih.',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
@@ -420,6 +432,14 @@ class _BackupWizardScreenState extends ConsumerState<BackupWizardScreen> {
                 title: const Text('Nama berkas'),
                 subtitle: Text(fileName),
               ),
+              if (_method == BackupMethod.device && folder != null) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: const IconBadge(Icons.folder_outlined, tone: 4),
+                  title: const Text('Folder'),
+                  subtitle: Text(folder),
+                ),
+              ],
             ],
             const Divider(height: 1),
             ListTile(

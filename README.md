@@ -137,7 +137,14 @@ Dibangun dengan Flutter. Database SQLite tersimpan di perangkat, tanpa server.
   filter terlalu sempit, masing-masing dengan tombol jalan keluar
 
 **Backup**
-- Backup otomatis harian ke penyimpanan aplikasi, tujuh salinan terakhir
+- Backup otomatis harian, tujuh salinan terakhir. Foldernya bisa dipilih di
+  Pengaturan, wizard backup, dan wizard awal: **Download/LaundryManise**
+  (disarankan, tetap ada walau aplikasi dicopot), Documents/LaundryManise,
+  folder lain di dalam Download atau Documents, atau folder aplikasi (ikut
+  terhapus saat dicopot). Folder diuji tulis sebelum dipakai; bila suatu
+  saat tidak bisa ditulis, backup jatuh ke folder aplikasi dan Pengaturan
+  menampilkan peringatan. Android 11 ke atas tidak perlu izin; Android 8
+  sampai 10 meminta izin penyimpanan sekali
 - Bagikan backup ke WhatsApp, email, atau Google Drive
 - Restore dari berkas, dengan salinan pengaman sebelum menimpa
 - Wizard backup empat langkah (kenapa, ke mana, buat, selesai), dibuka dari
